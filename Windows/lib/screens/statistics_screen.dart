@@ -1,0 +1,1338 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:collection/collection.dart';
+import '../models/plant.dart';
+import '../providers/plant_provider.dart';
+import 'package:syncfusion_flutter_treemap/treemap.dart';
+
+class StatisticsScreen extends StatefulWidget {
+  const StatisticsScreen({super.key});
+
+  @override
+  State<StatisticsScreen> createState() => _StatisticsScreenState();
+}
+
+class _StatisticsScreenState extends State<StatisticsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  int? _selectedYear;
+  String? _selectedCategory;
+  bool _groupByRange = false;
+  String _timeRange = 'Всё время';
+  bool _treemapByStatus = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 9, vsync: this);
+    _loadFilters();
+  }
+
+  void _loadFilters() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _selectedYear = prefs.getInt('statsYear');
+      _selectedCategory = prefs.getString('statsCategory');
+    });
+  }
+
+  void _saveFilters() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_selectedYear != null) {
+      prefs.setInt('statsYear', _selectedYear!);
+    } else {
+      prefs.remove('statsYear');
+    }
+    if (_selectedCategory != null) {
+      prefs.setString('statsCategory', _selectedCategory!);
+    } else {
+      prefs.remove('statsCategory');
+    }
+  }
+
+  List<Plant> _filterPlants(PlantProvider provider) {
+    var plants = provider.plants;
+    final now = DateTime.now();
+
+    if (_timeRange == 'Последний месяц') {
+      final startDate = DateTime(now.year, now.month - 1, now.day);
+      plants = plants.where((p) {
+        if (p.wateringDates.isNotEmpty) {
+          return p.wateringDates.first.isAfter(startDate);
+        }
+        if (p.germinationHistory.isNotEmpty) {
+          return p.germinationHistory.first.date.isAfter(startDate);
+        }
+        return DateTime(p.year).isAfter(startDate);
+      }).toList();
+    } else if (_timeRange == 'Последний год') {
+      final startDate = DateTime(now.year - 1, now.month, now.day);
+      plants = plants.where((p) {
+        if (p.wateringDates.isNotEmpty) {
+          return p.wateringDates.first.isAfter(startDate);
+        }
+        if (p.germinationHistory.isNotEmpty) {
+          return p.germinationHistory.first.date.isAfter(startDate);
+        }
+        return DateTime(p.year).isAfter(startDate);
+      }).toList();
+    }
+
+    if (_selectedYear != null) {
+      plants = plants.where((p) => p.year == _selectedYear!).toList();
+    }
+    if (_selectedCategory != null) {
+      plants = plants.where((p) => p.category == _selectedCategory!).toList();
+    }
+
+    return plants;
+  }
+
+  Map<String, int> getStatusCounts(List<Plant> plants) {
+    return {
+      'В коллекции': plants.where((p) => p.status == 'in_collection').length,
+      'Растёт': plants.where((p) => p.status == 'growing').length,
+      'Погиб': plants.where((p) => p.status == 'dead').length,
+      'Не взошел': plants.where((p) => p.status == 'failed').length,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final filteredPlants = _filterPlants(provider);
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Статистика коллекции'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context),
+            ),
+            bottom: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabs: const [
+                Tab(text: 'Статусы', icon: Icon(Icons.pie_chart)),
+                Tab(text: 'Выживаемость', icon: Icon(Icons.show_chart)),
+                Tab(text: 'Категории', icon: Icon(Icons.compare_arrows)),
+                Tab(text: 'Возраст', icon: Icon(Icons.cake)),
+                Tab(text: 'Поливы', icon: Icon(Icons.water_drop)),
+                Tab(text: 'Рост', icon: Icon(Icons.trending_up)),
+                Tab(text: 'Уход', icon: Icon(Icons.local_florist)),
+                Tab(text: 'События', icon: Icon(Icons.calendar_today)),
+                Tab(text: 'Treemap', icon: Icon(Icons.view_quilt)),
+              ],
+            ),
+          ),
+          body: Column(
+            children: [
+              _buildSummaryCards(filteredPlants),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: [
+                    Tooltip(
+                      message: 'Фильтр по году посева',
+                      child: _buildYearFilter(),
+                    ),
+                    Tooltip(
+                      message: 'Фильтр по категории растений',
+                      child: _buildCategoryFilter(),
+                    ),
+                  ],
+                ),
+              ),
+              _buildTimeRangeSelector(),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: TabBarView(
+                    key: ValueKey(_tabController.index),
+                    controller: _tabController,
+                    children: [
+                      _buildStatusChart(filteredPlants),
+                      _buildSurvivalChart(filteredPlants),
+                      _buildCategoryChart(filteredPlants),
+                      _buildAgeDistributionChart(filteredPlants),
+                      _buildWateringHeatmap(),
+                      _buildGrowthChart(filteredPlants),
+                      _buildCareActivityChart(filteredPlants),
+                      _buildEventsCalendar(filteredPlants),
+                      _buildTreemapChart(filteredPlants),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTreemapChart(List<Plant> filteredPlants) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        List<Map<String, dynamic>> treemapData = [];
+        if (_treemapByStatus) {
+          final statusCounts = getStatusCounts(filteredPlants);
+          treemapData = statusCounts.entries
+              .map((e) => {'group': e.key, 'count': e.value})
+              .toList();
+        } else {
+          final categoryCounts = {
+            'Посевы': filteredPlants.where((p) => p.category == 'sown').length,
+            'Купленные':
+                filteredPlants.where((p) => p.category == 'purchased').length,
+          };
+          treemapData = categoryCounts.entries
+              .map((e) => {'group': e.key, 'count': e.value})
+              .toList();
+        }
+
+        if (treemapData.every((data) => data['count'] == 0)) {
+          return const Center(child: Text('Нет данных для отображения'));
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.5),
+                  offset: const Offset(4, 4),
+                  blurRadius: 10,
+                ),
+                BoxShadow(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  offset: const Offset(-4, -4),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Показать по: '),
+                      DropdownButton<bool>(
+                        value: _treemapByStatus,
+                        items: const [
+                          DropdownMenuItem(
+                            value: true,
+                            child: Text('Статусам'),
+                          ),
+                          DropdownMenuItem(
+                            value: false,
+                            child: Text('Категориям'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _treemapByStatus = value);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SfTreemap(
+                    dataCount: treemapData.length,
+                    weightValueMapper: (int index) {
+                      return treemapData[index]['count'].toDouble();
+                    },
+                    levels: [
+                      TreemapLevel(
+                        groupMapper: (int index) => treemapData[index]['group'],
+                        labelBuilder: (BuildContext context, TreemapTile tile) {
+                          return Center(
+                            child: Text(
+                              '${tile.group}\n${tile.weight.toInt()}',
+                              style: const TextStyle(color: Colors.white),
+                              textAlign: TextAlign.center,
+                            ),
+                          );
+                        },
+                        color: Colors.green,
+                        padding: const EdgeInsets.all(4.0),
+                      ),
+                    ],
+                    tooltipSettings: const TreemapTooltipSettings(
+                      color: Colors.black87,
+                    ),
+                    onSelectionChanged: (TreemapTile tile) {
+                      final group = tile.group;
+                      List<Plant> selectedPlants;
+                      String title;
+                      if (_treemapByStatus) {
+                        String status;
+                        switch (group) {
+                          case 'В коллекции':
+                            status = 'in_collection';
+                            break;
+                          case 'Растёт':
+                            status = 'growing';
+                            break;
+                          case 'Погиб':
+                            status = 'dead';
+                            break;
+                          case 'Не взошел':
+                            status = 'failed';
+                            break;
+                          default:
+                            status = group.toLowerCase();
+                        }
+                        selectedPlants = filteredPlants
+                            .where((p) => p.status == status)
+                            .toList();
+                        title = 'Растения со статусом: $group';
+                      } else {
+                        selectedPlants = filteredPlants
+                            .where((p) =>
+                                p.category ==
+                                (group == 'Посевы' ? 'sown' : 'purchased'))
+                            .toList();
+                        title = 'Растения категории: $group';
+                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => _PlantListScreen(
+                              plants: selectedPlants, title: title),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTimeRangeSelector() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildTimeRangeButton('Последний месяц'),
+          _buildTimeRangeButton('Последний год'),
+          _buildTimeRangeButton('Всё время'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeRangeButton(String label) {
+    return ElevatedButton(
+      onPressed: () {
+        if (_timeRange == label) {
+          return;
+        }
+        setState(() {
+          _timeRange = label;
+        });
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _timeRange == label ? Colors.blue : Colors.grey[300],
+      ),
+      child: Text(label),
+    );
+  }
+
+  Widget _buildSummaryCards(List<Plant> filteredPlants) {
+    final totalAge = filteredPlants.fold(0, (sum, p) => sum + p.age);
+    final averageAge = filteredPlants.isNotEmpty
+        ? (totalAge / filteredPlants.length).toStringAsFixed(1)
+        : 'Нет данных';
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          _buildNeumorphicCard(
+            'Всего растений',
+            filteredPlants.length.toString(),
+            Colors.blue,
+            Icons.eco,
+          ),
+          _buildNeumorphicCard(
+            'В коллекции',
+            filteredPlants
+                .where((p) => p.status == 'in_collection')
+                .length
+                .toString(),
+            Colors.green,
+            Icons.collections_bookmark,
+          ),
+          _buildNeumorphicCard(
+            'Средний возраст',
+            averageAge,
+            Colors.orange,
+            Icons.cake,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNeumorphicCard(
+      String title, String value, Color color, IconData icon) {
+    return Container(
+      width: 180,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.5),
+            offset: const Offset(4, 4),
+            blurRadius: 10,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.7),
+            offset: const Offset(-4, -4),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color.withValues(alpha: 0.8),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildYearFilter() {
+    final provider = context.watch<PlantProvider>();
+    final years = provider.getUniqueSowingYears();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          FilterChip(
+            label: Text(
+                _selectedYear == null ? 'Все годы' : 'Год: $_selectedYear'),
+            selected: _selectedYear != null,
+            onSelected: (selected) => _showYearSelectionDialog(context, years),
+            checkmarkColor: Colors.white,
+            selectedColor: Colors.blue,
+            labelStyle: TextStyle(
+                color: _selectedYear != null ? Colors.white : Colors.black),
+          ),
+          if (_selectedYear != null)
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () => setState(() => _selectedYear = null),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showYearSelectionDialog(BuildContext context, List<int> years) async {
+    final selected = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Выберите год'),
+        content: SizedBox(
+          width: 300,
+          child: StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              // Сохранено: Local setDialogState — эффективнее для диалога.
+              int? selected =
+                  _selectedYear; // Сохранено: Initial selected из состояния — не меняется.
+              return ListView.builder(
+                // Сохранено: ListView.builder для dynamic годов — не меняется, itemCount остаётся.
+                itemCount: years.length +
+                    1, // Сохранено: +1 для 'Все годы' — не меняется.
+                itemBuilder: (ctx, i) {
+                  // Сохранено: Builder логика — не меняется.
+                  if (i == 0) {
+                    // Сохранено: Первая опция 'Все годы' (null).
+                    return GestureDetector(
+                      onTap: () {
+                        // Сохранено: onTap вместо onChanged on Radio — M3-стандарт for custom selection.
+                        setDialogState(() {
+                          // Сохранено: Local setDialogState — обновляет selected.
+                          selected =
+                              null; // Сохранено: Значение null для 'Все годы' — не меняется.
+                        });
+                        Navigator.pop(context,
+                            null); // Сохранено: Возврат значения — не меняется.
+                      },
+                      child: InkWell(
+                        // Сохранено: InkWell for ripple on tap — M3-visual (selected style from theme).
+                        child: ListTile(
+                          // Сохранено: ListTile — title не меняется.
+                          title: const Text(
+                              'Все годы'), // Сохранено: Текст — не меняется.
+                          leading: Radio<int?>(
+                            // Сохранено: Radio for display — M3-стиль, no groupValue (deprecation fixed).
+                            value:
+                                null, // Сохранено: Значение null — не меняется.
+                          ), // Нет groupValue — visual via selected:.
+                          selected: selected ==
+                              null, // Сохранено: Visual selected (M3-color from theme) — не ломает логику.
+                        ),
+                      ),
+                    );
+                  }
+                  final year =
+                      years[i - 1]; // Сохранено: Логика года — не меняется.
+                  return GestureDetector(
+                    // Сохранено: GestureDetector for tap on dynamic year.
+                    onTap: () {
+                      setDialogState(() {
+                        selected = year;
+                      });
+                      Navigator.pop(context, year);
+                    },
+                    child: InkWell(
+                      child: ListTile(
+                        // Сохранено: ListTile для года — title динамический.
+                        title: Text(year
+                            .toString()), // Сохранено: Текст года — не меняется.
+                        leading: Radio<int>(
+                          // Сохранено: Radio for display.
+                          value:
+                              year, // Сохранено: Значение года — не меняется.
+                        ), // Нет groupValue — visual via selected:.
+                        selected: selected ==
+                            year, // Сохранено: Visual selected — не ломает логику.
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (selected != _selectedYear && mounted) {
+      setState(() => _selectedYear = selected);
+      _saveFilters();
+    }
+  }
+
+  Widget _buildCategoryFilter() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          FilterChip(
+            label: Text(_selectedCategory == null
+                ? 'Все категории'
+                : _selectedCategory == 'sown'
+                    ? 'Посевы'
+                    : 'Купленные'),
+            selected: _selectedCategory != null,
+            onSelected: (selected) => _showCategorySelectionDialog(context),
+            checkmarkColor: Colors.white,
+            selectedColor: Colors.blue,
+            labelStyle: TextStyle(
+                color: _selectedCategory != null ? Colors.white : Colors.black),
+          ),
+          if (_selectedCategory != null)
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () => setState(() => _selectedCategory = null),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showCategorySelectionDialog(BuildContext context) async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Выберите категорию'),
+        content: SizedBox(
+          width: 300,
+          child: StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              // Сохранено: Local setDialogState — эффективнее для диалога.
+              String? selected =
+                  _selectedCategory; // Сохранено: Initial selected из состояния — не меняется.
+              return ListView(
+                // Сохранено: ListView для опций — shrinkWrap остаётся.
+                shrinkWrap: true, // Сохранено: shrinkWrap — не меняется.
+                children: [
+                  // Сохранено: children с опциями — не меняется.
+                  GestureDetector(
+                    onTap: () {
+                      // Сохранено: onTap вместо onChanged on Radio — M3-стандарт for custom selection.
+                      setDialogState(() {
+                        // Сохранено: Local setDialogState — обновляет selected.
+                        selected =
+                            null; // Сохранено: Значение null для 'Все категории' — не меняется.
+                      });
+                      Navigator.pop(context,
+                          null); // Сохранено: Возврат значения — не меняется.
+                    },
+                    child: InkWell(
+                      // Сохранено: InkWell for ripple on tap — M3-visual (selected style from theme).
+                      child: ListTile(
+                        // Сохранено: ListTile — title не меняется.
+                        title: const Text(
+                            'Все категории'), // Сохранено: Текст — не меняется.
+                        leading: Radio<String?>(
+                          // Сохранено: Radio for display — M3-стиль, no groupValue (deprecation fixed).
+                          value:
+                              null, // Сохранено: Значение null — не меняется.
+                        ), // Нет groupValue — visual via selected:.
+                        selected: selected ==
+                            null, // Сохранено: Visual selected (M3-color from theme) — не ломает логику.
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        selected = 'sown';
+                      });
+                      Navigator.pop(context, 'sown');
+                    },
+                    child: InkWell(
+                      child: ListTile(
+                        title: const Text(
+                            'Посевы'), // Сохранено: Текст — не меняется.
+                        leading: Radio<String>(
+                          value: 'sown', // Сохранено: Значение — не меняется.
+                        ), // Нет groupValue — visual via selected:.
+                        selected: selected ==
+                            'sown', // Сохранено: Visual selected — не ломает логику.
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        selected = 'purchased';
+                      });
+                      Navigator.pop(context, 'purchased');
+                    },
+                    child: InkWell(
+                      child: ListTile(
+                        title: const Text(
+                            'Купленные'), // Сохранено: Текст — не меняется.
+                        leading: Radio<String>(
+                          value:
+                              'purchased', // Сохранено: Значение — не меняется.
+                        ), // Нет groupValue — visual via selected:.
+                        selected: selected ==
+                            'purchased', // Сохранено: Visual selected — не ломает логику.
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (selected != _selectedCategory && mounted) {
+      setState(() => _selectedCategory = selected);
+      _saveFilters();
+    }
+  }
+
+  Widget _buildStatusChart(List<Plant> filteredPlants) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final data = getStatusCounts(filteredPlants);
+        final total = data.values.reduce((a, b) => a + b).toDouble();
+
+        if (data.values.every((v) => v == 0)) {
+          return const Center(child: Text('Нет данных для отображения'));
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.5),
+                  offset: const Offset(4, 4),
+                  blurRadius: 10,
+                ),
+                BoxShadow(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  offset: const Offset(-4, -4),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: SfCircularChart(
+                title: const ChartTitle(text: 'Распределение по статусам'),
+                legend: const Legend(isVisible: true),
+                series: <PieSeries<ChartData, String>>[
+                  PieSeries<ChartData, String>(
+                    dataSource: data.entries
+                        .map((e) => ChartData(
+                              e.key,
+                              e.value.toDouble(),
+                              secondaryValue: total > 0
+                                  ? (e.value / total * 100).roundToDouble()
+                                  : 0,
+                            ))
+                        .toList(),
+                    xValueMapper: (ChartData d, _) => d.category,
+                    yValueMapper: (ChartData d, _) => d.value,
+                    dataLabelMapper: (ChartData d, _) =>
+                        '${d.category}: ${d.secondaryValue}%',
+                    dataLabelSettings: const DataLabelSettings(
+                      isVisible: true,
+                      labelPosition: ChartDataLabelPosition.outside,
+                    ),
+                    explode: true,
+                    explodeIndex: null,
+                    enableTooltip: true,
+                    onPointTap: (ChartPointDetails details) {
+                      if (details.pointIndex != null) {
+                        final status = data.keys.elementAt(details.pointIndex!);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (ctx) => _PlantListScreen(
+                              plants: filteredPlants
+                                  .where(
+                                      (p) => p.status == status.toLowerCase())
+                                  .toList(),
+                              title: 'Растения со статусом: $status',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSurvivalChart(List<Plant> filteredPlants) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final years = provider.getUniqueSowingYears();
+        final data = years.map((year) {
+          final total = provider.getPlantCountForYear(year);
+          final alive = filteredPlants
+              .where((p) =>
+                  p.year == year && !['dead', 'failed'].contains(p.status))
+              .length;
+          return ChartData(
+            year.toString(),
+            total > 0 ? (alive / total * 100) : 0.0,
+            secondaryValue: total.toDouble(),
+          );
+        }).toList();
+
+        if (data.isEmpty) {
+          return const Center(child: Text('Нет данных для отображения'));
+        }
+
+        return Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('Динамика выживаемости',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            SizedBox(
+              height: 300,
+              child: SfCartesianChart(
+                primaryXAxis: CategoryAxis(),
+                primaryYAxis: NumericAxis(
+                    maximum: 100,
+                    title: AxisTitle(text: 'Процент выживших (%)')),
+                axes: [
+                  NumericAxis(
+                    name: 'secondary',
+                    title: AxisTitle(text: 'Количество растений'),
+                    opposedPosition: true,
+                    isVisible: true,
+                  ),
+                ],
+                tooltipBehavior: TooltipBehavior(
+                  enable: true,
+                  builder: (dynamic data, dynamic point, dynamic series,
+                      int pointIndex, int seriesIndex) {
+                    final chartData = data as ChartData;
+                    return Text(
+                      'Год: ${chartData.category}\nВыживаемость: ${chartData.value.toStringAsFixed(1)}%\nВсего: ${chartData.secondaryValue.toInt()}',
+                      style: const TextStyle(color: Colors.white),
+                    );
+                  },
+                ),
+                series: <CartesianSeries>[
+                  LineSeries<ChartData, String>(
+                    dataSource: data,
+                    xValueMapper: (ChartData d, _) => d.category,
+                    yValueMapper: (ChartData d, _) => d.value,
+                    name: 'Выживаемость',
+                    markerSettings: const MarkerSettings(isVisible: true),
+                    color: Colors.green,
+                    onPointTap: (ChartPointDetails details) {
+                      if (details.pointIndex != null) {
+                        final year =
+                            int.parse(data[details.pointIndex!].category);
+                        final yearPlants = filteredPlants
+                            .where((p) => p.year == year)
+                            .toList();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (ctx) => _PlantListScreen(
+                              plants: yearPlants,
+                              title: 'Растения $year года',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  ColumnSeries<ChartData, String>(
+                    dataSource: data,
+                    xValueMapper: (ChartData d, _) => d.category,
+                    yValueMapper: (ChartData d, _) => d.secondaryValue,
+                    name: 'Всего растений',
+                    color: Colors.blue.withValues(alpha: 0.3),
+                    yAxisName: 'secondary',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryChart(List<Plant> filteredPlants) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final sownCount =
+            filteredPlants.where((p) => p.category == 'sown').length;
+        final purchasedCount =
+            filteredPlants.where((p) => p.category == 'purchased').length;
+
+        if (sownCount == 0 && purchasedCount == 0) {
+          return const Center(child: Text('Нет данных для отображения'));
+        }
+
+        return SfCircularChart(
+          title: const ChartTitle(text: 'Посевы vs Купленные'),
+          series: <PieSeries<ChartData, String>>[
+            PieSeries<ChartData, String>(
+              dataSource: [
+                ChartData('Посевы', sownCount.toDouble()),
+                ChartData('Купленные', purchasedCount.toDouble()),
+              ],
+              xValueMapper: (ChartData d, _) => d.category,
+              yValueMapper: (ChartData d, _) => d.value,
+              dataLabelSettings: const DataLabelSettings(isVisible: true),
+              enableTooltip: true,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAgeDistributionChart(List<Plant> filteredPlants) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final filteredPlantsForAge = _selectedYear != null
+            ? filteredPlants.where((p) => p.year == _selectedYear!).toList()
+            : filteredPlants;
+
+        final ageGroups =
+            filteredPlantsForAge.fold<Map<int, int>>({}, (map, plant) {
+          map[plant.age] = (map[plant.age] ?? 0) + 1;
+          return map;
+        });
+
+        final rangeGroups = {
+          '0-1': filteredPlantsForAge
+              .where((p) => p.age >= 0 && p.age <= 1)
+              .length,
+          '1-3':
+              filteredPlantsForAge.where((p) => p.age > 1 && p.age <= 3).length,
+          '3-5':
+              filteredPlantsForAge.where((p) => p.age > 3 && p.age <= 5).length,
+          '5+': filteredPlantsForAge.where((p) => p.age > 5).length,
+        };
+
+        if (ageGroups.isEmpty && rangeGroups.values.every((v) => v == 0)) {
+          return const Center(child: Text('Нет данных для отображения'));
+        }
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Группировать по диапазонам: '),
+                  Switch(
+                      value: _groupByRange,
+                      onChanged: (value) =>
+                          setState(() => _groupByRange = value)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Tooltip(
+                message: 'Распределение растений по возрасту',
+                child: SfCartesianChart(
+                  title: const ChartTitle(text: 'Распределение по возрасту'),
+                  primaryXAxis: _groupByRange
+                      ? CategoryAxis(
+                          title: AxisTitle(text: 'Диапазон возраста'))
+                      : NumericAxis(title: AxisTitle(text: 'Возраст (лет)')),
+                  primaryYAxis:
+                      NumericAxis(title: AxisTitle(text: 'Количество')),
+                  series: <ColumnSeries<ChartData, dynamic>>[
+                    ColumnSeries<ChartData, dynamic>(
+                      dataSource: _groupByRange
+                          ? rangeGroups.entries
+                              .map((e) => ChartData(e.key, e.value.toDouble()))
+                              .toList()
+                          : ageGroups.entries
+                              .map((e) => ChartData(
+                                  e.key.toString(), e.value.toDouble()))
+                              .toList(),
+                      xValueMapper: (ChartData d, _) =>
+                          _groupByRange ? d.category : int.parse(d.category),
+                      yValueMapper: (ChartData d, _) => d.value,
+                      onPointTap: (ChartPointDetails details) {
+                        if (details.pointIndex != null) {
+                          final index = details.pointIndex!;
+                          List<Plant> selectedPlants;
+                          String title;
+                          if (_groupByRange) {
+                            final rangeKey = rangeGroups.keys.elementAt(index);
+                            selectedPlants = filteredPlantsForAge.where((p) {
+                              if (rangeKey == '0-1') {
+                                return p.age >= 0 && p.age <= 1;
+                              }
+                              if (rangeKey == '1-3') {
+                                return p.age > 1 && p.age <= 3;
+                              }
+                              if (rangeKey == '3-5') {
+                                return p.age > 3 && p.age <= 5;
+                              }
+                              return p.age > 5;
+                            }).toList();
+                            title = 'Растения возраста $rangeKey лет';
+                          } else {
+                            final age = ageGroups.keys.elementAt(index);
+                            selectedPlants = filteredPlantsForAge
+                                .where((p) => p.age == age)
+                                .toList();
+                            title = 'Растения возраста $age лет';
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (ctx) => _PlantListScreen(
+                                  plants: selectedPlants, title: title),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildWateringHeatmap() {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final events = provider.globalWateringDates.fold<Map<DateTime, int>>({},
+            (map, date) {
+          final normalized = DateTime(date.year, date.month, date.day);
+          map[normalized] = (map[normalized] ?? 0) + 1;
+          return map;
+        });
+        if (events.isEmpty) {
+          return const Center(child: Text('Нет данных о поливах'));
+        }
+        return Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('Активность поливов',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            Expanded(
+              child: SingleChildScrollView(child: _buildCustomHeatmap(events)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCustomHeatmap(Map<DateTime, int> events) {
+    final now = DateTime.now();
+    final startDate = DateTime(now.year, now.month - 3, 1);
+    final endDate = DateTime(now.year, now.month + 1, 0);
+
+    final List<DateTime> days = [];
+    for (var date = startDate;
+        date.isBefore(endDate);
+        date = date.add(const Duration(days: 1))) {
+      days.add(date);
+    }
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: List.generate(3, (index) {
+            final monthDate = DateTime(now.year, now.month - 2 + index, 1);
+            return Text(DateFormat('MMMM yyyy').format(monthDate));
+          }),
+        ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            childAspectRatio: 1,
+          ),
+          itemCount: days.length,
+          itemBuilder: (context, index) {
+            final date = days[index];
+            final count = events[date] ?? 0;
+            final color = _getHeatmapColor(count);
+            return Tooltip(
+              message:
+                  '${date.day}.${date.month}.${date.year}\nПоливов: $count',
+              child: Container(
+                margin: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Center(
+                  child: Text(
+                    '${date.day}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Color _getHeatmapColor(int count) {
+    if (count == 0) return Colors.grey[300]!;
+    if (count <= 2) return Colors.green[100]!;
+    if (count <= 5) return Colors.green[300]!;
+    return Colors.green[500]!;
+  }
+
+  Widget _buildGrowthChart(List<Plant> filteredPlants) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final monthlyGrowth = <String, int>{};
+        for (var plant in filteredPlants) {
+          DateTime? additionDate;
+          if (plant.germinationHistory.isNotEmpty) {
+            additionDate = plant.germinationHistory.first.date;
+          } else if (plant.wateringDates.isNotEmpty) {
+            additionDate = plant.wateringDates.first;
+          } else {
+            additionDate = DateTime(plant.year, 1, 1);
+          }
+          final month = DateTime(additionDate.year, additionDate.month, 1)
+              .toString()
+              .substring(0, 7);
+          monthlyGrowth[month] = (monthlyGrowth[month] ?? 0) + 1;
+        }
+
+        final sortedData = monthlyGrowth.entries
+            .map((e) => ChartData(e.key, e.value.toDouble()))
+            .toList()
+            .sorted((a, b) => a.category.compareTo(b.category));
+
+        if (sortedData.isEmpty) {
+          return const Center(child: Text('Нет данных для отображения'));
+        }
+
+        return Tooltip(
+          message: 'Рост коллекции по месяцам',
+          child: SfCartesianChart(
+            title: const ChartTitle(text: 'Рост коллекции'),
+            primaryXAxis: CategoryAxis(title: AxisTitle(text: 'Месяц')),
+            primaryYAxis:
+                NumericAxis(title: AxisTitle(text: 'Количество растений')),
+            series: <LineSeries<ChartData, String>>[
+              LineSeries<ChartData, String>(
+                dataSource: sortedData,
+                xValueMapper: (ChartData d, _) => d.category,
+                yValueMapper: (ChartData d, _) => d.value,
+                markerSettings: const MarkerSettings(isVisible: true),
+                enableTooltip: true,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCareActivityChart(List<Plant> filteredPlants) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final monthlyCare = <String, Map<String, int>>{};
+        for (var date in provider.globalWateringDates) {
+          final key =
+              DateTime(date.year, date.month, 1).toString().substring(0, 7);
+          monthlyCare[key] = monthlyCare[key] ?? {'Полив': 0, 'Пересадка': 0};
+          monthlyCare[key]!['Полив'] = monthlyCare[key]!['Полив']! + 1;
+        }
+        for (var plant in filteredPlants) {
+          if (plant.lastRepotting != null) {
+            final key = DateTime(
+                    plant.lastRepotting!.year, plant.lastRepotting!.month, 1)
+                .toString()
+                .substring(0, 7);
+            monthlyCare[key] = monthlyCare[key] ?? {'Полив': 0, 'Пересадка': 0};
+            monthlyCare[key]!['Пересадка'] =
+                monthlyCare[key]!['Пересадка']! + 1;
+          }
+        }
+
+        final sortedWateringData = monthlyCare.entries
+            .map((e) => ChartData(e.key, e.value['Полив']!.toDouble()))
+            .toList()
+            .sorted((a, b) => a.category.compareTo(b.category));
+        final sortedRepottingData = monthlyCare.entries
+            .map((e) => ChartData(e.key, e.value['Пересадка']!.toDouble()))
+            .toList()
+            .sorted((a, b) => a.category.compareTo(b.category));
+
+        if (sortedWateringData.isEmpty && sortedRepottingData.isEmpty) {
+          return const Center(child: Text('Нет данных для отображения'));
+        }
+
+        return Tooltip(
+          message: 'Активность ухода по месяцам',
+          child: SfCartesianChart(
+            title: const ChartTitle(text: 'Активность ухода'),
+            primaryXAxis: CategoryAxis(title: AxisTitle(text: 'Месяц')),
+            primaryYAxis:
+                NumericAxis(title: AxisTitle(text: 'Количество действий')),
+            legend: const Legend(isVisible: true),
+            series: <ColumnSeries<ChartData, String>>[
+              ColumnSeries<ChartData, String>(
+                dataSource: sortedWateringData,
+                xValueMapper: (ChartData d, _) => d.category,
+                yValueMapper: (ChartData d, _) => d.value,
+                name: 'Полив',
+                color: Colors.blue,
+                enableTooltip: true,
+              ),
+              ColumnSeries<ChartData, String>(
+                dataSource: sortedRepottingData,
+                xValueMapper: (ChartData d, _) => d.category,
+                yValueMapper: (ChartData d, _) => d.value,
+                name: 'Пересадка',
+                color: Colors.green,
+                enableTooltip: true,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEventsCalendar(List<Plant> filteredPlants) {
+    return Consumer<PlantProvider>(
+      builder: (ctx, provider, _) {
+        final now = DateTime.now();
+        final startDate = DateTime(now.year, now.month, 1);
+        final dayCount = DateTime(now.year, now.month + 1, 0).day;
+
+        final events = <DateTime, String>{};
+        for (var plant in filteredPlants) {
+          for (var date in plant.wateringDates) {
+            final normalized = DateTime(date.year, date.month, date.day);
+            if (normalized.month == now.month && normalized.year == now.year) {
+              events[normalized] = 'Полив';
+            }
+          }
+          if (plant.lastRepotting != null) {
+            final normalized = DateTime(plant.lastRepotting!.year,
+                plant.lastRepotting!.month, plant.lastRepotting!.day);
+            if (normalized.month == now.month && normalized.year == now.year) {
+              events[normalized] = 'Пересадка';
+            }
+          }
+        }
+
+        if (events.isEmpty) {
+          return const Center(child: Text('Нет данных для отображения'));
+        }
+
+        return Tooltip(
+          message: 'Календарь событий за текущий месяц',
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Календарь событий',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.4,
+                child: SingleChildScrollView(
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 7,
+                      mainAxisSpacing: 2,
+                      crossAxisSpacing: 2,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: dayCount,
+                    itemBuilder: (context, index) {
+                      final date = startDate.add(Duration(days: index));
+                      final event = events[date];
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: event == null
+                              ? Colors.grey[200]
+                              : (event == 'Полив' ? Colors.blue : Colors.green),
+                          border: Border.all(color: Colors.black, width: 0.5),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${date.day}',
+                            style: TextStyle(
+                                color: event == null
+                                    ? Colors.black
+                                    : Colors.white),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class ChartData {
+  final String category;
+  final double value;
+  final double secondaryValue;
+
+  ChartData(this.category, this.value, {this.secondaryValue = 0.0});
+}
+
+class _PlantListScreen extends StatelessWidget {
+  final List<Plant> plants;
+  final String title;
+
+  const _PlantListScreen({required this.plants, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: ListView.builder(
+        itemCount: plants.length,
+        itemBuilder: (ctx, i) => ListTile(
+          title: Text(plants[i].latinName),
+          subtitle: Text(plants[i].displayId),
+        ),
+      ),
+    );
+  }
+}
