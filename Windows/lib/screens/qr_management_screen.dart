@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
+// TODO(окружение): import 'package:printing/printing.dart'; // Временно отключено из-за ошибки сборки pdfium
 import 'package:provider/provider.dart';
 import '../models/plant.dart';
 import '../models/qr_code_file.dart';
@@ -185,9 +185,11 @@ class _QRManagementScreenState extends State<QRManagementScreen>
       case 'print':
         final pdfFile = File(file.filePath);
         if (await pdfFile.exists()) {
-          await Printing.layoutPdf(
-            onLayout: (_) => pdfFile.readAsBytes(),
-          );
+          // TODO(окружение): Временно отключена печать из-за ошибки сборки pdfium
+          // await Printing.layoutPdf(
+          //   onLayout: (_) => pdfFile.readAsBytes(),
+          // );
+          _showSnackBar('Файл доступен для печати через системное приложение');
         } else {
           _showSnackBar('Файл не найден');
         }

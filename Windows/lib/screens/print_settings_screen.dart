@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+// TODO(окружение): import 'package:printing/printing.dart'; // Временно отключено из-за ошибки сборки pdfium
 import 'package:path_provider/path_provider.dart';
 import '../models/plant.dart';
 import '../models/qr_code_file.dart';
@@ -224,8 +224,20 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
 
   Future<void> _printPdf() async {
     final pdf = await _generatePdf();
-    await Printing.layoutPdf(
-      onLayout: (format) => pdf.save(),
+    
+    // TODO(окружение): Временно отключена печать из-за ошибки сборки pdfium
+    // await Printing.layoutPdf(
+    //   onLayout: (format) => pdf.save(),
+    // );
+    
+    // Вместо печати сохраняем PDF файл
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/qr_labels_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    await file.writeAsBytes(await pdf.save());
+    
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('PDF сохранен: ${file.path}')),
     );
   }
 

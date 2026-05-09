@@ -44,7 +44,9 @@ dependencies:
   # Задача 1.1: QR-этикетки
   qr_flutter: ^4.1.0  # Генерация QR кодов
   pdf: ^3.10.8  # Генерация PDF
-  printing: ^5.13.4  # Печать PDF
+  # TODO(окружение): printing: ^5.13.4  # Печать PDF - временно отключено из-за ошибки сборки pdfium
+  # Проблема: Build step for pdfium failed даже с установленной VS2022
+  # Решение: Вернуть после исправления проблем с pdfium или использования альтернативного пакета
 
 dev_dependencies:
   flutter_test:
