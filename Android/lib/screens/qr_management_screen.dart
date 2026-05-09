@@ -7,6 +7,7 @@ import '../models/qr_code_file.dart';
 import '../providers/plant_provider.dart';
 import 'batch_qr_creation_screen.dart';
 import 'print_settings_screen.dart';
+import 'select_plants_for_print_screen.dart';
 
 /// Экран управления QR-кодами и файлами печати
 class QRManagementScreen extends StatefulWidget {
@@ -42,6 +43,20 @@ class _QRManagementScreenState extends State<QRManagementScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Управление QR-кодами'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            tooltip: 'Создать лист для печати',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (ctx) => const SelectPlantsForPrintScreen(),
+                ),
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
