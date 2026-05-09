@@ -1,0 +1,1038 @@
+# ПЛАН РЕФАКТОРИНГА MY CACTUS
+
+**Дата создания:** 2026-05-09
+**Дата обновления:** 2026-05-09
+**Статус:** В планировании
+**Общая оценка:** 10-12 недель
+
+---
+
+## Связанные файлы
+
+- [PROMPT.md](PROMPT.md) - инструкции для работы
+- [CURRENT_STATUS.md](CURRENT_STATUS.md) - текущий статус
+- [03-CURRENT_REFACTORING_STEP.md](03-CURRENT_REFACTORING_STEP.md) - текущий шаг
+- [00-BEFORE_REFACTORING.md](00-BEFORE_REFACTORING.md) - состояние до рефакторинга
+- [01-AFTER_REFACTORING.md](01-AFTER_REFACTORING.md) - состояние после рефакторинга
+- [LESSONS_LEARNED.md](LESSONS_LEARNED.md) - ошибки и уроки
+
+---
+
+# СОДЕРЖАНИЕ
+
+1. [Общая информация](#общая-информация)
+2. [Фазы рефакторинга](#фазы-рефакторинга)
+3. [Детальный план по фазам](#детальный-план-по-фазам)
+4. [Приоритеты](#приоритеты)
+5. [Стратегия выполнения](#стратегия-выполнения)
+
+---
+
+# ОБЩАЯ ИНФОРМАЦИЯ
+
+## Цель рефакторинга
+Улучшение архитектуры, производительности, надежности и поддерживаемости приложений Windows и Android.
+
+## Подход
+- Пошаговый рефакторинг без потери функциональности
+- Каждое изменение должно быть тестировано
+- Сохранение всех существующих функций
+- Документирование каждого шага
+
+## Риски
+- Потеря данных при миграции на Hive
+- Регрессии функциональности
+- Долгое время блокировки новых функций
+- Ошибки в build_runner при code generation
+- Проблемы с изолятами (memory leaks, deadlocks)
+- Превышение сроков из-за непредвиденных сложностей
+- Сложность отладки изолятов
+- Проблемы с Firebase Crashlytics конфигурацией
+- Проблемы с CI/CD пайплайном на разных платформах
+
+## Митигация рисков
+- Автоматические бэкапы перед критическими изменениями
+- Комплексное тестирование после каждого шага
+- Возможность отката к предыдущему состоянию
+- Тестирование build_runner на небольшом наборе данных перед запуском на всем проекте
+- Профилирование изолятов с Flutter DevTools
+- Приоритизация P0 задач, возможность остановки на любом этапе
+- Логирование всех операций в изолятах
+- Тестирование Firebase конфигурации на dev окружении
+- Пошаговое внедрение CI/CD с тестированием на каждом шаге
+
+---
+
+# ФАЗЫ РЕФАКТОРИНГА
+
+## Фаза 1: Критические улучшения (P0) - 4-5 недель
+
+**Цель:** Решить критические архитектурные проблемы
+
+**Улучшения:**
+1. Разделение PlantProvider (2230 строк)
+2. Repository Pattern
+3. Замена SharedPreferences на Hive
+4. Dependency Injection (GetIt)
+5. Разделение CloudStorageProvider
+6. Разбиение PlantCardScreen
+7. Обработка ошибок (ErrorHandler)
+8. Миграция данных
+9. Централизация констант
+
+**Приоритет:** 🔴 Критично
+
+## Фаза 2: Важные улучшения (P1) - 3-4 недели
+
+**Цель:** Улучшить UX и надежность
+
+**Улучшения:**
+1. go_router навигация
+2. UiState pattern (loading/error)
+3. Структурированное логирование
+4. Кэширование изображений
+5. Isolates для тяжелых операций
+6. Оптимизация дерева виджетов
+7. Code Generation (freezed, json_serializable)
+8. Строгий линтер
+
+**Приоритет:** 🟡 Важно
+
+## Фаза 3: Желательные улучшения (P2) - 3-4 недели
+
+**Цель:** Подготовка к масштабированию
+
+**Улучшения:**
+1. Тестирование (unit/widget/integration)
+2. Accessibility
+3. CI/CD пайплайн
+4. Crash Reporting (Firebase Crashlytics)
+5. Документация API
+
+**Приоритет:** 🟢 Желательно
+
+## Фаза 4: Будущее (P3) - по необходимости
+
+**Цель:** Подготовка к будущим фичам
+
+**Улучшения:**
+1. Feature flags
+2. Система прав доступа (multi-user)
+
+**Приоритет:** 🔵 Будущее
+
+---
+
+# ДЕТАЛЬНЫЙ ПЛАН ПО ФАЗАМ
+
+## ФАЗА 1: КРИТИЧЕСКИЕ УЛУЧШЕНИЯ (P0)
+
+### 1.1 Подготовка инфраструктуры (1 день)
+
+**Задачи:**
+1.1.1 Создать структуру папок core/, data/, domain/, presentation/, services/
+1.1.2 Добавить новые зависимости в pubspec.yaml (оба проекта)
+1.1.3 Запустить flutter pub get (оба проекта)
+1.1.4 Проверить flutter analyze (оба проекта)
+
+**Зависимости:**
+```yaml
+dependencies:
+  get_it: ^7.6.0
+  injectable: ^2.3.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  logger: ^2.0.0+1
+
+dev_dependencies:
+  injectable_generator: ^2.4.1
+  build_runner: ^2.4.8
+  hive_generator: ^2.0.1
+```
+
+**Проверка:** flutter analyze проходит без ошибок
+
+---
+
+### 1.2 Создание core/error - Обработка ошибок (1 день)
+
+**Задачи:**
+1.2.1 Создать core/error/failures.dart с абстрактными классами ошибок
+1.2.2 Создать core/error/exceptions.dart с пользовательскими исключениями
+1.2.3 Создать core/error/error_handler.dart с централизованной обработкой
+1.2.4 Создать core/error/error_boundary.dart для UI
+
+**Файлы:**
+- `core/error/failures.dart`
+- `core/error/exceptions.dart`
+- `core/error/error_handler.dart`
+- `core/error/error_boundary.dart`
+
+**Проверка:** flutter analyze проходит без ошибок
+
+---
+
+### 1.3 Создание core/logger - Логирование (0.5 дня)
+
+**Задачи:**
+1.3.1 Создать core/logger/app_logger.dart с AppLogger
+1.3.2 Определить категории логов (SYNC, DB, API, UI, PHOTO, NOTIFICATION)
+1.3.3 Заменить первые print() на AppLogger calls в PlantProvider
+
+**Файлы:**
+- `core/logger/app_logger.dart`
+
+**Проверка:** flutter analyze проходит без ошибок
+
+---
+
+### 1.4 Создание core/config - Централизация констант (1 день)
+
+**Задачи:**
+1.4.1 Создать core/config/app_constants.dart
+1.4.2 Создать core/config/api_config.dart
+1.4.3 Создать core/config/route_config.dart
+1.4.4 Создать core/config/theme_config.dart
+1.4.5 Перенести константы из app_constants.dart в новые файлы
+1.4.6 Заменить хардкод констант в PlantProvider и CloudStorageProvider
+
+**Файлы:**
+- `core/config/app_constants.dart`
+- `core/config/api_config.dart`
+- `core/config/route_config.dart`
+- `core/config/theme_config.dart`
+
+**Проверка:** flutter analyze проходит без ошибок, все константы централизованы
+
+---
+
+### 1.5 Создание core/utils - Утилиты (0.5 дня)
+
+**Задачи:**
+1.5.1 Создать core/utils/date_formatter.dart
+1.5.2 Создать core/utils/validators.dart
+1.5.3 Перенести общие утилиты из utils/
+
+**Файлы:**
+- `core/utils/date_formatter.dart`
+- `core/utils/validators.dart`
+
+**Проверка:** flutter analyze проходит без ошибок
+
+---
+
+### 1.6 Создание Hive Database (2 дня)
+
+**Задачи:**
+1.6.1 Создать data/models/plant_dto.dart с @HiveType аннотациями
+1.6.2 Создать data/models/qr_code_dto.dart с @HiveType аннотациями
+1.6.3 Создать data/models/note_dto.dart с @HiveType аннотациями
+1.6.4 Создать data/models/wintering_log_entry_dto.dart с @HiveType аннотациями
+1.6.5 Создать data/models/gbif_occurrence_dto.dart с @HiveType аннотациями
+1.6.6 Создать data/datasources/local/hive_database.dart
+1.6.7 Создать box'ы для plants, qr_codes, notes, wintering_logs, gbif_cache
+1.6.8 Запустить build_runner для генерации адаптеров
+1.6.9 Инициализировать Hive в main.dart
+1.6.10 Создать тестовую миграцию SharedPreferences → Hive
+1.6.11 Добавить индексы для быстрого поиска (по permanentId, displayId, статусу)
+
+**Файлы:**
+- `data/models/plant_dto.dart`
+- `data/models/qr_code_dto.dart`
+- `data/models/note_dto.dart`
+- `data/models/wintering_log_entry_dto.dart`
+- `data/models/gbif_occurrence_dto.dart`
+- `data/datasources/local/hive_database.dart`
+
+**Проверка:**
+- build_runner прошел без ошибок
+- Hive инициализируется корректно
+- Миграция тестовых данных работает
+- Индексы работают корректно
+
+---
+
+### 1.7 Создание Repository Pattern (2 дня)
+
+**Задачи:**
+1.7.1 Создать domain/repositories/plant_repository.dart (абстрактный)
+1.7.2 Создать data/repositories/plant_repository_impl.dart
+1.7.3 Создать data/datasources/local/plant_local_datasource.dart
+1.7.4 Реализовать PlantRepositoryImpl с Hive (CRUD операции)
+1.7.5 Создать domain/repositories/watering_repository.dart
+1.7.6 Создать domain/repositories/photo_repository.dart
+1.7.7 Создать domain/repositories/sync_repository.dart
+1.7.8 Создать domain/repositories/note_repository.dart
+1.7.9 Создать domain/repositories/wintering_repository.dart
+1.7.10 Создать domain/repositories/qr_code_repository.dart
+1.7.11 Создать domain/repositories/batch_repository.dart
+1.7.12 Добавить NetworkInfo для проверки интернет-соединения
+1.7.13 Создать пользовательские исключения (DuplicateIdException, ValidationException, OAuth2Exception)
+
+**Файлы:**
+- `domain/repositories/plant_repository.dart`
+- `data/repositories/plant_repository_impl.dart`
+- `data/datasources/local/plant_local_datasource.dart`
+- `domain/repositories/watering_repository.dart`
+- `domain/repositories/photo_repository.dart`
+- `domain/repositories/sync_repository.dart`
+- `domain/repositories/note_repository.dart`
+- `domain/repositories/wintering_repository.dart`
+- `domain/repositories/qr_code_repository.dart`
+- `domain/repositories/batch_repository.dart`
+- `core/network/network_info.dart`
+- `core/error/exceptions.dart` (DuplicateIdException, ValidationException, OAuth2Exception)
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Unit тесты для репозиториев (если есть)
+- NetworkInfo работает корректно
+
+---
+
+### 1.8 Создание Data Migration Manager (1.5 дня)
+
+**Задачи:**
+1.8.1 Создать data/migrations/data_migration_manager.dart
+1.8.2 Реализовать миграцию SharedPreferences → Hive (все растения, QR-коды, заметки)
+1.8.3 Реализовать миграцию с версионированием (currentVersion = 1)
+1.8.4 Реализовать автоматический бэкап перед миграцией
+1.8.5 Реализовать миграцию поля lastModified (v1)
+1.8.6 Добавить миграцию в main.dart при запуске
+1.8.7 Протестировать миграцию на реальных данных
+1.8.8 Добавить проверку целостности данных после миграции
+1.8.9 Реализовать возможность отката миграции
+
+**Файлы:**
+- `data/migrations/data_migration_manager.dart`
+- `data/migrations/migration_v1_add_last_modified.dart`
+
+**Проверка:**
+- Миграция работает без потери данных
+- Версионирование работает корректно
+- Бэкап создается автоматически
+- Откат работает корректно
+
+---
+
+### 1.9 Создание Dependency Injection (1 день)
+
+**Задачи:**
+1.9.1 Создать injection_container.dart
+1.9.2 Зарегистрировать все репозитории
+1.9.3 Зарегистрировать все сервисы
+1.9.4 Зарегистрировать провайдеры
+1.9.5 Интегрировать в main.dart
+1.9.6 Запустить build_runner для генерации DI кода
+
+**Файлы:**
+- `injection_container.dart`
+
+**Проверка:**
+- build_runner прошел без ошибок
+- Приложение запускается с DI
+- Все зависимости резолвятся корректно
+
+---
+
+### 1.10 Разделение PlantProvider (3 дня)
+
+**Задачи:**
+1.10.1 Создать presentation/providers/plant_provider.dart (только CRUD)
+1.10.2 Создать presentation/providers/watering_provider.dart
+1.10.3 Создать presentation/providers/wintering_provider.dart
+1.10.4 Создать presentation/providers/photo_provider.dart
+1.10.5 Создать presentation/providers/batch_provider.dart
+1.10.6 Создать presentation/providers/sync_provider.dart
+1.10.7 Создать presentation/providers/cache_manager.dart
+1.10.8 Перенести логику из старого PlantProvider в новые провайдеры
+1.10.9 Обновить все экраны для использования новых провайдеров
+1.10.10 Удалить старый PlantProvider
+
+**Файлы:**
+- `presentation/providers/plant_provider.dart` (~300 строк)
+- `presentation/providers/watering_provider.dart` (~250 строк)
+- `presentation/providers/wintering_provider.dart` (~200 строк)
+- `presentation/providers/photo_provider.dart` (~300 строк)
+- `presentation/providers/batch_provider.dart` (~200 строк)
+- `presentation/providers/sync_provider.dart` (~250 строк)
+- `presentation/providers/cache_manager.dart` (~150 строк)
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Все функции работают как раньше
+- Тестирование на обеих платформах
+
+---
+
+### 1.11 Разделение CloudStorageProvider (2 дня)
+
+**Задачи:**
+1.11.1 Создать services/auth/auth_service.dart
+1.11.2 Создать services/auth/yandex_auth_service.dart
+1.11.3 Создать services/auth/token_storage.dart
+1.11.4 Создать services/cloud/cloud_storage_service.dart
+1.11.5 Создать services/cloud/yandex_disk_service.dart
+1.11.6 Создать services/cloud/cloud_file.dart
+1.11.7 Создать services/sync/sync_manager.dart
+1.11.8 Создать services/sync/conflict_resolver.dart
+1.11.9 Создать services/sync/sync_status.dart
+1.11.10 Создать services/platform/deep_link_handler.dart
+1.11.11 Создать services/platform/local_server.dart
+1.11.12 Создать services/platform/platform_adapter.dart
+1.11.13 Перенести логику из старого CloudStorageProvider
+1.11.14 Обновить экраны для использования новых сервисов
+1.11.15 Удалить старый CloudStorageProvider
+
+**Файлы:**
+- `services/auth/auth_service.dart`
+- `services/auth/yandex_auth_service.dart`
+- `services/auth/token_storage.dart`
+- `services/cloud/cloud_storage_service.dart`
+- `services/cloud/yandex_disk_service.dart`
+- `services/cloud/cloud_file.dart`
+- `services/sync/sync_manager.dart`
+- `services/sync/conflict_resolver.dart`
+- `services/sync/sync_status.dart`
+- `services/platform/deep_link_handler.dart`
+- `services/platform/local_server.dart`
+- `services/platform/platform_adapter.dart`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- OAuth2 работает на обеих платформах
+- Синхронизация работает как раньше
+
+---
+
+### 1.12 Разбиение PlantCardScreen (2 дня)
+
+**Задачи:**
+1.12.1 Создать presentation/screens/plant_card/plant_card_screen.dart
+1.12.2 Создать presentation/screens/plant_card/tabs/overview_tab.dart
+1.12.3 Создать presentation/screens/plant_card/tabs/care_tab.dart
+1.12.4 Создать presentation/screens/plant_card/tabs/gallery_tab.dart
+1.12.5 Создать presentation/screens/plant_card/tabs/notes_tab.dart
+1.12.6 Создать presentation/screens/plant_card/tabs/map_tab.dart
+1.12.7 Создать presentation/screens/plant_card/tabs/seedlings_tab.dart
+1.12.8 Создать виджеты для PlantCardScreen
+1.12.9 Перенести логику из старого PlantCardScreen
+1.12.10 Обновить навигацию
+1.12.11 Удалить старый PlantCardScreen
+
+**Файлы:**
+- `presentation/screens/plant_card/plant_card_screen.dart` (~150 строк)
+- `presentation/screens/plant_card/tabs/overview_tab.dart` (~250 строк)
+- `presentation/screens/plant_card/tabs/care_tab.dart` (~300 строк)
+- `presentation/screens/plant_card/tabs/gallery_tab.dart` (~250 строк)
+- `presentation/screens/plant_card/tabs/notes_tab.dart` (~200 строк)
+- `presentation/screens/plant_card/tabs/map_tab.dart` (~200 строк)
+- `presentation/screens/plant_card/tabs/seedlings_tab.dart` (~200 строк)
+- Виджеты в `presentation/screens/plant_card/widgets/`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Все вкладки работают как раньше
+- Тестирование на обеих платформах
+
+---
+
+### 1.13 Создание сервисного слоя для API (1 день)
+
+**Задачи:**
+1.13.1 Создать services/api/gbif_service.dart
+1.13.2 Создать services/api/llifle_service.dart
+1.13.3 Создать services/api/weather_service.dart
+1.13.4 Перенести логику из utils/gbif_utils.dart
+1.13.5 Перенести логику из utils/llifle_utils.dart
+1.13.6 Перенести логику из utils/weather_service.dart
+1.13.7 Обновить провайдеры для использования сервисов
+1.13.8 Удалить старые utils
+
+**Файлы:**
+- `services/api/gbif_service.dart`
+- `services/api/llifle_service.dart`
+- `services/api/weather_service.dart`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Парсинг GBIF работает
+- Парсинг Llifle работает
+- Погода работает
+
+---
+
+### 1.14 Создание UiState pattern (1 день)
+
+**Задачи:**
+1.14.1 Создать core/ui/ui_state.dart
+1.14.2 Интегрировать UiState в PlantProvider
+1.14.3 Интегрировать UiState в WateringProvider
+1.14.4 Обновить UI для отображения loading/error/success состояний
+1.14.5 Добавить retry логику
+
+**Файлы:**
+- `core/ui/ui_state.dart`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Loading states отображаются
+- Error states отображаются с retry
+- Success states отображаются
+
+---
+
+### 1.15 Финальное тестирование Фазы 1 (1 день)
+
+**Задачи:**
+1.15.1 Полное тестирование всех функций (чек-лист из 00-BEFORE_REFACTORING.md)
+1.15.2 Тестирование на Android
+1.15.3 Тестирование на Windows
+1.15.4 Проверка производительности (загрузка, фильтрация)
+1.15.5 flutter analyze (оба проекта)
+1.15.6 Создание бэкапа перед Фазой 2
+
+**Проверка:**
+- Все функции работают
+- Производительность улучшилась
+- Нет регрессий
+
+---
+
+## ФАЗА 2: ВАЖНЫЕ УЛУЧШЕНИЯ (P1)
+
+### 2.1 go_router навигация (2 дня)
+
+**Задачи:**
+2.1.1 Добавить go_router в pubspec.yaml
+2.1.2 Создать presentation/routers/app_router.dart
+2.1.3 Определить все маршруты
+2.1.4 Заменить Navigator.push на go_router
+2.1.5 Реализовать deep linking
+2.1.6 Тестирование навигации
+
+**Файлы:**
+- `presentation/routers/app_router.dart`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Навигация работает
+- Deep linking работает
+
+---
+
+### 2.2 Структурированное логирование (1 день)
+
+**Задачи:**
+2.2.1 Заменить все print() на AppLogger calls
+2.2.2 Добавить логирование в репозитории
+2.2.3 Добавить логирование в сервисы
+2.2.4 Добавить логирование в провайдеры
+2.2.5 Настроить уровни логирования (debug/release)
+
+**Проверка:**
+- Все print() заменены
+- Логи структурированы
+- Категории логов определены
+
+---
+
+### 2.3 Кэширование изображений (2 дня)
+
+**Задачи:**
+2.3.1 Добавить flutter_cache_manager в pubspec.yaml
+2.3.2 Добавить flutter_image_compress в pubspec.yaml
+2.3.3 Создать services/image/photo_cache_manager.dart
+2.3.4 Создать services/image/image_processor.dart
+2.3.5 Интегрировать в PhotoProvider
+2.3.6 Тестирование кэширования
+2.3.7 Тестирование сжатия
+2.3.8 Настроить maxSizeBytes (500 MB)
+2.3.9 Настроить stalePeriod (30 дней)
+2.3.10 Добавить prefetch для галереи
+
+**Файлы:**
+- `services/image/photo_cache_manager.dart`
+- `services/image/image_processor.dart`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Галерея загружается быстрее
+- Память используется меньше
+
+---
+
+### 2.4 Isolates для тяжелых операций (1.5 дня)
+
+**Задачи:**
+2.4.1 Создать services/isolates/parser_isolate.dart
+2.4.2 Перенести парсинг Llifle в isolate
+2.4.3 Перенести парсинг GBIF в isolate
+2.4.4 Перенести сериализацию JSON в isolate
+2.4.5 Создать _IsolateMessage для коммуникации
+2.4.6 Тестирование UI без блокировок
+2.4.7 Проверка использования CPU
+
+**Файлы:**
+- `services/isolates/parser_isolate.dart`
+- `services/isolates/json_serializer_isolate.dart`
+
+**Проверка:**
+- UI не блокируется при парсинге
+- FPS стабилен при тяжелых операциях
+- Память не растет бесконечно
+
+---
+
+### 2.5 Оптимизация дерева виджетов (1 день)
+
+**Задачи:**
+2.5.1 Добавить const виджеты где возможно
+2.5.2 Добавить RepaintBoundary для PlantCard
+2.5.3 Добавить RepaintBoundary для галереи фото
+2.5.4 Использовать ValueListenableBuilder вместо полного rebuild
+2.5.5 Проверить использование ListView.builder везде
+2.5.6 Профилирование с Flutter DevTools
+2.5.7 Оптимизация перерисовок
+
+**Проверка:**
+- Flutter DevTools показывает меньше перерисовок
+- FPS стабилен при скролле
+- Память не растет при скролле
+
+---
+
+### 2.6 Code Generation (0.5 дня)
+
+**Задачи:**
+2.6.1 Добавить freezed в pubspec.yaml
+2.6.2 Добавить json_serializable в pubspec.yaml
+2.6.3 Создать модели с @freezed аннотациями
+2.6.4 Запустить build_runner для генерации кода
+2.6.5 Проверить сгенерированный код
+
+**Файлы:**
+- `pubspec.yaml` (добавить зависимости)
+- Сгенерированные файлы через build_runner
+
+**Проверка:**
+- build_runner прошел без ошибок
+- Сгенерированный код работает корректно
+
+---
+
+### 2.7 Строгий линтер (0.5 дня)
+
+**Задачи:**
+2.7.1 Создать/обновить analysis_options.yaml
+2.7.2 Добавить правила: always_declare_return_types, avoid_print, prefer_single_quotes, sort_constructors_first, require_trailing_commas
+2.7.3 Запустить flutter analyze
+2.7.4 Исправить все предупреждения линтера
+
+**Файлы:**
+- `analysis_options.yaml`
+
+**Проверка:**
+- flutter analyze проходит без предупреждений
+- Код соответствует стандартам
+
+---
+
+### 2.8 Финальное тестирование Фазы 2 (1 день)
+
+**Задачи:**
+2.8.1 Полное тестирование всех функций
+2.8.2 Тестирование на обеих платформах
+2.8.3 Проверка производительности (FPS, память, CPU)
+2.8.4 flutter analyze (оба проекта)
+2.8.5 Проверка работы isolates
+2.8.6 Проверка кэширования изображений
+
+**Проверка:**
+- Все функции работают
+- Производительность улучшилась
+- Навигация работает
+
+---
+
+## ФАЗА 3: ЖЕЛАТЕЛЬНЫЕ УЛУЧШЕНИЯ (P2)
+
+### 3.1 Тестирование (3 дня)
+
+**Задачи:**
+3.1.1 Добавить mockito и mocktail в pubspec.yaml
+3.1.2 Создать структуру test/
+3.1.3 Написать unit тесты для репозиториев
+3.1.4 Написать unit тесты для сервисов
+3.1.5 Написать widget тесты для основных экранов
+3.1.6 Написать integration тесты для критических потоков
+3.1.7 Настроить CI/CD для автоматического запуска тестов
+
+**Файлы:**
+- `test/unit/repositories/plant_repository_test.dart`
+- `test/unit/services/gbif_service_test.dart`
+- `test/widget/screens/home_screen_test.dart`
+- `test/integration/sync_flow_test.dart`
+
+**Проверка:**
+- Test coverage >80%
+- Все тесты проходят
+- CI/CD настроен
+
+---
+
+### 3.2 Accessibility (1 день)
+
+**Задачи:**
+3.2.1 Добавить Semantics виджеты в PlantCard
+3.2.2 Добавить Semantics в другие экраны
+3.2.3 Проверить контрастность цветов
+3.2.4 Тестирование с TalkBack/VoiceOver
+
+**Проверка:**
+- Скринридеры работают
+- Контрастность соответствует WCAG
+
+---
+
+### 3.3 CI/CD пайплайн (2 дня)
+
+**Задачи:**
+3.3.1 Создать .github/workflows/ci.yml
+3.3.2 Настроить автоматический flutter analyze
+3.3.3 Настроить автоматический flutter test --coverage
+3.3.4 Настроить сборку APK для Android
+3.3.5 Настроить сборку App Bundle для Android
+3.3.6 Настроить сборку MSIX для Windows
+3.3.7 Настроить автоматическую публикацию артефактов
+3.3.8 Настроить Codecov для coverage reports
+3.3.9 Настроить ветки main, develop
+3.3.10 Тестирование пайплайна
+
+**Файлы:**
+- `.github/workflows/ci.yml`
+- `.github/workflows/android-build.yml`
+- `.github/workflows/windows-build.yml`
+
+**Проверка:**
+- CI/CD работает
+- Артефакты собираются автоматически
+- Coverage reports публикуются
+
+---
+
+### 3.4 Crash Reporting (1 день)
+
+**Задачи:**
+3.4.1 Добавить firebase_crashlytics в pubspec.yaml
+3.4.2 Добавить firebase_analytics в pubspec.yaml
+3.4.3 Настроить Firebase проект
+3.4.4 Интегрировать Crashlytics в AppLogger
+3.4.5 Интегрировать Analytics для key events
+3.4.6 Тестирование crash reporting
+3.4.7 Настроить release builds
+
+**Файлы:**
+- `pubspec.yaml` (добавить зависимости)
+- `core/logger/app_logger.dart` (добавить Crashlytics)
+
+**Проверка:**
+- Crashlytics собирает краши
+- Analytics собирает события
+- Release builds работают
+
+---
+
+### 3.5 Документация API (2 дня)
+
+**Задачи:**
+3.5.1 Добавить dartdoc комментарии ко всем публичным методам
+3.5.2 Создать архитектурные диаграммы (Mermaid)
+3.5.3 Сгенерировать HTML документацию через dartdoc
+3.5.4 Создать README для новых разработчиков
+3.5.5 Создать docs/architecture.md
+3.5.6 Создать docs/data_flow.md
+3.5.7 Создать docs/api_reference.html
+3.5.8 Создать docs/contributing.md
+
+**Файлы:**
+- `docs/architecture.md`
+- `docs/data_flow.md`
+- `docs/api_reference.html`
+- `docs/contributing.md`
+- `README.md`
+
+**Проверка:**
+- Документация генерируется
+- Диаграммы корректны
+- README понятен новым разработчикам
+
+---
+
+### 3.6 Финальное тестирование Фазы 3 (1 день)
+
+**Задачи:**
+3.6.1 Полное тестирование всех функций
+3.6.2 Тестирование на обеих платформах
+3.6.3 Проверка производительности
+3.6.4 flutter analyze (оба проекта)
+3.6.5 Запуск всех тестов
+3.6.6 Проверка CI/CD пайплайна
+3.6.7 Проверка Crash Reporting
+
+**Проверка:**
+- Все функции работают
+- Все тесты проходят
+- Производительность соответствует целям
+
+---
+
+## ФАЗА 4: БУДУЩЕЕ (P3)
+
+### 4.1 Feature flags (1.5 дня)
+
+**Задачи:**
+4.1.1 Создать core/config/feature_flags.dart
+4.1.2 Добавить флаги: enableGbifParsing, enableWeatherAdvice, enableBatchManagement, enableNewWateringAlgorithm, enableAdvancedStatistics
+4.1.3 Добавить загрузку конфигурации с сервера/файла
+4.1.4 Интегрировать в критические функции (GBIF, погода, batch management)
+4.1.5 Добавить overrideForTesting для тестирования
+4.1.6 Создать UI для управления feature flags (для разработчиков)
+4.1.7 Тестирование feature flags
+
+**Файлы:**
+- `core/config/feature_flags.dart`
+- `presentation/screens/developer/feature_flags_screen.dart`
+
+**Проверка:**
+- Feature flags работают корректно
+- Отключение фичи не ломает приложение
+- Тестирование с overrideForTesting работает
+
+---
+
+### 4.2 Система прав доступа (2 дня)
+
+**Задачи:**
+4.2.1 Создать domain/entities/user_permission.dart
+4.2.2 Создать domain/entities/user_role.dart (owner, editor, viewer)
+
+**Файлы:**
+- `domain/entities/user_permission.dart`
+- `domain/repositories/user_repository.dart`
+- `presentation/screens/settings/permissions_screen.dart`
+
+**Проверка:**
+- Права доступа работают корректно
+- Viewer не может редактировать
+- Editor может редактировать только уход
+- Owner имеет полный доступ
+
+---
+
+### 4.3 Финальная проверка перед разблокировкой ROADMAP (1-2 дня)
+
+**Цель:** Полная проверка работоспособности приложения перед разблокировкой доступа к ROADMAP для дальнейшего улучшения приложения.
+
+**КРИТИЧЕСКОЕ ТРЕБОВАНИЕ:**
+ТОЛЬКО если приложение работает идеально - разблокировать доступ к ROADMAP. Если есть проблемы - сначала исправить их, затем разблокировать.
+
+**Задачи:**
+4.3.1 Проверить полную работоспособность приложения на Android
+4.3.2 Проверить полную работоспособность приложения на Windows
+4.3.3 Проверить приложение на возможные баги
+4.3.4 Проверить необходимость полировки UI/UX
+4.3.5 Убедиться, что все функции из 00-BEFORE_REFACTORING.md работают
+4.3.6 Убедиться, что все новые улучшения работают
+4.3.7 Проверить flutter analyze на обоих проектах
+4.3.8 Провести полное тестирование всех функций
+4.3.9 Проверить синхронизацию между Android и Windows
+4.3.10 Проверить миграцию данных (если применимо)
+4.3.11 Проверить производительность приложения
+4.3.12 Убедиться, что нет незавершенных заглушек и TODO
+
+**Проверка работоспособности:**
+- [ ] Все функции из чек-листа 00-BEFORE_REFACTORING.md работают
+- [ ] Галерея загружается быстро (кэширование)
+- [ ] Синхронизация с Яндекс Диск работает
+- [ ] QR-коды сканируются и создаются
+- [ ] Полив отмечается корректно
+- [ ] Зимовка работает
+- [ ] Фильтры и поиск работают
+- [ ] Пакетные операции работают
+- [ ] go_router навигация работает
+- [ ] UiState pattern работает во всех экранах
+- [ ] Логирование работает
+- [ ] Accessibility работает (скринридеры, контрастность)
+- [ ] CI/CD работает
+- [ ] Crash Reporting работает (Crashlytics)
+- [ ] Миграция данных работает без потери данных
+- [ ] flutter analyze проходит без ошибок (оба проекта)
+- [ ] Приложение запускается без ошибок (оба проекта)
+- [ ] Приложение работает стабильно (нет вылетов)
+
+**Критерии завершения:**
+- ВСЕ проверки пройдены успешно
+- Приложение работает идеально на обеих платформах
+- flutter analyze проходит без ошибок на обоих проектах
+- Нет багов и проблем
+- Нет незавершенных заглушек и TODO
+
+**Действие после завершения:**
+Если ВСЕ проверки пройдены - разблокировать доступ к ROADMAP для дальнейшего улучшения приложения.
+Если есть проблемы - сначала исправить их, затем повторить проверку.
+
+---
+
+# АДАПТАЦИЯ ROADMAP ПОСЛЕ РЕФАКТОРИНГА
+
+## Шаг 5.1: Адаптация ROADMAP к изменениям (1-2 дня)
+
+**Цель:** Адаптировать ROADMAP к изменениям, которые произошли после рефакторинга, и внести необходимые изменения в ROADMAP.
+
+**Задачи:**
+5.1.1 Проверить, какие изменения произошли после рефакторинга
+5.1.2 Проанализировать влияние изменений на ROADMAP
+5.1.3 Адаптировать ROADMAP к новым изменениям в архитектуре
+5.1.4 Обновить ROADMAP если это необходимо
+5.1.5 Внести необходимые изменения в ROADMAP
+5.1.6 Убедиться, что ROADMAP соответствует текущему состоянию проекта
+5.1.7 Обновить приоритеты задач в ROADMAP
+5.1.8 Обновить оценки времени в ROADMAP
+
+**Проверка:**
+- ROADMAP соответствует текущему состоянию проекта
+- Все изменения после рефакторинга учтены в ROADMAP
+- Приоритеты актуальны
+- Оценки времени актуальны
+
+---
+
+## P1 - Важные
+- go_router навигация
+- UiState pattern
+- Структурированное логирование
+- Кэширование изображений
+- Isolates для тяжелых операций
+- Оптимизация дерева виджетов
+- Code Generation (freezed, json_serializable)
+- Строгий линтер
+
+## P2 - Желательные
+- Тестирование (unit/widget/integration)
+- Accessibility
+- CI/CD пайплайн
+- Crash Reporting (Firebase Crashlytics)
+- Документация API
+
+## P3 - Будущее
+- Feature flags
+- Система прав доступа
+
+---
+
+# СТРАТЕГИЯ ВЫПОЛНЕНИЯ
+
+## Порядок выполнения
+1. Фаза 1 полностью (критические улучшения)
+2. Фаза 2 полностью (важные улучшения)
+3. Фаза 3 полностью (желательные улучшения)
+4. Фаза 4 по необходимости (будущее)
+
+## Правила
+- Каждый шаг должен быть протестирован
+- flutter analyze должен проходить после каждого шага
+- Сохранять бэкапы перед критическими изменениями
+- Не переходить к следующему шагу пока текущий не завершен
+
+## Откат
+- Git коммит после каждого завершенного шага
+- Возможность отката к любому шагу
+- Сохранение ветки для каждого шага (опционально)
+
+---
+
+# ОЦЕНКА ВРЕМЕНИ
+
+| Фаза | Оценка | Приоритет |
+|------|--------|----------|
+| Фаза 1: Критические | 4-5 недель | 🔴 P0 |
+| Фаза 2: Важные | 3-4 недели | 🟡 P1 |
+| Фаза 3: Желательные | 3-4 недели | 🟢 P2 |
+| Фаза 4: Будущее | 3.5 дня | 🔵 P3 |
+| **Итого** | **10-12 недель** | |
+
+---
+
+# ЧЕК-ЛИСТ ЗАВЕРШЕНИЯ
+
+После завершения рефакторинга проверить:
+
+**Архитектура:**
+- [ ] PlantProvider разделен на 7 файлов
+- [ ] CloudStorageProvider разделен на сервисы
+- [ ] PlantCardScreen разбит на компоненты
+- [ ] Repository Pattern реализован (все репозитории)
+- [ ] Dependency Injection работает (get_it)
+- [ ] Hive заменяет SharedPreferences
+- [ ] Clean Architecture соблюдена (3 слоя)
+- [ ] SOLID принципы соблюдены
+
+**Функциональность:**
+- [ ] Все функции из 00-BEFORE_REFACTORING.md работают
+- [ ] Синхронизация работает на обеих платформах
+- [ ] OAuth2 работает на обеих платформах
+- [ ] QR-коды работают
+- [ ] Парсинг GBIF работает
+- [ ] Парсинг Llifle работает
+- [ ] Погода работает
+- [ ] Уведомления работают
+- [ ] Зимовка работает
+- [ ] Система партий работает
+- [ ] Заметки работают
+- [ ] Карта работает
+
+**Производительность:**
+- [ ] Загрузка 1000 растений < 0.5 сек
+- [ ] Фильтрация < 50ms
+- [ ] Память < 150 MB
+- [ ] UI FPS стабильные 60
+- [ ] Галерея загружается быстро (кэширование)
+- [ ] UI не блокируется при тяжелых операциях (isolates)
+- [ ] Память не растет при скролле (оптимизация виджетов)
+
+**Надежность:**
+- [ ] Test coverage >80%
+- [ ] flutter analyze без ошибок
+- [ ] flutter analyze без предупреждений (строгий линтер)
+- [ ] Все тесты проходят
+- [ ] CI/CD работает
+- [ ] Crash Reporting работает (Crashlytics)
+- [ ] Миграция данных работает без потери данных
+- [ ] Бэкапы создаются автоматически
+
+**Навигация и UX:**
+- [ ] go_router внедрен
+- [ ] Deep links работают
+- [ ] UiState pattern работает во всех экранах
+- [ ] Loading states отображаются
+- [ ] Error states отображаются с retry
+- [ ] Accessibility работает (скринридеры, контрастность)
+
+**Документация:**
+- [ ] Код задокументирован (dartdoc комментарии)
+- [ ] Архитектурные диаграммы созданы (Mermaid)
+- [ ] README для новых разработчиков
+- [ ] docs/architecture.md создан
+- [ ] docs/data_flow.md создан
+- [ ] docs/api_reference.html сгенерирован
+- [ ] docs/contributing.md создан
+
+**Инфраструктура:**
+- [ ] Code Generation работает (build_runner)
+- [ ] Feature flags работают
+- [ ] Система прав доступа работает (если реализована)
+
+---
+
+**Этот план будет обновляться по мере выполнения рефакторинга.**
