@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import 'plant_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
@@ -15,6 +16,7 @@ class CloudStorageProvider with ChangeNotifier {
   final _storage = const FlutterSecureStorage();
   oauth2.Client? _yandexClient;
   bool _isConnected = false;
+  bool _isSyncing = false;
   String? _currentStorageType;
   bool _isAuthorizing = false;
   DateTime? _lastCloudUpdate;
@@ -29,6 +31,7 @@ class CloudStorageProvider with ChangeNotifier {
       'https://cloud-api.yandex.net/v1/disk';
 
   bool get isConnected => _isConnected;
+  bool get isSyncing => _isSyncing;
   String? get currentStorageType => _currentStorageType;
   DateTime? get lastCloudUpdate => _lastCloudUpdate;
 
@@ -260,6 +263,9 @@ class CloudStorageProvider with ChangeNotifier {
   Future<void> syncData(PlantProvider plantProvider) async {
     if (!_isConnected || _yandexClient == null) return;
 
+    _isSyncing = true;
+    notifyListeners();
+
     try {
       await fetchLastCloudUpdate();
       final localUpdate = plantProvider.lastLocalUpdate;
@@ -285,6 +291,9 @@ class CloudStorageProvider with ChangeNotifier {
       }
     } catch (e) {
       print('❌ Ошибка синхронизации: $e');
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
     }
   }
 
@@ -317,6 +326,12 @@ class CloudStorageProvider with ChangeNotifier {
     }
 
     await syncUserPhotos(plantProvider);
+  }
+
+  Future<void> loadFromCloud(BuildContext context) async {
+    if (!context.mounted) return;
+    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
+    await loadDataFromCloud(plantProvider);
   }
 
   Future<void> loadDataFromCloud(PlantProvider plantProvider) async {

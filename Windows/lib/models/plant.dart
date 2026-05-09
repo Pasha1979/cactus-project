@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import '../utils/gbif_utils.dart';
+import 'qr_code.dart';
 
 class Plant {
   String permanentId;
@@ -49,6 +50,9 @@ class Plant {
   List<String> childrenIds;           // ID сеянцев (для витрины)
   String? parentId;                   // ID витрины (для сеянца)
 
+  // === ПОЛЕ ДЛЯ QR КОДА ===
+  QRCode? qrCode;                     // QR код растения (null если не создан)
+
   static const statusOrder = {
     'sown': 0,
     'growing': 1,
@@ -97,6 +101,8 @@ class Plant {
     this.isBatch = false,
     List<String>? childrenIds,
     this.parentId,
+    // Поле для QR кода
+    this.qrCode,
   })  : permanentId = const Uuid().v4(),
         displayId = Plant.generateDisplayId(year, customNumber, category),
         wateringDates = wateringDates ?? [],
@@ -178,6 +184,8 @@ class Plant {
     bool? isBatch,
     List<String>? childrenIds,
     String? parentId,
+    // Поле для QR кода
+    QRCode? qrCode,
   }) {
     return Plant(
       latinName: latinName ?? this.latinName,
@@ -222,6 +230,8 @@ class Plant {
       isBatch: isBatch ?? this.isBatch,
       childrenIds: childrenIds ?? this.childrenIds,
       parentId: parentId ?? this.parentId,
+      // Поле для QR кода
+      qrCode: qrCode ?? this.qrCode,
     )
       ..permanentId = permanentId
       ..displayId = displayId ?? this.displayId;
@@ -273,6 +283,8 @@ class Plant {
         'isBatch': isBatch,
         'childrenIds': childrenIds,
         'parentId': parentId,
+        // Поле для QR кода
+        'qrCode': qrCode?.toJson(),
       };
 
   factory Plant.fromJson(Map<String, dynamic> json) {
@@ -365,12 +377,13 @@ class Plant {
           : null,
       // Поля для системы партий (обратная совместимость — null если не в JSON)
       aliveCount: json['aliveCount'] as int?,
-      isBatch: json['isBatch'] ?? false,
-      childrenIds: (json['childrenIds'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
+      isBatch: json['isBatch'] as bool? ?? false,
+      childrenIds: List<String>.from(json['childrenIds'] ?? []),
       parentId: json['parentId'] as String?,
+      // Поле для QR кода (обратная совместимость — null если не в JSON)
+      qrCode: json['qrCode'] != null
+          ? QRCode.fromJson(json['qrCode'] as Map<String, dynamic>)
+          : null,
     )..permanentId = json['permanentId'];
   }
 

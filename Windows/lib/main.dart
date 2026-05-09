@@ -7,6 +7,7 @@ import 'providers/plant_provider.dart';
 import 'providers/cloud_storage_provider.dart';
 import 'screens/sowing_management_screen.dart';
 import 'screens/statistics_screen.dart';
+import 'screens/qr_management_screen.dart';
 import 'dart:io';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
@@ -462,12 +463,27 @@ class HomeScreenState extends State<HomeScreen>
             } else if (index == 4) {
               _navigateToCollectionManagement();
             } else if (index == 5) {
-              // Новая кнопка "Статистика"
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (ctx) => const StatisticsScreen()),
               );
             } else if (index == 6) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (ctx) => const QRManagementScreen()),
+              );
+            } else if (index == 7) {
+              final provider = context.read<PlantProvider>();
+              provider.clearSelections();
+              final plantsWithoutQR = provider.getPlantsWithoutQRCode();
+              for (var plant in plantsWithoutQR) {
+                provider.toggleSelection(plant.permanentId);
+              }
+              setState(() {
+                _currentFilter = 'all';
+                _isSownExpanded = false;
+              });
+            } else if (index == 8) {
               setState(() {
                 _isSownExpanded = !_isSownExpanded;
               });
@@ -537,6 +553,14 @@ class HomeScreenState extends State<HomeScreen>
             const NavigationRailDestination(
               icon: Icon(Icons.analytics),
               label: Text('Статистика'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.qr_code_2),
+              label: Text('Управление QR'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.qr_code_outlined),
+              label: Text('Без QR'),
             ),
             const NavigationRailDestination(
               icon: Icon(Icons.grass),

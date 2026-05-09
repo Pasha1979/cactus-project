@@ -4,6 +4,8 @@ import '../constants/app_constants.dart';
 import 'package:csv/csv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/plant.dart';
+import '../models/qr_code.dart';
+import '../models/qr_code_file.dart';
 import '../utils/gbif_utils.dart';
 import 'dart:convert' show jsonDecode, jsonEncode, utf8, latin1;
 import 'package:file_picker/file_picker.dart';
@@ -23,9 +25,15 @@ class PlantProvider with ChangeNotifier {
   final Set<String> _selectedIds = {};
   // === НОВОЕ: Флаг для отложенной синхронизации фото ===
   bool _needsPhotoSync = false;
-  
+
   // === ЗАЩИТА ОТ RACE CONDITIONS ===
   bool _isEnsuringPhotos = false;
+
+  // === QR КОДЫ ===
+  static const String _qrFilesKey = 'qr_code_files';
+  List<QRCodeFile> _qrCodeFiles = [];
+  static const String _scanHistoryKey = 'qr_scan_history';
+  List<String> _scanHistory = [];
   
   // === ОТСЛЕЖИВАНИЕ УДАЛЕННЫХ ФОТО ===
   final Set<String> _deletedUserPhotos = {};      // Удаленные свои фото
@@ -2207,6 +2215,148 @@ class PlantProvider with ChangeNotifier {
     _fertilizationDatesCache = {};
     _plannedFertilizationDatesCache = {};
     notifyListeners();
+  }
+
+  // === QR КОДЫ ===
+  List<QRCodeFile> get qrCodeFiles => List.unmodifiable(_qrCodeFiles);
+  List<String> get scanHistory => List.unmodifiable(_scanHistory);
+
+  Future<void> loadQRCodeFiles() async {
+    final prefs = await SharedPreferences.getInstance();
+    final filesJson = prefs.getString(_qrFilesKey);
+    if (filesJson != null) {
+      try {
+        _qrCodeFiles = QRCodeFile.decodeList(filesJson);
+      } catch (_) {
+        _qrCodeFiles = [];
+      }
+    }
+  }
+
+  Future<void> saveQRCodeFile(QRCodeFile file) async {
+    _qrCodeFiles.add(file);
+    _qrCodeFiles.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_qrFilesKey, QRCodeFile.encodeList(_qrCodeFiles));
+  }
+
+  Future<void> deleteQRCodeFile(String id) async {
+    final file = _qrCodeFiles.firstWhere((f) => f.id == id);
+    try {
+      final f = File(file.filePath);
+      if (await f.exists()) {
+        await f.delete();
+      }
+    } catch (_) {
+    }
+    _qrCodeFiles.removeWhere((f) => f.id == id);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_qrFilesKey, QRCodeFile.encodeList(_qrCodeFiles));
+    notifyListeners();
+  }
+
+  Future<void> renameQRCodeFile(String id, String newName) async {
+    final fileIndex = _qrCodeFiles.indexWhere((f) => f.id == id);
+    if (fileIndex == -1) return;
+
+    final oldFile = _qrCodeFiles[fileIndex];
+    final oldFileObj = File(oldFile.filePath);
+    final newPath = oldFile.filePath.replaceAll(oldFile.fileName, '$newName.pdf');
+
+    try {
+      if (await oldFileObj.exists()) {
+        await oldFileObj.rename(newPath);
+      }
+    } catch (_) {
+    }
+
+    _qrCodeFiles[fileIndex] = QRCodeFile(
+      id: oldFile.id,
+      fileName: '$newName.pdf',
+      filePath: newPath,
+      createdAt: oldFile.createdAt,
+      plantIds: oldFile.plantIds,
+      pageFormat: oldFile.pageFormat,
+      orientation: oldFile.orientation,
+      labelWidthCm: oldFile.labelWidthCm,
+      labelHeightCm: oldFile.labelHeightCm,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_qrFilesKey, QRCodeFile.encodeList(_qrCodeFiles));
+    notifyListeners();
+  }
+
+  Plant? findPlantByQRCode(String qrData) {
+    String? plantId;
+
+    try {
+      final decoded = jsonDecode(qrData) as Map<String, dynamic>;
+      plantId = decoded['permanentId'] as String? ?? decoded['plantId'] as String?;
+    } catch (_) {
+      plantId = qrData;
+    }
+
+    if (plantId == null) return null;
+
+    return _plants.firstWhereOrNull((p) => p.permanentId == plantId);
+  }
+
+  Future<void> loadScanHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final historyJson = prefs.getString(_scanHistoryKey);
+    if (historyJson != null) {
+      try {
+        _scanHistory = List<String>.from(jsonDecode(historyJson));
+      } catch (_) {
+        _scanHistory = [];
+      }
+    }
+  }
+
+  Future<void> addToScanHistory(String plantId) async {
+    _scanHistory.remove(plantId);
+    _scanHistory.insert(0, plantId);
+    if (_scanHistory.length > 10) {
+      _scanHistory = _scanHistory.sublist(0, 10);
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_scanHistoryKey, jsonEncode(_scanHistory));
+  }
+
+  Future<void> clearScanHistory() async {
+    _scanHistory = [];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_scanHistoryKey);
+  }
+
+  void createQRCodeBatch(Set<String> plantIds) {
+    for (final plantId in plantIds) {
+      final plantIndex = _plants.indexWhere((p) => p.permanentId == plantId);
+      if (plantIndex == -1) continue;
+
+      final plant = _plants[plantIndex];
+      if (plant.qrCode == null || !plant.qrCode!.isActive) {
+        final newQRCode = QRCode.createNew(
+          plantId: plant.displayId,
+          plantName: plant.latinName,
+        );
+
+        _plants[plantIndex] = plant.copyWith(qrCode: newQRCode);
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Возвращает список растений без QR кода
+  List<Plant> getPlantsWithoutQRCode() {
+    return _plants.where((p) => p.qrCode == null || !p.qrCode!.isActive).toList();
+  }
+
+  /// Возвращает список растений с QR кодом
+  List<Plant> getPlantsWithQRCode() {
+    return _plants.where((p) => p.qrCode != null && p.qrCode!.isActive).toList();
   }
 }
 

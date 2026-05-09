@@ -17,6 +17,7 @@ class CloudStorageProvider with ChangeNotifier {
   final _storage = const FlutterSecureStorage();
   oauth2.Client? _yandexClient;
   bool _isConnected = false;
+  bool _isSyncing = false;
   String? _currentStorageType;
   bool _isAuthorizing = false;
   DateTime? _lastCloudUpdate;
@@ -33,7 +34,7 @@ class CloudStorageProvider with ChangeNotifier {
       'https://cloud-api.yandex.net/v1/disk';
 
   bool get isConnected => _isConnected;
-  bool get isSyncing => false; // TODO: реализовать флаг синхронизации
+  bool get isSyncing => _isSyncing;
   String? get currentStorageType => _currentStorageType;
   DateTime? get lastCloudUpdate => _lastCloudUpdate;
   Future<void> handleDeepLink(Uri uri) async {
@@ -429,6 +430,9 @@ class CloudStorageProvider with ChangeNotifier {
       return;
     }
 
+    _isSyncing = true;
+    notifyListeners();
+
     try {
       await fetchLastCloudUpdate();
       final localUpdate = plantProvider.lastLocalUpdate;
@@ -460,6 +464,9 @@ class CloudStorageProvider with ChangeNotifier {
       print('✅ Синхронизация успешно завершена');
     } catch (e) {
       print('❌ Ошибка синхронизации: $e');
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
     }
   }
 

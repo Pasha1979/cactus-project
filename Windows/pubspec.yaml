@@ -41,6 +41,10 @@ dependencies:
   # Новое: Добавляем для интерактивной карты GBIF — отображает точки наблюдения на карте.
   flutter_map: ^6.1.0  # Интерактивная карта с OpenStreetMap
   latlong2: ^0.9.1  # Для работы с географическими координатами (совместимо с flutter_map 6.x)
+  # Задача 1.1: QR-этикетки
+  qr_flutter: ^4.1.0  # Генерация QR кодов
+  pdf: ^3.10.8  # Генерация PDF
+  printing: ^5.13.4  # Печать PDF
 
 dev_dependencies:
   flutter_test:
