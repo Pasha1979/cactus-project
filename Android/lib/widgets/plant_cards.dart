@@ -6,6 +6,7 @@ import '../providers/plant_provider.dart'; // Сохранено: Для context
 import '../models/plant.dart'; // Сохранено: Для Plant тип, statusText, lastWateringText.
 import '../screens/plant_card_screen.dart';
 import '../theme/cactus_theme.dart';
+import '../widgets/qr_code_widget.dart';
 
 class PlantCards extends StatelessWidget {
   final List<Plant> plants;
@@ -461,14 +462,23 @@ class PlantCards extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      plant.latinName,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            plant.latinName,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        QRCodeIndicator(
+                                          hasQRCode: plant.qrCode != null && plant.qrCode!.isActive,
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 3),
                                     Text(

@@ -33,6 +33,7 @@ class CloudStorageProvider with ChangeNotifier {
       'https://cloud-api.yandex.net/v1/disk';
 
   bool get isConnected => _isConnected;
+  bool get isSyncing => false; // TODO: реализовать флаг синхронизации
   String? get currentStorageType => _currentStorageType;
   DateTime? get lastCloudUpdate => _lastCloudUpdate;
   Future<void> handleDeepLink(Uri uri) async {
@@ -496,6 +497,12 @@ class CloudStorageProvider with ChangeNotifier {
     }
 
     await syncUserPhotos(plantProvider);
+  }
+
+  Future<void> loadFromCloud(BuildContext context) async {
+    if (!context.mounted) return;
+    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
+    await loadDataFromCloud(plantProvider);
   }
 
   Future<void> loadDataFromCloud(PlantProvider plantProvider) async {

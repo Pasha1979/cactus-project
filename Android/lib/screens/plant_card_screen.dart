@@ -10,6 +10,8 @@ import '../screens/plant_statistics_screen.dart';
 import '../screens/edit_plant_screen.dart';
 import '../widgets/notes_bottom_sheet.dart';
 import '../widgets/image_selection_dialog.dart';
+import '../widgets/qr_code_widget.dart';
+import '../screens/print_settings_screen.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -91,6 +93,25 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           appBar: AppBar(
             title: Text(updatedPlant.latinName),
             elevation: 0,
+            actions: [
+              // Кнопка создания/просмотра QR кода
+              if (updatedPlant.qrCode == null)
+                IconButton(
+                  icon: const Icon(Icons.qr_code),
+                  tooltip: 'Создать QR код',
+                  onPressed: () {
+                    _showCreateQRCodeDialog(context, updatedPlant);
+                  },
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.qr_code_scanner),
+                  tooltip: 'Показать QR код',
+                  onPressed: () {
+                    _showQRCodeDialog(context, updatedPlant);
+                  },
+                ),
+            ],
           ),
           floatingActionButton: _currentTabIndex == 3
               ? null // На вкладке "Галерея" кнопки редактирования нет
@@ -2783,6 +2804,136 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       default:
         return status;
     }
+  }
+
+  // === МЕТОДЫ ДЛЯ QR КОДОВ ===
+
+  /// Показывает диалог создания QR кода
+  void _showCreateQRCodeDialog(BuildContext context, Plant plant) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Создать QR код?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Создать QR код для растения:',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              plant.latinName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'ID: ${plant.displayId}',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'QR код будет содержать ID и название растения. Вы сможете распечатать его на этикетке.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              final provider = Provider.of<PlantProvider>(context, listen: false);
+              provider.createQRCode(plant.permanentId);
+              Navigator.pop(ctx);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('QR код для ${plant.latinName} создан'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            icon: const Icon(Icons.qr_code),
+            label: const Text('Создать'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Показывает диалог с QR кодом
+  void _showQRCodeDialog(BuildContext context, Plant plant) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                plant.latinName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'ID: ${plant.displayId}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              QRCodeWidget(
+                plant: plant,
+                size: 250,
+                showName: false,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Отсканируйте для быстрого поиска растения',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => PrintSettingsScreen(
+                            plantsToPrint: [plant],
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.print),
+                    label: const Text('Печать'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                    label: const Text('Закрыть'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

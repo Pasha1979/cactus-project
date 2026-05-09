@@ -7,6 +7,9 @@ import 'providers/cloud_storage_provider.dart';
 import 'screens/sowing_management_screen.dart';
 import 'screens/statistics_screen.dart';
 import 'screens/collection_management_screen.dart';
+import 'screens/batch_qr_creation_screen.dart';
+import 'screens/qr_management_screen.dart';
+import 'screens/qr_scanner_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io'; // ←←← ДОБАВЬ ЭТУ СТРОКУ
 import 'screens/welcome_screen.dart';
@@ -742,7 +745,14 @@ class HomeScreenState extends State<HomeScreen>
                   final selectedIds = Set<String>.from(provider.selectedIds);
                   if (selectedIds.isEmpty) return;
 
-                  if (value == 'cleanup_old') {
+                  if (value == 'create_qr_codes') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (ctx) => const BatchQRCreationScreen(),
+                      ),
+                    );
+                  } else if (value == 'cleanup_old') {
                     await provider.cleanupUnusedPhotosForSelected(
                         selectedIds, context);
                   } else if (value == 'delete_all_photos') {
@@ -751,6 +761,10 @@ class HomeScreenState extends State<HomeScreen>
                   }
                 },
                 itemBuilder: (BuildContext context) => [
+                  const PopupMenuItem<String>(
+                    value: 'create_qr_codes',
+                    child: Text('📱 Создать QR-коды для выбранных'),
+                  ),
                   const PopupMenuItem<String>(
                     value: 'cleanup_old',
                     child: Text('🗑 Удалить старые (неиспользуемые) фото'),
@@ -940,7 +954,7 @@ class HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Нижняя навигация: "Растут" + "Синхронизировать" + "Выход"
+  // Нижняя навигация: "Растут" + "Синхронизировать" + "QR-скан" + "Выход"
   Widget _buildBottomNavigationBar() {
     final cloudProvider = context.watch<CloudStorageProvider>();
 
@@ -958,42 +972,44 @@ class HomeScreenState extends State<HomeScreen>
           });
         } else if (index == 1) {
           // Синхронизировать
-          if (!cloudProvider.isConnected) {
+          if (cloudProvider.isSyncing) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Сначала подключите Яндекс.Диск'),
-                backgroundColor: Colors.orange,
+                content: Text('Синхронизация уже выполняется...'),
               ),
             );
-            return;
-          }
-
-          final plantProvider = context.read<PlantProvider>();
-          final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-          scaffoldMessenger.showSnackBar(
-            const SnackBar(content: Text('🔄 Синхронизация началась...')),
-          );
-
-          try {
-            await cloudProvider.syncData(plantProvider);
-            if (!mounted) return;
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('✅ Синхронизация успешно завершена'),
-                backgroundColor: Colors.green,
+          } else {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Синхронизация'),
+                content: const Text(
+                    'Загрузить данные с Яндекс.Диска?\n\nЭто перезапишет локальные изменения.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Отмена'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Загрузить'),
+                  ),
+                ],
               ),
             );
-          } catch (e) {
-            if (!mounted) return;
-            scaffoldMessenger.showSnackBar(
-              SnackBar(
-                content: Text('❌ Ошибка: $e'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            if (confirmed == true && mounted) {
+              cloudProvider.loadFromCloud(context);
+            }
           }
         } else if (index == 2) {
+          // Сканировать QR
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (ctx) => const QRScannerScreen(),
+            ),
+          );
+        } else if (index == 3) {
           // Выход
           _showExitDialog();
         }
@@ -1006,6 +1022,10 @@ class HomeScreenState extends State<HomeScreen>
         BottomNavigationBarItem(
           icon: Icon(Icons.sync),
           label: 'Синхр.',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.qr_code_scanner),
+          label: 'QR',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.exit_to_app),
@@ -1157,6 +1177,40 @@ class HomeScreenState extends State<HomeScreen>
                   ),
                 );
               }
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.qr_code_2, color: Colors.blue),
+            title: const Text('Управление QR-кодами'),
+            subtitle: const Text('Файлы и растения'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (ctx) => const QRManagementScreen(),
+                ),
+              );
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.qr_code_2, color: Colors.orange),
+            title: const Text('Только без QR кодов'),
+            subtitle: const Text('Показать растения без этикеток'),
+            onTap: () {
+              Navigator.pop(context);
+              // Устанавливаем фильтр на растения без QR кодов
+              final provider = context.read<PlantProvider>();
+              provider.clearSelections();
+              final plantsWithoutQR = provider.getPlantsWithoutQRCode();
+              for (var plant in plantsWithoutQR) {
+                provider.toggleSelection(plant.permanentId);
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Выбрано растений без QR: ${plantsWithoutQR.length}')),
+              );
             },
           ),
 
