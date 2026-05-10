@@ -20,6 +20,7 @@ import '../theme/cactus_theme.dart';
 import '../utils/responsive_helper.dart';
 import 'dart:async';
 import 'package:flutter/services.dart'; // ← добавь эту строку
+import 'data/datasources/local/hive_database.dart';
 
 enum GroupAction { changeStatus, delete }
 
@@ -28,6 +29,9 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Инициализация Hive базы данных
+  await HiveDatabase.initialize();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);

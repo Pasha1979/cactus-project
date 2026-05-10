@@ -20,6 +20,7 @@ import '../widgets/plant_cards.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import '../theme/cactus_theme.dart';
+import 'data/datasources/local/hive_database.dart';
 
 enum GroupAction { changeStatus, delete }
 
@@ -28,6 +29,10 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Инициализация Hive базы данных
+  await HiveDatabase.initialize();
+
   const bool isRelease = bool.fromEnvironment('dart.vm.product');
   if (isRelease) {
     await _cleanAppData();

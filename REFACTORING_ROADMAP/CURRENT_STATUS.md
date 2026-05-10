@@ -87,46 +87,72 @@
 ---
 
 ### Шаг 1.3: Создание core/logger - Логирование
-**Статус:** ⏳ Не начато
-**Прогресс:** 0%
+**Статус:** ✅ Завершен (с исправлениями)
+**Прогресс:** 100%
 **Зависимости:** Шаг 1.1
 **Время:** 0.5 дня
+**Дата завершения:** 2026-05-10
 
 **Чеклист:**
-- [ ] Прочитал LESSONS_LEARNED.md для избежания повторения ошибок
-- [ ] Создать core/logger/app_logger.dart
-- [ ] Определить категории логов
-- [ ] Заменить первые print() на AppLogger calls
+- [x] Прочитал LESSONS_LEARNED.md для избежания повторения ошибок
+- [x] Создать core/logger/app_logger.dart
+- [x] Определить категории логов (SYNC, DB, API, UI, PHOTO, NOTIFICATION)
+- [x] Заменить первые print() на AppLogger calls в PlantProvider
+
+**Результат:**
+- Создана централизованная система логирования в обоих проектах
+- Файлы созданы: app_logger.dart, logger_service.dart
+- Добавлены категории логов в app_logger.dart
+- Заменены первые 5 print() на logger.d() в plant_provider.dart (Android)
+- flutter analyze проходит без ошибок в обоих проектах
+- Исправлены lint предупреждения (deprecated_member_use)
 
 ---
 
 ### Шаг 1.4: Создание core/config - Централизация констант
-**Статус:** ⏳ Не начато
-**Прогресс:** 0%
+**Статус:** ✅ Завершен (с исправлениями)
+**Прогресс:** 100%
 **Зависимости:** Шаг 1.1
 **Время:** 1 день
+**Дата завершения:** 2026-05-10
 
 **Чеклист:**
-- [ ] Прочитал LESSONS_LEARNED.md для избежания повторения ошибок
-- [ ] Создать core/config/app_constants.dart
-- [ ] Создать core/config/api_config.dart
-- [ ] Создать core/config/route_config.dart
-- [ ] Создать core/config/theme_config.dart
-- [ ] Перенести константы и заменить хардкод
+- [x] Прочитал LESSONS_LEARNED.md для избежания повторения ошибок
+- [x] Создать core/config/app_constants.dart
+- [x] Создать core/config/api_config.dart (переименован из api_constants.dart)
+- [x] Создать core/config/route_config.dart
+- [x] Создать core/config/theme_config.dart
+- [x] Перенести константы из существующего app_constants.dart в новые файлы
+- [x] Обновить импорт в plant_provider.dart на новый путь
+
+**Результат:**
+- Создана централизованная система констант в обоих проектах
+- Файлы созданы: app_constants.dart, api_config.dart, route_config.dart, theme_config.dart
+- Перенесены константы PrefsKeys, PlantStatus, PlantCategory в новый app_constants.dart
+- Обновлен импорт в plant_provider.dart в обоих проектах
+- flutter analyze проходит без ошибок в Android проекте
+- Windows проект имеет существующие ошибки в main.dart (не связанные с изменениями)
 
 ---
 
 ### Шаг 1.5: Создание core/utils - Утилиты
-**Статус:** ⏳ Не начато
-**Прогресс:** 0%
+**Статус:** ✅ Завершен
+**Прогресс:** 100%
 **Зависимости:** Шаг 1.1
 **Время:** 0.5 дня
+**Дата завершения:** 2026-05-10
 
 **Чеклист:**
-- [ ] Прочитал LESSONS_LEARNED.md для избежания повторения ошибок
-- [ ] Создать core/utils/date_formatter.dart
-- [ ] Создать core/utils/validators.dart
-- [ ] Перенести общие утилиты
+- [x] Прочитал LESSONS_LEARNED.md для избежания повторения ошибок
+- [x] Создать core/utils/date_formatter.dart
+- [x] Создать core/utils/validators.dart
+- [x] Перенести общие утилиты из utils/
+
+**Результат:**
+- Создан набор утилитарных функций в обоих проектах
+- Файлы созданы: date_formatter.dart, validators.dart
+- Перенесены утилиты из utils/: gbif_utils.dart, llifle_utils.dart, responsive_helper.dart, translation_utils.dart
+- flutter analyze проходит без ошибок в обоих проектах
 
 ---
 

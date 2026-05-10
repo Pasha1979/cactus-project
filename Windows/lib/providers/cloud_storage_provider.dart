@@ -11,6 +11,8 @@ import 'package:provider/provider.dart';
 import 'plant_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
+import '../core/config/api_config.dart';
+import '../core/config/app_constants.dart';
 
 class CloudStorageProvider with ChangeNotifier {
   final _storage = const FlutterSecureStorage();
@@ -21,12 +23,11 @@ class CloudStorageProvider with ChangeNotifier {
   bool _isAuthorizing = false;
   DateTime? _lastCloudUpdate;
 
-  static const String _yandexClientId = '066c5dd1fda94c15ac2dc248cdb0f1e8';
-  static const String _yandexClientSecret = 'c624749917a34e6a8579e5ff2685f0f7';
-  static const String _yandexRedirectUri = 'http://localhost:8080';
-  static const String _yandexAuthEndpoint =
-      'https://oauth.yandex.com/authorize';
-  static const String _yandexTokenEndpoint = 'https://oauth.yandex.com/token';
+  static const String _yandexClientId = ApiConstants.yandexClientId;
+  static const String _yandexClientSecret = ApiConstants.yandexClientSecret;
+  static const String _yandexRedirectUri = ApiConstants.yandexRedirectUri;
+  static const String _yandexAuthEndpoint = ApiConstants.yandexAuthEndpoint;
+  static const String _yandexTokenEndpoint = ApiConstants.yandexTokenEndpoint;
   static const String _yandexApiBaseUrl =
       'https://cloud-api.yandex.net/v1/disk';
 
@@ -42,7 +43,7 @@ class CloudStorageProvider with ChangeNotifier {
   Future<void> loadCredentials() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _currentStorageType = prefs.getString('cloud_storage_type');
+      _currentStorageType = prefs.getString(PrefsKeys.cloudStorageType);
 
       if (_currentStorageType == 'yandex') {
         final accessToken = await _storage.read(key: 'yandex_access_token');
@@ -216,8 +217,8 @@ class CloudStorageProvider with ChangeNotifier {
           value: _yandexClient!.credentials.refreshToken!);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('cloud_storage_type', 'yandex');
-      await prefs.setBool('has_seen_welcome', true);
+      await prefs.setString(PrefsKeys.cloudStorageType, 'yandex');
+      await prefs.setBool(PrefsKeys.hasSeenWelcome, true);
       await prefs.setBool('remember_me', true);
 
       _currentStorageType = 'yandex';

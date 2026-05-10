@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import '../constants/app_constants.dart';
+import '../core/config/app_constants.dart';
 import 'package:csv/csv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/plant.dart';
@@ -8,6 +8,7 @@ import '../models/qr_code.dart';
 import '../models/qr_code_file.dart';
 import '../utils/gbif_utils.dart';
 import 'dart:convert' show jsonDecode, jsonEncode, utf8, latin1;
+import '../core/logger/app_logger.dart';
 import 'package:file_picker/file_picker.dart';
 import '../main.dart'; // Импорт main.dart для доступа к navigatorKey
 import 'package:collection/collection.dart';
@@ -117,7 +118,7 @@ class PlantProvider with ChangeNotifier {
   // Геттеры для кэшированных данных
   Map<DateTime, List<Plant>> get individualWateringDates {
     if (_individualWateringDatesCache.isEmpty) {
-      print('Пересчёт individualWateringDates');
+      logger.d('Пересчёт individualWateringDates');
       _individualWateringDatesCache = {};
       for (var plant in _plants) {
         for (var date in plant.wateringDates) {
@@ -132,7 +133,7 @@ class PlantProvider with ChangeNotifier {
 
   Map<DateTime, int> get customWateringDates {
     if (_customWateringDatesCache.isEmpty) {
-      print('Пересчёт customWateringDates');
+      logger.d('Пересчёт customWateringDates');
       _customWateringDatesCache = {};
       for (var plant in _plants) {
         for (var date in plant.customWateringDates) {
@@ -147,11 +148,11 @@ class PlantProvider with ChangeNotifier {
 
   List<DateTime> get recommendedWateringDates {
     if (_recommendedWateringDatesCache.isNotEmpty) {
-      print('Возвращаем кэшированные recommendedWateringDates');
+      logger.d('Возвращаем кэшированные recommendedWateringDates');
       return _recommendedWateringDatesCache;
     }
 
-    print('Пересчёт recommendedWateringDates');
+    logger.d('Пересчёт recommendedWateringDates');
     final lastWatering = lastGlobalWateringDate;
     if (lastWatering == null) {
       _recommendedWateringDatesCache = [];
@@ -179,7 +180,7 @@ class PlantProvider with ChangeNotifier {
 // Геттеры для кэшированных данных подкормок
   Map<DateTime, List<Plant>> get fertilizationDates {
     if (_fertilizationDatesCache.isEmpty) {
-      print('Пересчёт fertilizationDates');
+      logger.d('Пересчёт fertilizationDates');
       _fertilizationDatesCache = {};
       for (var plant in _plants) {
         if (plant.lastFertilization != null) {
@@ -195,7 +196,7 @@ class PlantProvider with ChangeNotifier {
 
   Map<DateTime, List<Plant>> get plannedFertilizationDates {
     if (_plannedFertilizationDatesCache.isEmpty) {
-      print('Пересчёт plannedFertilizationDates');
+      logger.d('Пересчёт plannedFertilizationDates');
       _plannedFertilizationDatesCache = {};
       for (var plant in _plants) {
         if (plant.plannedFertilizationDate != null) {
@@ -213,14 +214,14 @@ class PlantProvider with ChangeNotifier {
 
 // Метод для сброса кэша подкормок
   void invalidateFertilizationDatesCache() {
-    print('Сброс кэша fertilization dates');
+    logger.d('Сброс кэша fertilization dates');
     _fertilizationDatesCache = {};
     _plannedFertilizationDatesCache = {};
     notifyListeners();
   }
 
   void invalidateWateringDatesCache() {
-    print('Сброс кэша watering dates');
+    logger.d('Сброс кэша watering dates');
     _individualWateringDatesCache = {};
     _customWateringDatesCache = {};
     _recommendedWateringDatesCache = []; // Добавляем сброс кэша
@@ -296,38 +297,38 @@ class PlantProvider with ChangeNotifier {
   Future<void> loadPlants() async {
     final prefs = await SharedPreferences.getInstance();
     final plantsJson = prefs.getStringList(_prefsKey) ?? [];
-    print('Загружено растений: ${plantsJson.length}');
+    logger.d('Загружено растений: ${plantsJson.length}');
     _plants = [];
     for (var json in plantsJson) {
       try {
         final plantData = jsonDecode(json);
         _plants.add(Plant.fromJson(plantData));
       } catch (e) {
-        print('Ошибка при загрузке растения: $e');
+        logger.d('Ошибка при загрузке растения: $e');
         try {
           // Пробуем исправить кодировку через Latin1 как запасной вариант
           final decodedJson = latin1.decode(json.codeUnits, allowInvalid: true);
           final plantData = jsonDecode(decodedJson);
           _plants.add(Plant.fromJson(plantData));
-          print('Исправлена кодировка для растения (latin1)');
+          logger.d('Исправлена кодировка для растения (latin1)');
         } catch (e2) {
-          print('Не удалось исправить кодировку: $e2');
+          logger.d('Не удалось исправить кодировку: $e2');
           // В случае ошибки добавляем растение с пустыми полями страны
           try {
             final plantData = jsonDecode(json);
             Plant plant = Plant.fromJson(plantData);
             plant = plant.copyWith(country: 'Неизвестно', countryFlag: null);
             _plants.add(plant);
-            print('Добавлено растение с неизвестной страной');
+            logger.d('Добавлено растение с неизвестной страной');
           } catch (e3) {
-            print('Полностью поврежденные данные, пропускаем: $e3');
+            logger.d('Полностью поврежденные данные, пропускаем: $e3');
           }
         }
       }
     }
     _lastLocalUpdate =
         DateTime.tryParse(prefs.getString('last_local_update') ?? '');
-    print(
+    logger.d(
         'Локальные данные загружены, последнее обновление: $_lastLocalUpdate');
     _hasUnsavedChanges = false;
     await _loadGlobalWateringDates();
@@ -344,13 +345,13 @@ class PlantProvider with ChangeNotifier {
         final decodedJson = utf8.decode(json.codeUnits, allowMalformed: true);
         return WinteringLogEntry.fromJson(jsonDecode(decodedJson));
       } catch (e) {
-        print('Ошибка загрузки записи о зимовке: $e');
+        logger.d('Ошибка загрузки записи о зимовке: $e');
         try {
           final bytes = latin1.encode(json);
           final correctedJson = utf8.decode(bytes);
           return WinteringLogEntry.fromJson(jsonDecode(correctedJson));
         } catch (e2) {
-          print('Не удалось исправить кодировку записи о зимовке: $e2');
+          logger.d('Не удалось исправить кодировку записи о зимовке: $e2');
           rethrow;
         }
       }
@@ -363,7 +364,7 @@ class PlantProvider with ChangeNotifier {
 
   Future<void> savePlants() async {
     if (!_hasUnsavedChanges) {
-      print('Нет несохранённых изменений, пропускаем сохранение');
+      logger.d('Нет несохранённых изменений, пропускаем сохранение');
       return;
     }
 // === НОВОЕ: Создаём бэкап перед сохранением ===
@@ -377,7 +378,7 @@ class PlantProvider with ChangeNotifier {
       _lastLocalUpdate = DateTime.now();
       await prefs.setString(
           'last_local_update', _lastLocalUpdate!.toIso8601String());
-      print('Локальные данные сохранены, время: $_lastLocalUpdate');
+      logger.d('Локальные данные сохранены, время: $_lastLocalUpdate');
       await _saveGlobalWateringDates();
       // Сохранение данных о зимовке
       await prefs.setString(
@@ -395,11 +396,11 @@ class PlantProvider with ChangeNotifier {
       _hasUnsavedChanges = false;
       // Если были изменения фото — помечаем на синхронизацию (уже есть флаг)
       if (_needsPhotoSync) {
-        print(
+        logger.d(
             '📸 Фото изменены — будет синхронизировано при следующей полной синхронизации');
       }
     } catch (e) {
-      print('Ошибка сохранения: $e');
+      logger.d('Ошибка сохранения: $e');
       _hasUnsavedChanges = true;
       throw Exception('Не удалось сохранить растения: $e');
     } finally {
@@ -429,7 +430,7 @@ class PlantProvider with ChangeNotifier {
         notifyListeners();
         savePlants();
       } else {
-        print('Данные не изменились, обновление не требуется');
+        logger.d('Данные не изменились, обновление не требуется');
       }
     }
   }
@@ -533,7 +534,7 @@ class PlantProvider with ChangeNotifier {
 
   // === УПРАВЛЕНИЕ ФАЙЛАМИ QR ЭТИКЕТОК ===
   List<QRCodeFile> _qrCodeFiles = [];
-  static const String _qrFilesKey = 'qr_code_files';
+  static const String _qrFilesKey = PrefsKeys.qrCodeFiles;
 
   List<QRCodeFile> get qrCodeFiles => List.unmodifiable(_qrCodeFiles);
 
@@ -627,7 +628,7 @@ class PlantProvider with ChangeNotifier {
   }
 
   // === ИСТОРИЯ СКАНИРОВАНИЙ QR КОДОВ ===
-  static const String _scanHistoryKey = 'qr_scan_history';
+  static const String _scanHistoryKey = PrefsKeys.qrScanHistory;
   List<String> _scanHistory = [];
 
   List<String> get scanHistory => List.unmodifiable(_scanHistory);
@@ -880,7 +881,7 @@ class PlantProvider with ChangeNotifier {
   }
 
   void checkWateringNotifications() {
-    print('Проверка уведомлений о поливе');
+    logger.d('Проверка уведомлений о поливе');
     final now = DateTime.now();
     final lastGlobalWatering = lastGlobalWateringDate;
     final recommendedDates = recommendedWateringDates;
@@ -906,12 +907,12 @@ class PlantProvider with ChangeNotifier {
     }
 
     if (hasChanges) {
-      print('Уведомления изменены, обновляем данные');
+      logger.d('Уведомления изменены, обновляем данные');
       _hasUnsavedChanges = true;
       notifyListeners();
       savePlants();
     } else {
-      print('Уведомления не изменились');
+      logger.d('Уведомления не изменились');
     }
   }
 
@@ -1179,7 +1180,7 @@ class PlantProvider with ChangeNotifier {
     final base = useCloudAsBase ? cloud : local;
     final other = useCloudAsBase ? local : cloud;
     
-    print('🔄 Слияние ${base.latinName}: ${useCloudAsBase ? "облако > локальное" : "локальное > облако"}');
+    logger.d('🔄 Слияние ${base.latinName}: ${useCloudAsBase ? "облако > локальное" : "локальное > облако"}');
     
     // Сливаем свои фото с исключением удаленных
     final mergedPhotos = _mergePhotoLists(base.userPhotos, other.userPhotos, _deletedUserPhotos);
@@ -1346,7 +1347,7 @@ class PlantProvider with ChangeNotifier {
 
   // === МЕТОД ЗАГРУЗКИ ДАННЫХ ИЗ ОБЛАКА ===
   void loadFromCloudJson(Map<String, dynamic> data) {
-    print(
+    logger.d(
         '🔄 loadFromCloudJson вызван — загружаем ${data['plants']?.length ?? 0} растений');
 
     final plantsJson = data['plants'] as List<dynamic>? ?? [];
@@ -1358,7 +1359,7 @@ class PlantProvider with ChangeNotifier {
         final plant = Plant.fromJson(json as Map<String, dynamic>);
         cloudPlants.add(plant);
       } catch (e) {
-        print('❌ Ошибка загрузки растения из облака: $e');
+        logger.d('❌ Ошибка загрузки растения из облака: $e');
       }
     }
 
@@ -1373,11 +1374,11 @@ class PlantProvider with ChangeNotifier {
         // Растение есть локально и в облаке - сливаем
         final merged = _mergePlantData(_plants[localIndex], cloudPlant);
         mergedPlants.add(merged);
-        print('✅ Слияние: ${merged.latinName}');
+        logger.d('✅ Слияние: ${merged.latinName}');
       } else {
         // Растение только в облаке - добавляем как есть
         mergedPlants.add(cloudPlant);
-        print('➕ Новое из облака: ${cloudPlant.latinName}');
+        logger.d('➕ Новое из облака: ${cloudPlant.latinName}');
       }
     }
     
@@ -1386,7 +1387,7 @@ class PlantProvider with ChangeNotifier {
       final existsInCloud = cloudPlants.any((p) => p.permanentId == localPlant.permanentId);
       if (!existsInCloud) {
         mergedPlants.add(localPlant);
-        print('💾 Только локальное: ${localPlant.latinName}');
+        logger.d('💾 Только локальное: ${localPlant.latinName}');
       }
     }
     
@@ -1419,14 +1420,14 @@ class PlantProvider with ChangeNotifier {
             .toList() ??
         [];
 
-    print('✅ Загружено ${_plants.length} растений из облака');
+    logger.d('✅ Загружено ${_plants.length} растений из облака');
 
     // КРИТИЧНО: После загрузки сразу приводим фото в порядок
     ensureLocalPhotosExist().then((_) {
       cleanupLocalPhotosAfterCloudLoad();
       invalidateAllCaches();
       notifyListeners();
-      print('✅ Фото обработаны после загрузки из облака');
+      logger.d('✅ Фото обработаны после загрузки из облака');
     });
   }
 
@@ -1456,7 +1457,7 @@ class PlantProvider with ChangeNotifier {
       await sourceFile.copy(newPath);
       return newPath;
     } catch (e) {
-      print('Ошибка копирования файла: $e');
+      logger.d('Ошибка копирования файла: $e');
       rethrow; // Или обработайте ошибку иным способом
     }
   }
@@ -1494,7 +1495,7 @@ class PlantProvider with ChangeNotifier {
         //   cloudProvider.syncUserPhotos(this); // пока закомментируем
         // }
       } catch (e) {
-        print('Ошибка добавления фото: $e');
+        logger.d('Ошибка добавления фото: $e');
         rethrow;
       }
     }
@@ -1715,7 +1716,7 @@ class PlantProvider with ChangeNotifier {
       }
       await photoDir.create(recursive: true);
     } catch (e) {
-      print('Ошибка очистки фото: $e');
+      logger.d('Ошибка очистки фото: $e');
     }
 
     // Сброс кэшей
@@ -1723,7 +1724,7 @@ class PlantProvider with ChangeNotifier {
     invalidateFertilizationDatesCache();
 
     notifyListeners();
-    print('Все данные приложения сброшены');
+    logger.d('Все данные приложения сброшены');
   }
 
   Future<void> initLocation() async {
@@ -1824,9 +1825,9 @@ class PlantProvider with ChangeNotifier {
 
       final file = File(backupPath);
       await file.writeAsString(jsonEncode(backupData));
-      print('✅ Локальный бэкап создан: $backupPath');
+      logger.d('✅ Локальный бэкап создан: $backupPath');
     } catch (e) {
-      print('❌ Ошибка создания бэкапа: $e');
+      logger.d('❌ Ошибка создания бэкапа: $e');
     }
   }
 
@@ -1835,7 +1836,7 @@ class PlantProvider with ChangeNotifier {
       final backupPath = await getBackupFilePath();
       final file = File(backupPath);
       if (!await file.exists()) {
-        print('Бэкап-файл не найден');
+        logger.d('Бэкап-файл не найден');
         return false;
       }
 
@@ -1848,12 +1849,12 @@ class PlantProvider with ChangeNotifier {
       invalidateWateringDatesCache();
       invalidateFertilizationDatesCache();
 
-      print('✅ Данные успешно восстановлены из локального бэкапа');
+      logger.d('✅ Данные успешно восстановлены из локального бэкапа');
       await savePlants();
       notifyListeners();
       return true;
     } catch (e) {
-      print('❌ Ошибка восстановления из бэкапа: $e');
+      logger.d('❌ Ошибка восстановления из бэкапа: $e');
       return false;
     }
   }
@@ -1861,7 +1862,7 @@ class PlantProvider with ChangeNotifier {
   // === ЛЕНИВОЕ СКАЧИВАНИЕ ФОТО БЕЗ ИЗМЕНЕНИЯ userPhotos ===
   Future<void> ensureLocalPhotosExist() async {
     if (_isEnsuringPhotos) {
-      print('⏸️ ensureLocalPhotosExist уже выполняется, пропускаем');
+      logger.d('⏸️ ensureLocalPhotosExist уже выполняется, пропускаем');
       return;
     }
     
@@ -1870,7 +1871,7 @@ class PlantProvider with ChangeNotifier {
       final photosDir = await _getPhotosDirectory();
       int cachedCount = 0;
 
-      print(
+      logger.d(
           '🔄 ensureLocalPhotosExist (prefetch cache) запущен для ${_plants.length} растений');
 
       for (final plant in _plants) {
@@ -1889,7 +1890,7 @@ class PlantProvider with ChangeNotifier {
             
             // Валидируем доступность cloud URL перед скачиванием
             if (!await _validateCloudUrl(photo)) {
-              print('⚠️ Cloud URL недоступен, пропускаем: $photo');
+              logger.d('⚠️ Cloud URL недоступен, пропускаем: $photo');
               continue;
             }
             
@@ -1897,12 +1898,12 @@ class PlantProvider with ChangeNotifier {
             await _downloadPhotoWithRetry(photo, localPath);
             cachedCount++;
           } catch (e) {
-            print('⚠️ Не удалось закешировать облачное фото $photo: $e');
+            logger.d('⚠️ Не удалось закешировать облачное фото $photo: $e');
           }
         }
       }
 
-      print('✅ Prefetch завершён, новых закешированных фото: $cachedCount');
+      logger.d('✅ Prefetch завершён, новых закешированных фото: $cachedCount');
       
       // Запускаем очистку старого кэша
       _cleanupOldCache();
@@ -1928,16 +1929,16 @@ class PlantProvider with ChangeNotifier {
           if (DateTime.now().difference(stat.modified).inDays > 30) {
             await file.delete();
             deletedCount++;
-            print('🗑️ Удален старый кэш: ${file.path}');
+            logger.d('🗑️ Удален старый кэш: ${file.path}');
           }
         }
       }
       
       if (deletedCount > 0) {
-        print('🧹 Очистка кэша завершена: удалено $deletedCount старых файлов');
+        logger.d('🧹 Очистка кэша завершена: удалено $deletedCount старых файлов');
       }
     } catch (e) {
-      print('⚠️ Ошибка очистки кэша: $e');
+      logger.d('⚠️ Ошибка очистки кэша: $e');
     }
   }
   
@@ -1956,7 +1957,7 @@ class PlantProvider with ChangeNotifier {
         if (attempt == 2) {
           rethrow;
         }
-        print('🔄 Попытка ${attempt + 1} для скачивания $url не удалась: $e');
+        logger.d('🔄 Попытка ${attempt + 1} для скачивания $url не удалась: $e');
         await Future.delayed(Duration(seconds: attempt + 1));
       }
     }
@@ -1999,13 +2000,13 @@ class PlantProvider with ChangeNotifier {
           await entity.delete();
           deletedCount++;
         } catch (e) {
-          print('⚠️ Не удалось удалить старое фото: ${entity.path}');
+          logger.d('⚠️ Не удалось удалить старое фото: ${entity.path}');
         }
       }
     }
 
     if (deletedCount > 0) {
-      print(
+      logger.d(
           '🧹 Автоочистка после синхронизации: удалено $deletedCount старых фото');
     }
   }
@@ -2044,7 +2045,7 @@ class PlantProvider with ChangeNotifier {
           await fileEntity.delete();
           deletedCount++;
         } catch (e) {
-          print('⚠️ Не удалось удалить файл ${fileEntity.path}: $e');
+          logger.d('⚠️ Не удалось удалить файл ${fileEntity.path}: $e');
         }
       }
     }
@@ -2127,7 +2128,7 @@ class PlantProvider with ChangeNotifier {
           await fileEntity.delete();
           deletedCount++;
         } catch (e) {
-          print('⚠️ Не удалось удалить: ${fileEntity.path}');
+          logger.d('⚠️ Не удалось удалить: ${fileEntity.path}');
         }
       }
     }
@@ -2446,7 +2447,7 @@ class PlantProvider with ChangeNotifier {
 
   // Полная очистка всех кэшей после загрузки из облака
   void invalidateAllCaches() {
-    print('🔄 Полный сброс всех кэшей после загрузки из облака');
+    logger.d('🔄 Полный сброс всех кэшей после загрузки из облака');
     _individualWateringDatesCache = {};
     _customWateringDatesCache = {};
     _recommendedWateringDatesCache = [];
