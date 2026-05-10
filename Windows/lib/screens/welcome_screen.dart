@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/cloud_storage_provider.dart';
-import '../main.dart'; // Импортируем main.dart, где находится HomeScreen
-import '../providers/plant_provider.dart';
+import '../main.dart';
+import '../presentation/providers/providers.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -13,16 +13,14 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class WelcomeScreenState extends State<WelcomeScreen> {
-  bool _rememberMe = false; // Переменная для чекбокса
+  bool _rememberMe = false;
 
   @override
   void initState() {
-    super.initState(); // Базовый вызов — стандартный для StatefulWidget.
+    super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context
-          .read<PlantProvider>()
-          .initLocation(); // Вызов провайдера — гео один раз, сохраняет в prefs без влияния на UI.
+      context.read<WeatherProvider>().initLocation();
     });
   }
 
@@ -30,7 +28,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_seen_welcome', true);
-      await prefs.setBool('remember_me', _rememberMe); // Сохраняем выбор
+      await prefs.setBool('remember_me', _rememberMe);
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -38,10 +36,10 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         );
       }
     } catch (e) {
-      print('Ошибка при пропуске приветственного экрана: $e');
+      print('Ошибка при пропуске: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Произошла ошибка: $e')),
+          SnackBar(content: Text('Ошибка: $e')),
         );
       }
     }
@@ -50,47 +48,89 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   Future<void> _connectToYandexDisk(ValueNotifier<bool> isLoading) async {
     try {
       isLoading.value = true;
+
       final cloudProvider =
           Provider.of<CloudStorageProvider>(context, listen: false);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Открываем браузер для авторизации...\nПосле авторизации закройте браузер и вернитесь в приложение'),
+            duration: Duration(seconds: 6),
+          ),
+        );
+      }
+
       await cloudProvider.connectToYandexDisk(context);
-      if (cloudProvider.isConnected && mounted) {
+
+      // Даём системе время обработать deep link
+      if (mounted) {
+        await Future.delayed(const Duration(seconds: 3));
+      }
+
+      if (!mounted) return;
+
+      if (cloudProvider.isConnected) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('has_seen_welcome', true);
         await prefs.setBool('remember_me', _rememberMe);
-        if (!mounted) return;
-        final plantProvider = context.read<PlantProvider>();
-        await _syncAfterFirstConnect(plantProvider, cloudProvider);
+
         if (mounted) {
-          // Дополнительная проверка
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Авторизация успешна! Начинаем синхронизацию...'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
+
+        if (!mounted) return;
+        final plantCrudProvider = context.read<PlantCrudProvider>();
+        await _syncAfterFirstConnect(plantCrudProvider, cloudProvider);
+
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось подключиться. Попробуйте ещё раз.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
-    } catch (e) {
+    } catch (e, stack) {
+      print('❌ Критическая ошибка авторизации: $e');
+      print(stack);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка подключения: $e')),
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      if (mounted) {
-        isLoading.value = false;
-      }
+      if (mounted) isLoading.value = false;
     }
   }
 
+  // Безопасная синхронизация после первого подключения
   Future<void> _syncAfterFirstConnect(
-      PlantProvider plantProvider, CloudStorageProvider cloudProvider) async {
+      PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider) async {
     try {
-      await plantProvider.loadPlants();
+      print('📥 Загружаем данные из Яндекс.Диска...');
+
+      await plantCrudProvider.loadPlants();
       await cloudProvider.fetchLastCloudUpdate();
 
       if (cloudProvider.lastCloudUpdate != null) {
-        await cloudProvider.loadDataFromCloud(plantProvider);
-        await plantProvider.savePlants();
+        await cloudProvider.loadDataFromCloud(plantCrudProvider);
+        await plantCrudProvider.savePlants();
+        print('✅ Данные успешно загружены из облака');
       } else {
-        await cloudProvider.syncData(plantProvider);
+        print('⚠️ В облаке пока нет данных, сохраняем локальные...');
+        await cloudProvider.syncData(plantCrudProvider);
       }
     } catch (e) {
       print('❌ Ошибка при синхронизации после подключения: $e');
@@ -179,3 +219,4 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 }
+

@@ -62,6 +62,8 @@ class Plant {
   };
 
   Plant({
+    String? permanentId,
+    String? displayId,
     required this.latinName,
     required this.status,
     required this.year,
@@ -103,8 +105,8 @@ class Plant {
     this.parentId,
     // Поле для QR кода
     this.qrCode,
-  })  : permanentId = const Uuid().v4(),
-        displayId = Plant.generateDisplayId(year, customNumber, category),
+  })  : permanentId = permanentId ?? const Uuid().v4(),
+        displayId = displayId ?? Plant.generateDisplayId(year, customNumber, category),
         wateringDates = wateringDates ?? [],
         customWateringDates = customWateringDates ?? [],
         germinationHistory = germinationHistory ?? [],
@@ -377,8 +379,11 @@ class Plant {
           : null,
       // Поля для системы партий (обратная совместимость — null если не в JSON)
       aliveCount: json['aliveCount'] as int?,
-      isBatch: json['isBatch'] as bool? ?? false,
-      childrenIds: List<String>.from(json['childrenIds'] ?? []),
+      isBatch: json['isBatch'] ?? false,
+      childrenIds: (json['childrenIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
       parentId: json['parentId'] as String?,
       // Поле для QR кода (обратная совместимость — null если не в JSON)
       qrCode: json['qrCode'] != null

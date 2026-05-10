@@ -18,23 +18,58 @@ class HiveDatabase {
   static Box<WinteringLogEntryDto>? _winteringLogsBox;
   static Box<GbifOccurrenceDto>? _gbifCacheBox;
 
+  static bool _isInitialized = false;
+  static bool _isInitializing = false;
+
   /// Инициализация Hive базы данных
+  /// Безопасна при повторном вызове (idempotent)
   static Future<void> initialize() async {
-    await Hive.initFlutter();
-    
-    // Регистрация адаптеров
-    Hive.registerAdapter(PlantDtoAdapter());
-    Hive.registerAdapter(QRCodeDtoAdapter());
-    Hive.registerAdapter(NoteDtoAdapter());
-    Hive.registerAdapter(WinteringLogEntryDtoAdapter());
-    Hive.registerAdapter(GbifOccurrenceDtoAdapter());
-    
-    // Открытие коробок
-    _plantsBox = await Hive.openBox<PlantDto>(_plantsBoxName);
-    _qrCodesBox = await Hive.openBox<QRCodeDto>(_qrCodesBoxName);
-    _notesBox = await Hive.openBox<NoteDto>(_notesBoxName);
-    _winteringLogsBox = await Hive.openBox<WinteringLogEntryDto>(_winteringLogsBoxName);
-    _gbifCacheBox = await Hive.openBox<GbifOccurrenceDto>(_gbifCacheBoxName);
+    if (_isInitialized) {
+      return;
+    }
+    if (_isInitializing) {
+      // Ждём завершения текущей инициализации
+      while (_isInitializing) {
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+      return;
+    }
+
+    _isInitializing = true;
+    try {
+      await Hive.initFlutter();
+
+      // Регистрация адаптеров с защитой от повторной регистрации
+      _safeRegisterAdapter(PlantDtoAdapter());
+      _safeRegisterAdapter(QRCodeDtoAdapter());
+      _safeRegisterAdapter(NoteDtoAdapter());
+      _safeRegisterAdapter(WinteringLogEntryDtoAdapter());
+      _safeRegisterAdapter(GbifOccurrenceDtoAdapter());
+
+      // Открытие коробок
+      _plantsBox = await Hive.openBox<PlantDto>(_plantsBoxName);
+      _qrCodesBox = await Hive.openBox<QRCodeDto>(_qrCodesBoxName);
+      _notesBox = await Hive.openBox<NoteDto>(_notesBoxName);
+      _winteringLogsBox = await Hive.openBox<WinteringLogEntryDto>(_winteringLogsBoxName);
+      _gbifCacheBox = await Hive.openBox<GbifOccurrenceDto>(_gbifCacheBoxName);
+
+      _isInitialized = true;
+    } finally {
+      _isInitializing = false;
+    }
+  }
+
+  /// Безопасная регистрация адаптера (игнорирует повторную регистрацию)
+  static void _safeRegisterAdapter<T>(TypeAdapter<T> adapter) {
+    try {
+      Hive.registerAdapter(adapter);
+    } on HiveError catch (e) {
+      if (e.message.contains('already a TypeAdapter')) {
+        // Адаптер уже зарегистрирован — это нормально при hot-restart
+        return;
+      }
+      rethrow;
+    }
   }
 
   /// Получить коробку растений
@@ -77,13 +112,20 @@ class HiveDatabase {
     return _gbifCacheBox!;
   }
 
-  /// Закрыть все коробки
+  /// Закрыть все коробки и сбросить состояние
   static Future<void> close() async {
     await _plantsBox?.close();
     await _qrCodesBox?.close();
     await _notesBox?.close();
     await _winteringLogsBox?.close();
     await _gbifCacheBox?.close();
+
+    _plantsBox = null;
+    _qrCodesBox = null;
+    _notesBox = null;
+    _winteringLogsBox = null;
+    _gbifCacheBox = null;
+    _isInitialized = false;
   }
 
   /// Очистить все данные (для тестирования)

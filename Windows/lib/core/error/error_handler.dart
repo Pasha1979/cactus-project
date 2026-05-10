@@ -22,6 +22,10 @@ class ErrorHandler {
       return const ValidationFailure();
     } else if (exception is AuthenticationException) {
       return const AuthenticationFailure();
+    } else if (exception is DuplicateIdException) {
+      return const DuplicateFailure();
+    } else if (exception is OAuth2Exception) {
+      return const OAuth2Failure();
     } else {
       return const UnknownFailure();
     }

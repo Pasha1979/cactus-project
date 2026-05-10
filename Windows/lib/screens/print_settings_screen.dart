@@ -6,7 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import '../models/plant.dart';
 import '../models/qr_code_file.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import '../widgets/print_preview_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -150,18 +150,21 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
   }
 
   Future<void> _savePdf() async {
-    final plantProvider = context.read<PlantProvider>();
+    final qrProvider = context.read<QrCodeProvider>();
     final pdf = await _generatePdf();
 
+    // Формируем понятное имя файла: qr_labels_2024-05-09_15-30-00.pdf
     final now = DateTime.now();
     final fileName =
         'qr_labels_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_'
         '${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}.pdf';
 
+    // Получаем директорию для сохранения (Documents для Windows/Android)
     final output = await getApplicationDocumentsDirectory();
     final file = File('${output.path}${Platform.pathSeparator}$fileName');
     await file.writeAsBytes(await pdf.save());
 
+    // Сохраняем метаданные о файле
     final qrFile = QRCodeFile(
       id: const Uuid().v4(),
       fileName: fileName,
@@ -173,7 +176,7 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
       labelWidthCm: _labelWidthCm,
       labelHeightCm: _labelHeightCm,
     );
-    await plantProvider.saveQRCodeFile(qrFile);
+    await qrProvider.saveQRCodeFile(qrFile);
 
     if (mounted) {
       _showSaveSuccessDialog(file.path);
@@ -224,17 +227,17 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
 
   Future<void> _printPdf() async {
     final pdf = await _generatePdf();
-    
+
     // TODO(окружение): Временно отключена печать из-за ошибки сборки pdfium
     // await Printing.layoutPdf(
     //   onLayout: (format) => pdf.save(),
     // );
-    
+
     // Вместо печати сохраняем PDF файл
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/qr_labels_${DateTime.now().millisecondsSinceEpoch}.pdf');
     await file.writeAsBytes(await pdf.save());
-    
+
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('PDF сохранен: ${file.path}')),

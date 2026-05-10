@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:async';
 import '../models/plant.dart';
 import 'package:provider/provider.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/llifle_utils.dart';
 import '../utils/translation_utils.dart';
@@ -265,7 +265,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
               _editedPlant = _editedPlant.copyWith(
                 latinName: _latinNameController.text.trim(),
               );
-              Provider.of<PlantProvider>(context, listen: false)
+              context.read<PlantCrudProvider>()
                   .updatePlant(_editedPlant.permanentId, _editedPlant);
               Navigator.pop(
                   context, _editedPlant); // Возвращаем обновленное растение

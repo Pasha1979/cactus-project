@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'constants/app_constants.dart';
 import 'models/plant.dart';
 import 'screens/edit_plant_screen.dart';
-import 'providers/plant_provider.dart';
 import 'providers/cloud_storage_provider.dart';
+import 'presentation/providers/providers.dart';
 import 'screens/sowing_management_screen.dart';
 import 'screens/statistics_screen.dart';
 import 'screens/qr_management_screen.dart';
@@ -21,6 +21,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import '../theme/cactus_theme.dart';
 import 'data/datasources/local/hive_database.dart';
+import 'data/migrations/data_migration_manager.dart';
+import 'injection_container.dart' as di;
 
 enum GroupAction { changeStatus, delete }
 
@@ -32,6 +34,15 @@ void main() async {
 
   // Инициализация Hive базы данных
   await HiveDatabase.initialize();
+
+  // Инициализация DI-контейнера (зависит от Hive)
+  await di.init();
+
+  // Миграция данных из SharedPreferences в Hive (при первом запуске после обновления)
+  final migrationSuccess = await DataMigrationManager.runMigrationIfNeeded();
+  if (!migrationSuccess) {
+    print('⚠️ Миграция данных не удалась. Используем резервный режим.');
+  }
 
   const bool isRelease = bool.fromEnvironment('dart.vm.product');
   if (isRelease) {
@@ -45,8 +56,17 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => PlantProvider()),
+        ChangeNotifierProvider(create: (_) => PlantCrudProvider()),
         ChangeNotifierProvider(create: (_) => CloudStorageProvider()),
+        // Новые специализированные провайдеры (шаг 1.10)
+        ChangeNotifierProvider(create: (_) => PlantCrudProvider()),
+        ChangeNotifierProvider(create: (_) => WateringProvider()),
+        ChangeNotifierProvider(create: (_) => WinteringProvider()),
+        ChangeNotifierProvider(create: (_) => PhotoProvider()),
+        ChangeNotifierProvider(create: (_) => BatchProvider()),
+        ChangeNotifierProvider(create: (_) => SyncProvider()),
+        ChangeNotifierProvider(create: (_) => QrCodeProvider()),
+        ChangeNotifierProvider(create: (_) => WeatherProvider()),
       ],
       child: MaterialApp(
         // Перенесите MaterialApp сюда
@@ -59,9 +79,9 @@ void main() async {
 
 Future<void> _cleanAppData() async {
   // === НОВОЕ: Бэкап перед очисткой ===
-  final plantProvider =
-      Provider.of<PlantProvider>(navigatorKey.currentContext!, listen: false);
-  await plantProvider.createLocalBackup();
+  final plantCrudProvider =
+      Provider.of<PlantCrudProvider>(navigatorKey.currentContext!, listen: false);
+  await plantCrudProvider.createLocalBackup();
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
 
@@ -124,11 +144,27 @@ class MyApp extends StatelessWidget {
         final showWelcomeScreen = snapshot.data?['show_welcome'] ?? true;
         final startupMessage = snapshot.data?['startup_message'] as String?;
 
-        // Сохранено: PostFrameCallback для _syncData — не меняется, синхронизация запускается после загрузки.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final plantProvider =
-              Provider.of<PlantProvider>(context, listen: false);
-          _syncData(plantProvider, cloudProvider);
+        // Загрузка данных после первого фрейма
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          final plantCrudProvider =
+              Provider.of<PlantCrudProvider>(context, listen: false);
+          final wateringProvider =
+              Provider.of<WateringProvider>(context, listen: false);
+          final winteringProvider =
+              Provider.of<WinteringProvider>(context, listen: false);
+          final photoProvider =
+              Provider.of<PhotoProvider>(context, listen: false);
+          final qrCodeProvider =
+              Provider.of<QrCodeProvider>(context, listen: false);
+
+          await _syncData(plantCrudProvider, cloudProvider);
+
+          // Загрузка данных для специализированных провайдеров
+          await wateringProvider.load();
+          await winteringProvider.load();
+          await photoProvider.load();
+          await qrCodeProvider.loadScanHistory();
+          await qrCodeProvider.loadQRCodeFiles();
 
           if (startupMessage != null && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -189,14 +225,14 @@ class MyApp extends StatelessWidget {
   }
 
   Future<void> _syncData(
-      PlantProvider plantProvider, CloudStorageProvider cloudProvider) async {
-    await plantProvider.loadPlants();
+      PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider) async {
+    await plantCrudProvider.loadPlants();
     if (!cloudProvider.isConnected) {
       print('Нет подключения к облаку, синхронизация пропущена');
       return;
     }
     await cloudProvider.fetchLastCloudUpdate();
-    final localUpdate = plantProvider.lastLocalUpdate;
+    final localUpdate = plantCrudProvider.lastLocalUpdate;
     final cloudUpdate = cloudProvider.lastCloudUpdate;
     print('Локальное обновление: $localUpdate');
     print('Облачное обновление: $cloudUpdate');
@@ -204,18 +240,18 @@ class MyApp extends StatelessWidget {
       print('Оба хранилища пусты, синхронизация не требуется');
       return;
     }
-    if (plantProvider.plants.isEmpty && cloudUpdate != null) {
+    if (plantCrudProvider.plants.isEmpty && cloudUpdate != null) {
       print('Локальные данные пусты, загружаем из облака');
-      await cloudProvider.loadDataFromCloud(plantProvider);
-      await plantProvider.savePlants();
+      await cloudProvider.loadDataFromCloud(plantCrudProvider);
+      await plantCrudProvider.savePlants();
     } else if (cloudUpdate == null ||
         (localUpdate != null && localUpdate.isAfter(cloudUpdate))) {
       print('Локальные данные новее или облако пусто, синхронизируем в облако');
-      await cloudProvider.syncData(plantProvider);
+      await cloudProvider.syncData(plantCrudProvider);
     } else if (localUpdate == null || cloudUpdate.isAfter(localUpdate)) {
       print('Облачные данные новее или локальные пусты, загружаем из облака');
-      await cloudProvider.loadDataFromCloud(plantProvider);
-      await plantProvider.savePlants();
+      await cloudProvider.loadDataFromCloud(plantCrudProvider);
+      await plantCrudProvider.savePlants();
     } else {
       print('Данные синхронизированы, ничего не требуется');
     }
@@ -253,12 +289,12 @@ class HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    context.read<PlantProvider>().loadPlants();
+    context.read<PlantCrudProvider>().loadPlants();
     if (widget.initialFilter != null) {
       _currentFilter = 'custom_filter';
-      context.read<PlantProvider>().clearSelections();
+      context.read<PlantCrudProvider>().clearSelections();
       context
-          .read<PlantProvider>()
+          .read<PlantCrudProvider>()
           .selectAll(widget.initialFilter!.map((p) => p.permanentId).toList());
     }
   }
@@ -312,7 +348,7 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildStatsRow() {
-    final provider = context.watch<PlantProvider>();
+    final provider = context.watch<PlantCrudProvider>();
     final plants = provider.plants;
     // Всего растений на главном экране (без сеянцев)
     final mainPlants = plants.where((p) => p.parentId == null).toList();
@@ -385,7 +421,7 @@ class HomeScreenState extends State<HomeScreen>
 
   String _getSeasonalTip() {
     final month = DateTime.now().month;
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = Provider.of<PlantCrudProvider>(context, listen: false);
     final plants = provider.plants;
     final sownCount = plants.where((p) => p.category == 'sown').length;
     final purchasedCount = plants.where((p) => p.category == 'purchased').length;
@@ -449,7 +485,7 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildNavigationRail() {
-    final provider = context.watch<PlantProvider>();
+    final provider = context.watch<PlantCrudProvider>();
     final years = provider.plants
         .where((p) => p.category == 'sown')
         .map((p) => p.year)
@@ -478,7 +514,7 @@ class HomeScreenState extends State<HomeScreen>
                 MaterialPageRoute(builder: (ctx) => const QRManagementScreen()),
               );
             } else if (index == 7) {
-              final provider = context.read<PlantProvider>();
+              final provider = context.read<PlantCrudProvider>();
               provider.clearSelections();
               final plantsWithoutQR = provider.getPlantsWithoutQRCode();
               for (var plant in plantsWithoutQR) {
@@ -658,10 +694,10 @@ class HomeScreenState extends State<HomeScreen>
       context,
       MaterialPageRoute(
           builder: (ctx) => AddPlantForm(
-              getNextNumber: _getNextNumber, isNumberUnique: _isNumberUnique)),
+              getNextCustomNumber: _getNextCustomNumber, isCustomNumberUnique: _isCustomNumberUnique)),
     );
     if (result != null && mounted) {
-      Provider.of<PlantProvider>(context, listen: false).addPlant(result);
+      Provider.of<PlantCrudProvider>(context, listen: false).addPlant(result);
     }
   }
 
@@ -671,12 +707,12 @@ class HomeScreenState extends State<HomeScreen>
       MaterialPageRoute(builder: (ctx) => EditPlantScreen(plant: plant)),
     );
     if (result != null && mounted) {
-      context.read<PlantProvider>().updatePlant(plant.permanentId, result);
+      context.read<PlantCrudProvider>().updatePlant(plant.permanentId, result);
     }
   }
 
-  int _getNextNumber(int year, String category) {
-    final plants = context.read<PlantProvider>().plants;
+  int _getNextCustomNumber(int year, String category) {
+    final plants = context.read<PlantCrudProvider>().plants;
     final numbers = plants
         .where((p) => p.category == category && p.year == year)
         .map((p) => p.customNumber)
@@ -684,9 +720,9 @@ class HomeScreenState extends State<HomeScreen>
     return numbers.isEmpty ? 1 : numbers.reduce((a, b) => a > b ? a : b) + 1;
   }
 
-  bool _isNumberUnique(int year, int number, String category,
+  bool _isCustomNumberUnique(int year, int number, String category,
       {String? excludeId}) {
-    final plants = context.read<PlantProvider>().plants;
+    final plants = context.read<PlantCrudProvider>().plants;
     return !plants.any((p) =>
         p.category == category &&
         p.year == year &&
@@ -696,7 +732,7 @@ class HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<PlantProvider>();
+    final provider = context.watch<PlantCrudProvider>();
     // Фильтруем: не показываем сеянцы (parentId != null) на главном экране
     // Сеянцы показываются только внутри своих витрин
     List<Plant> filteredPlants = provider.plants.where((plant) {
@@ -863,7 +899,7 @@ class HomeScreenState extends State<HomeScreen>
                           icon: const Icon(Icons.sync),
                           tooltip: 'Синхронизировать с облаком',
                           onPressed: () async {
-                            final plantProvider = context.read<PlantProvider>();
+                            final plantCrudProvider = context.read<PlantCrudProvider>();
                             final cloudProvider =
                                 context.read<CloudStorageProvider>();
                             final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -872,7 +908,7 @@ class HomeScreenState extends State<HomeScreen>
                                   content: Text('🔄 Синхронизация началась...')),
                             );
                             try {
-                              await cloudProvider.syncData(plantProvider);
+                              await cloudProvider.syncData(plantCrudProvider);
                               if (!mounted) return;
                               scaffoldMessenger.showSnackBar(
                                 const SnackBar(
@@ -964,7 +1000,7 @@ class HomeScreenState extends State<HomeScreen>
                             ),
                           ],
                           onSelected: (value) async {
-                            final provider = context.read<PlantProvider>();
+                            final provider = context.read<PlantCrudProvider>();
 
                             if (value == 'changeStatus') {
                               _showStatusDialog(context);
@@ -1062,7 +1098,7 @@ class HomeScreenState extends State<HomeScreen>
       final excelInstance = excel.Excel.decodeBytes(bytes);
       final sheet = excelInstance.tables.keys.first;
       final table = excelInstance.tables[sheet]!;
-      final provider = Provider.of<PlantProvider>(context, listen: false);
+      final provider = Provider.of<PlantCrudProvider>(context, listen: false);
       int added = 0;
       int skipped = 0;
 
@@ -1097,9 +1133,9 @@ class HomeScreenState extends State<HomeScreen>
         final germinated = int.tryParse(germinatedStr) ?? 0;
         final seedNumber = int.tryParse(seedNumberStr);
         int customNumber = seedNumber != null &&
-                provider.isNumberUnique(year, seedNumber, category)
+                provider.isCustomNumberUnique(year, seedNumber, category)
             ? seedNumber
-            : provider.getNextNumber(year, category);
+            : provider.getNextCustomNumber(year, category);
 
         // Проверка на дубликат по имени и году
         if (provider.plants.any((p) => p.latinName == name && p.year == year)) {
@@ -1133,7 +1169,7 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _handleExit(BuildContext parentContext) async {
-    final provider = parentContext.read<PlantProvider>();
+    final provider = parentContext.read<PlantCrudProvider>();
     if (!provider.hasUnsavedChanges) {
       if (parentContext.mounted) {
         Navigator.of(parentContext).pop();
@@ -1184,7 +1220,7 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _confirmMassDelete(BuildContext context) {
-    final provider = context.read<PlantProvider>();
+    final provider = context.read<PlantCrudProvider>();
     final count = provider.selectedIds.length;
 
     showDialog(
@@ -1241,7 +1277,7 @@ class HomeScreenState extends State<HomeScreen>
               .toList(),
           onChanged: (value) {
             if (value != null) {
-              context.read<PlantProvider>().updateMultipleStatus(value);
+              context.read<PlantCrudProvider>().updateMultipleStatus(value);
               Navigator.pop(context);
             }
           },
@@ -1258,7 +1294,7 @@ class HomeScreenState extends State<HomeScreen>
   Future<void> _connectWeather(BuildContext context) async {
     // Сохраняем контекст в начале — это важно
     final currentContext = context;
-    final provider = currentContext.read<PlantProvider>();
+    final provider = currentContext.read<WeatherProvider>();
 
     try {
       await provider.initLocation();
@@ -1346,12 +1382,12 @@ class HomeScreenState extends State<HomeScreen>
 }
 
 class AddPlantForm extends StatefulWidget {
-  final int Function(int year, String category) getNextNumber;
+  final int Function(int year, String category) getNextCustomNumber;
   final bool Function(int year, int number, String category,
-      {String? excludeId}) isNumberUnique;
+      {String? excludeId}) isCustomNumberUnique;
 
   const AddPlantForm(
-      {super.key, required this.getNextNumber, required this.isNumberUnique});
+      {super.key, required this.getNextCustomNumber, required this.isCustomNumberUnique});
 
   @override
   State<AddPlantForm> createState() => _AddPlantFormState();
@@ -1374,7 +1410,7 @@ class _AddPlantFormState extends State<AddPlantForm> {
   void _updateNumber() {
     final year = int.tryParse(_yearController.text);
     if (year != null) {
-      _numberController.text = widget.getNextNumber(year, _category).toString();
+      _numberController.text = widget.getNextCustomNumber(year, _category).toString();
     }
   }
 
@@ -1384,7 +1420,7 @@ class _AddPlantFormState extends State<AddPlantForm> {
     if (number == null) return 'Введите число';
     final year = int.tryParse(_yearController.text);
     if (year == null) return 'Сначала укажите год';
-    return widget.isNumberUnique(year, number, _category)
+    return widget.isCustomNumberUnique(year, number, _category)
         ? null
         : 'Номер должен быть уникальным';
   }
@@ -1507,3 +1543,4 @@ class _AddPlantFormState extends State<AddPlantForm> {
     );
   }
 }
+

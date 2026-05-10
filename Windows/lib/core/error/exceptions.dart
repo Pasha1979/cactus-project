@@ -52,6 +52,22 @@ class AuthenticationException extends AppException {
   });
 }
 
+/// Дублированный ID
+class DuplicateIdException extends AppException {
+  const DuplicateIdException({
+    super.message = 'Дублированный идентификатор',
+    super.code = 409,
+  });
+}
+
+/// Ошибка OAuth2 аутентификации
+class OAuth2Exception extends AppException {
+  const OAuth2Exception({
+    super.message = 'Ошибка OAuth2 аутентификации',
+    super.code = 401,
+  });
+}
+
 /// Неизвестное исключение
 class UnknownException extends AppException {
   const UnknownException({

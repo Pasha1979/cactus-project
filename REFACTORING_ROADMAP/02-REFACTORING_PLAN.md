@@ -1,7 +1,7 @@
 # ПЛАН РЕФАКТОРИНГА MY CACTUS
 
 **Дата создания:** 2026-05-09
-**Дата обновления:** 2026-05-09
+**Дата изменения:** 2026-05-11
 **Статус:** В планировании
 **Общая оценка:** 10-12 недель
 
@@ -284,12 +284,112 @@ dev_dependencies:
 - `core/network/network_info.dart`
 - `core/error/exceptions.dart` (DuplicateIdException, ValidationException, OAuth2Exception)
 
-**Проверка:**
 - flutter analyze проходит без ошибок
 - Unit тесты для репозиториев (если есть)
 - NetworkInfo работает корректно
 
+----
+
+## ФАЗА И: ИСПРАВЛЕНИЕ ОШИБОК ШАГОВ 1.1-1.7 (0.5-1 дня)
+
+> **Контекст:** Глубокий аудит шагов 1.1-1.7 выявил 7 ошибок (1 критическую, 2 высоких, 3 средних, 1 низкую).
+> **Источник:** [LESSONS_LEARNED.md](LESSONS_LEARNED.md) — ошибки 4-8.
+> **Цель:** Исправить все ошибки ДО перехода к шагу 1.8 (миграция данных), чтобы избежать потери данных и проблем в будущих шагах.
+
 ---
+
+### И.1 Исправление критических ошибок маппинга и архитектуры
+
+**Задачи:**
+И.1.1 Исправить опечатку `plannedFertilizationDate: entity.plannedTransplantDate` → `entity.plannedFertilizationDate` в `PlantRepositoryImpl._mapToDto()` (Android + Windows)
+И.1.2 Добавить `DuplicateFailure` в `core/error/failures.dart` (Android + Windows)
+И.1.3 Добавить `OAuth2Failure` в `core/error/failures.dart` (Android + Windows)
+И.1.4 Обновить `ErrorHandler.handleException()` для обработки `DuplicateIdException` и `OAuth2Exception` (Android + Windows)
+И.1.5 Проверить flutter analyze — оба проекта
+
+**Проверка:**
+- flutter analyze проходит без ошибок (Android + Windows)
+- Все 3 файла (`exceptions.dart`, `failures.dart`, `error_handler.dart`) синхронизированы
+
+---
+
+### И.2 Улучшение HiveDatabase
+
+**Задачи:**
+И.2.1 Добавить `_isInitialized` флаг в `HiveDatabase` (Android + Windows)
+И.2.2 Добавить `_isInitializing` флаг для защиты от race condition (Android + Windows)
+И.2.3 Оборачивать `Hive.registerAdapter()` в try-catch на случай повторной регистрации (Android + Windows)
+И.2.4 Проверить flutter analyze — оба проекта
+
+**Проверка:**
+- `HiveDatabase.initialize()` безопасен при повторном вызове
+- flutter analyze проходит без ошибок (Android + Windows)
+
+---
+
+### И.3 Создание недостающих реализаций репозиториев и DataSource
+
+**Задачи:**
+И.3.1 Создать `QRCodeLocalDataSource` + `QRCodeRepositoryImpl` (Android + Windows)
+И.3.2 Создать `NoteLocalDataSource` + `NoteRepositoryImpl` (Android + Windows)
+И.3.3 Создать `WinteringLocalDataSource` + `WinteringRepositoryImpl` (Android + Windows)
+И.3.4 Создать `GbifCacheLocalDataSource` (Android + Windows)
+И.3.5 Создать `SyncRepositoryImpl` (базовая реализация) (Android + Windows)
+И.3.6 Создать `WateringRepositoryImpl` (базовая реализация) (Android + Windows)
+И.3.7 Создать `PhotoRepositoryImpl` (базовая реализация) (Android + Windows)
+И.3.8 Создать `BatchRepositoryImpl` (базовая реализация) (Android + Windows)
+И.3.9 Проверить flutter analyze — оба проекта
+
+**Проверка:**
+- flutter analyze проходит без ошибок (Android + Windows)
+- Все репозитории из задач 1.7.1-1.7.11 имеют реализации
+- Все `LocalDataSource` созданы для соответствующих DTO
+
+---
+
+### И.4 Оптимизация маппинга PlantRepositoryImpl
+
+**Задачи:**
+И.4.1 Заменить JSON-маршаллинг на прямое присвоение полей в `_mapToEntity()` (Android + Windows)
+И.4.2 Заменить JSON-маршаллинг на прямое присвоение полей в `_mapToDto()` (Android + Windows)
+И.4.3 Создать конвертеры для вложенных объектов (`GerminationRecord`, `FloweringRecord`, `Note`) (Android + Windows)
+И.4.4 Проверить чек-лист маппинга: попарное соответствие ВСЕХ полей `Plant` ↔ `PlantDto` (Android + Windows)
+И.4.5 Проверить flutter analyze — оба проекта
+
+**Проверка:**
+- flutter analyze проходит без ошибок (Android + Windows)
+- Все поля `Plant` сохраняются при round-trip (`entity → dto → entity`)
+- Нет JSON-посредника в маппинге
+
+---
+
+### И.5 Исправление мелких ошибок
+
+**Задачи:**
+И.5.1 Оптимизировать `PlantLocalDataSource.getPlantById` — использовать `_plantBox.get(id)` вместо `firstWhere` (Android + Windows)
+И.5.2 Исправить формат прогресса в `03-CURRENT_REFACTORING_STEP.md` (целое число вместо дробного)
+И.5.3 Проверить flutter analyze — оба проекта
+
+**Проверка:**
+- flutter analyze проходит без ошибок (Android + Windows)
+
+---
+
+### И.6 Финальная верификация шагов 1.1-1.7
+
+**Задачи:**
+И.6.1 Полный аудит всех файлов шагов 1.1-1.7 по чек-листам из `CHECKLIST.md`
+И.6.2 Сверка с планом `02-REFACTORING_PLAN.md` — все задачи 1.1.1-1.7.13 выполнены
+И.6.3 Проверка flutter analyze — оба проекта
+И.6.4 Обновление `03-CURRENT_REFACTORING_STEP.md` — шаги 1.1-1.7 отмечены как выполненные, И.1-И.6 отмечены как выполненные
+
+**Проверка:**
+- Все задачи шагов 1.1-1.7 выполнены полностью (100%)
+- flutter analyze без ошибок (Android + Windows)
+- Нет частично выполненных задач
+- Нет скрытых ошибок
+
+----
 
 ### 1.8 Создание Data Migration Manager (1.5 дня)
 
@@ -303,6 +403,7 @@ dev_dependencies:
 1.8.7 Протестировать миграцию на реальных данных
 1.8.8 Добавить проверку целостности данных после миграции
 1.8.9 Реализовать возможность отката миграции
+1.8.10 Расширить QRCodeDto полем filePath (TODO из И.3) — реализовать миграцию путей к PDF файлам
 
 **Файлы:**
 - `data/migrations/data_migration_manager.dart`
@@ -348,7 +449,10 @@ dev_dependencies:
 1.10.7 Создать presentation/providers/cache_manager.dart
 1.10.8 Перенести логику из старого PlantProvider в новые провайдеры
 1.10.9 Обновить все экраны для использования новых провайдеров
-1.10.10 Удалить старый PlantProvider
+1.10.10 Реализовать глобальное хранилище поливов (TODO из И.3) — создать settings_box в Hive
+1.10.11 Реализовать createBatch/updateBatch (TODO из И.3) — бизнес-логика создания партий через PlantDto
+1.10.12 Реализовать setLlifleAsMainPhoto (TODO из И.3) — добавить поле mainLliflePhotoUrl в PlantDto
+1.10.13 Удалить старый PlantProvider
 
 **Файлы:**
 - `presentation/providers/plant_provider.dart` (~300 строк)
@@ -383,7 +487,8 @@ dev_dependencies:
 1.11.12 Создать services/platform/platform_adapter.dart
 1.11.13 Перенести логику из старого CloudStorageProvider
 1.11.14 Обновить экраны для использования новых сервисов
-1.11.15 Удалить старый CloudStorageProvider
+1.11.15 Интегрировать SyncRepositoryImpl с SyncManager (TODO из И.3) — реализовать syncWithCloud и getSyncStatus
+1.11.16 Удалить старый CloudStorageProvider
 
 **Файлы:**
 - `services/auth/auth_service.dart`

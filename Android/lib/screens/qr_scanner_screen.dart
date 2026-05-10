@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'plant_card_screen.dart';
 
 /// Экран сканирования QR-кодов с камеры
@@ -19,7 +19,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<PlantProvider>().loadScanHistory();
+    context.read<QrCodeProvider>().loadScanHistory();
   }
 
   @override
@@ -136,13 +136,14 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   }
 
   Future<void> _handleScannedCode(String code) async {
-    final provider = context.read<PlantProvider>();
-    final plant = provider.findPlantByQRCode(code);
+    final plantCrudProvider = context.read<PlantCrudProvider>();
+    final qrCodeProvider = context.read<QrCodeProvider>();
+    final plant = qrCodeProvider.findPlantByQRCode(plantCrudProvider.plants, code);
 
     if (mounted) {
       if (plant != null) {
         // Растение найдено - добавляем в историю и открываем карточку
-        await provider.addToScanHistory(plant.permanentId);
+        await qrCodeProvider.addToScanHistory(plant.permanentId);
         if (!mounted) return;
         Navigator.pushReplacement(
           context,

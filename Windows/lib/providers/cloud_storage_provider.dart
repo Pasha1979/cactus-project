@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:oauth2/oauth2.dart' as oauth2;
@@ -8,7 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
-import 'plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import '../core/config/api_config.dart';
@@ -261,7 +261,7 @@ class CloudStorageProvider with ChangeNotifier {
 
   // ==================== ГЛАВНЫЕ МЕТОДЫ СИНХРОНИЗАЦИИ ====================
 
-  Future<void> syncData(PlantProvider plantProvider) async {
+  Future<void> syncData(PlantCrudProvider plantCrudProvider) async {
     if (!_isConnected || _yandexClient == null) return;
 
     _isSyncing = true;
@@ -269,7 +269,7 @@ class CloudStorageProvider with ChangeNotifier {
 
     try {
       await fetchLastCloudUpdate();
-      final localUpdate = plantProvider.lastLocalUpdate;
+      final localUpdate = plantCrudProvider.lastLocalUpdate;
       final cloudUpdate = _lastCloudUpdate;
 
       final timeTolerance = const Duration(seconds: 2);
@@ -277,18 +277,18 @@ class CloudStorageProvider with ChangeNotifier {
       if (cloudUpdate != null &&
           (localUpdate == null ||
               cloudUpdate.isAfter(localUpdate.add(timeTolerance)))) {
-        await plantProvider.createLocalBackup();
-        await loadDataFromCloud(plantProvider);
-        await plantProvider.savePlants();
+        await plantCrudProvider.createLocalBackup();
+        await loadDataFromCloud(plantCrudProvider);
+        await plantCrudProvider.savePlants();
         return;
       }
 
-      if (plantProvider.plants.isNotEmpty) {
-        await _uploadToCloud(plantProvider);
+      if (plantCrudProvider.plants.isNotEmpty) {
+        await _uploadToCloud(plantCrudProvider);
       } else if (cloudUpdate != null) {
-        await plantProvider.createLocalBackup();
-        await loadDataFromCloud(plantProvider);
-        await plantProvider.savePlants();
+        await plantCrudProvider.createLocalBackup();
+        await loadDataFromCloud(plantCrudProvider);
+        await plantCrudProvider.savePlants();
       }
     } catch (e) {
       print('❌ Ошибка синхронизации: $e');
@@ -298,15 +298,19 @@ class CloudStorageProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _uploadToCloud(PlantProvider plantProvider) async {
+  Future<void> _uploadToCloud(PlantCrudProvider plantCrudProvider) async {
     final dio = Dio();
     dio.options.headers['Authorization'] =
         'OAuth ${_yandexClient!.credentials.accessToken}';
 
     final now = DateTime.now().toUtc();
-    plantProvider.setLastLocalUpdate(now);
+    plantCrudProvider.setLastLocalUpdate(now);
 
-    final plantProviderData = utf8.encode(jsonEncode(plantProvider.toJson()));
+    // Перезагружаем legacy-данные из SharedPreferences,
+    // т.к. WateringProvider/WinteringProvider/PhotoProvider могли их изменить
+    await plantCrudProvider.reloadLegacyData();
+
+    final plantCrudProviderData = utf8.encode(jsonEncode(plantCrudProvider.toJson()));
 
     try {
       final uploadResponse = await dio.get(
@@ -316,7 +320,7 @@ class CloudStorageProvider with ChangeNotifier {
 
       await http.put(
         Uri.parse(uploadUrl),
-        body: plantProviderData,
+        body: plantCrudProviderData,
         headers: {'Content-Type': 'application/json; charset=utf-8'},
       );
 
@@ -326,19 +330,19 @@ class CloudStorageProvider with ChangeNotifier {
       rethrow;
     }
 
-    await syncUserPhotos(plantProvider);
+    await syncUserPhotos(plantCrudProvider);
   }
 
   Future<void> loadFromCloud(BuildContext context) async {
     if (!context.mounted) return;
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
-    await loadDataFromCloud(plantProvider);
+    final plantCrudProvider = Provider.of<PlantCrudProvider>(context, listen: false);
+    await loadDataFromCloud(plantCrudProvider);
   }
 
-  Future<void> loadDataFromCloud(PlantProvider plantProvider) async {
+  Future<void> loadDataFromCloud(PlantCrudProvider plantCrudProvider) async {
     if (!_isConnected || _yandexClient == null) return;
 
-    await plantProvider.createLocalBackup();
+    await plantCrudProvider.createLocalBackup();
 
     final dio = Dio();
     dio.options.headers['Authorization'] =
@@ -353,35 +357,29 @@ class CloudStorageProvider with ChangeNotifier {
       final data = jsonDecode(utf8.decode(fileResponse.bodyBytes));
 
       // Загружаем данные
-      if (plantProvider.plants.isEmpty) {
-        plantProvider.loadFromCloudJson(data);
-      } else {
-        // Если растения уже есть — используем безопасную замену
-        plantProvider.loadFromCloudJson(data);
-      }
-      plantProvider.notifyListeners();
+      await plantCrudProvider.loadFromCloudJson(data);
 
       await fetchLastCloudUpdate();
       if (_lastCloudUpdate != null) {
-        plantProvider.setLastLocalUpdate(_lastCloudUpdate!);
+        plantCrudProvider.setLastLocalUpdate(_lastCloudUpdate!);
       }
 
       // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ — скачиваем фото локально
-      await plantProvider.ensureLocalPhotosExist();
-      await plantProvider.cleanupLocalPhotosAfterCloudLoad();
-      await _cleanDuplicatePhotos(plantProvider);
+      await plantCrudProvider.ensureLocalPhotosExist();
+      await plantCrudProvider.cleanupLocalPhotosAfterCloudLoad();
+      await _cleanDuplicatePhotos(plantCrudProvider);
 
       print('✅ Данные загружены из облака + фото обработаны');
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 404) {
-        await _createEmptyPlantProviderFile(dio);
+        await _createEmptyPlantCrudProviderFile(dio);
       } else {
         print('❌ Ошибка загрузки из облака: $e');
       }
     }
   }
 
-  Future<void> _createEmptyPlantProviderFile(Dio dio) async {
+  Future<void> _createEmptyPlantCrudProviderFile(Dio dio) async {
     // ... (оставляем как было)
   }
 
@@ -473,7 +471,7 @@ class CloudStorageProvider with ChangeNotifier {
   }
 
 // === ИСПРАВЛЕННАЯ СИНХРОНИЗАЦИЯ ФОТО (гибридный подход) ===
-  Future<void> syncUserPhotos(PlantProvider plantProvider) async {
+  Future<void> syncUserPhotos(PlantCrudProvider plantCrudProvider) async {
     if (!_isConnected || _yandexClient == null) {
       print('Синхронизация фото невозможна: нет подключения');
       return;
@@ -498,7 +496,7 @@ class CloudStorageProvider with ChangeNotifier {
 
       int uploadedCount = 0;
 
-      for (var plant in plantProvider.plants) {
+      for (var plant in plantCrudProvider.plants) {
         final localPhotos = plant.userPhotos
             .where((photo) =>
                 !photo.startsWith('https://') && !photo.startsWith('http://'))
@@ -543,20 +541,20 @@ class CloudStorageProvider with ChangeNotifier {
 
         if (updatedPhotos != plant.userPhotos) {
           final updatedPlant = plant.copyWith(userPhotos: updatedPhotos);
-          plantProvider.updatePlant(plant.permanentId, updatedPlant);
+          plantCrudProvider.updatePlant(plant.permanentId, updatedPlant);
         }
       }
 
-      await _cleanDuplicatePhotos(plantProvider);
+      await _cleanDuplicatePhotos(plantCrudProvider);
 
       print('✅ Синхронизация фото завершена. Загружено: $uploadedCount фото');
       await fetchLastCloudUpdate();
       if (_lastCloudUpdate != null) {
-        plantProvider.setLastLocalUpdate(_lastCloudUpdate!);
+        plantCrudProvider.setLastLocalUpdate(_lastCloudUpdate!);
       }
       
       // === НОВОЕ: Синхронизация удаленных фото ===
-      await _syncDeletedPhotos(plantProvider);
+      await _syncDeletedPhotos(plantCrudProvider);
       
     } catch (e) {
       print('Ошибка синхронизации пользовательских фото: $e');
@@ -564,13 +562,13 @@ class CloudStorageProvider with ChangeNotifier {
   }
 
 // === СИНХРОНИЗАЦИЯ УДАЛЕННЫХ ФОТО ===
-  Future<void> _syncDeletedPhotos(PlantProvider plantProvider) async {
+  Future<void> _syncDeletedPhotos(PlantCrudProvider plantCrudProvider) async {
     print('🔄 Начинаем синхронизацию удаленных фото...');
     
     // Синхронизация удаленных своих фото
-    if (plantProvider.deletedUserPhotos.isNotEmpty) {
-      print('🗑️ Удаляем свои фото с облака: ${plantProvider.deletedUserPhotos.length}');
-      for (var deletedUrl in plantProvider.deletedUserPhotos) {
+    if (plantCrudProvider.deletedUserPhotos.isNotEmpty) {
+      print('🗑️ Удаляем свои фото с облака: ${plantCrudProvider.deletedUserPhotos.length}');
+      for (var deletedUrl in plantCrudProvider.deletedUserPhotos) {
         try {
           await deletePhotoFromYandexDisk(deletedUrl);
           print('✅ Своё фото удалено с облака: $deletedUrl');
@@ -581,9 +579,9 @@ class CloudStorageProvider with ChangeNotifier {
     }
     
     // Синхронизация удаленных Llifle фото
-    if (plantProvider.deletedLliflePhotos.isNotEmpty) {
-      print('🗑️ Удаляем Llifle фото из данных: ${plantProvider.deletedLliflePhotos.length}');
-      for (var deletedUrl in plantProvider.deletedLliflePhotos) {
+    if (plantCrudProvider.deletedLliflePhotos.isNotEmpty) {
+      print('🗑️ Удаляем Llifle фото из данных: ${plantCrudProvider.deletedLliflePhotos.length}');
+      for (var deletedUrl in plantCrudProvider.deletedLliflePhotos) {
         try {
           // Llifle фото не удаляем с облака (это внешние URL),
           // только убираем из локальных данных
@@ -595,15 +593,15 @@ class CloudStorageProvider with ChangeNotifier {
     }
     
     // Очищаем списки удаленных фото
-    plantProvider.clearDeletedPhotos();
+    plantCrudProvider.clearDeletedPhotos();
     print('✅ Синхронизация удаленных фото завершена');
   }
 
 // === УЛУЧШЕННАЯ ОЧИСТКА ДУБЛЕЙ ===
-  Future<void> _cleanDuplicatePhotos(PlantProvider plantProvider) async {
+  Future<void> _cleanDuplicatePhotos(PlantCrudProvider plantCrudProvider) async {
     bool changed = false;
 
-    for (var plant in List.from(plantProvider.plants)) {
+    for (var plant in List.from(plantCrudProvider.plants)) {
       final unique = <String>{};
       final cleaned = <String>[];
 
@@ -619,13 +617,13 @@ class CloudStorageProvider with ChangeNotifier {
 
       if (cleaned.length != plant.userPhotos.length) {
         final updatedPlant = plant.copyWith(userPhotos: cleaned);
-        plantProvider.updatePlant(plant.permanentId, updatedPlant);
+        plantCrudProvider.updatePlant(plant.permanentId, updatedPlant);
         changed = true;
       }
     }
 
     if (changed) {
-      await plantProvider.savePlants();
+      await plantCrudProvider.savePlants();
       print('✅ Дублей фото очищено');
     }
   }
@@ -750,3 +748,8 @@ class CloudStorageProvider with ChangeNotifier {
     notifyListeners();
   }
 }
+
+
+
+
+

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'wintering_screen.dart';
 import 'care_calendar_screen.dart'; // ←←← ДОБАВИТЬ ЭТУ СТРОКУ
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
+import '../utils/responsive_helper.dart';
 
 class CollectionManagementScreen extends StatelessWidget {
   const CollectionManagementScreen({super.key});
@@ -11,8 +12,8 @@ class CollectionManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final plantProvider = context.watch<PlantProvider>();
-    final plants = plantProvider.plants
+    final plantCrud = context.watch<PlantCrudProvider>();
+    final plants = plantCrud.plants
         .where((p) => p.status != 'dead' && p.status != 'failed')
         .toList();
 
@@ -24,8 +25,9 @@ class CollectionManagementScreen extends StatelessWidget {
 
     final totalPlants = plants.length;
     final needsWatering = 0; // Можно потом посчитать через провайдер
-    final winteringStatus = plantProvider.winteringStartDate != null &&
-            plantProvider.winteringEndDate != null
+    final wintering = context.watch<WinteringProvider>();
+    final winteringStatus = wintering.winteringStartDate != null &&
+            wintering.winteringEndDate != null
         ? "Активна"
         : "Не настроена";
 
@@ -35,7 +37,7 @@ class CollectionManagementScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            plantProvider.clearNotifications();
+            plantCrud.clearNotifications();
             Navigator.pop(context);
           },
         ),
@@ -61,24 +63,28 @@ class CollectionManagementScreen extends StatelessWidget {
                         runSpacing: 12,
                         children: [
                           _buildSummaryCard(
+                            context,
                             'Всего растений',
                             totalPlants.toString(),
                             Icons.eco,
                             Colors.green,
                           ),
                           _buildSummaryCard(
+                            context,
                             'Нужно полить',
                             needsWatering.toString(),
                             Icons.water_drop,
                             Colors.blue,
                           ),
                           _buildSummaryCard(
+                            context,
                             'Просрочена пересадка',
                             overdueCount.toString(),
                             Icons.warning_amber,
                             Colors.red,
                           ),
                           _buildSummaryCard(
+                            context,
                             'Зимовка',
                             winteringStatus,
                             Icons.ac_unit,
@@ -92,8 +98,9 @@ class CollectionManagementScreen extends StatelessWidget {
                     Expanded(
                       child: GridView(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: isWide ? 2 : 1,
-                          childAspectRatio: isWide ? 1.8 : 2.2,
+                          crossAxisCount: Responsive.isMobile(context) ? 1 : 2,
+                          childAspectRatio:
+                              Responsive.isMobile(context) ? 2.0 : 1.8,
                           mainAxisSpacing: 20,
                           crossAxisSpacing: 20,
                         ),
@@ -107,7 +114,7 @@ class CollectionManagementScreen extends StatelessWidget {
                             color: Colors.blue,
                             cardWidth: cardWidth,
                             hasNotification:
-                                plantProvider.hasUnreadNotifications ||
+                                plantCrud.hasUnreadNotifications ||
                                     overdueCount > 0,
                             onTap: () => Navigator.push(
                               context,
@@ -147,8 +154,9 @@ class CollectionManagementScreen extends StatelessWidget {
                       cardWidth: cardWidth,
                       hasNotification: false,
                       onTap: () async {
-                        final provider = context.read<PlantProvider>();
-                        final success = await provider.restoreFromLocalBackup();
+                        final syncProvider = context.read<SyncProvider>();
+                        final plantCrudProvider = context.read<PlantCrudProvider>();
+                        final success = await syncProvider.restoreFromLocalBackup(plantCrudProvider);
                         if (success && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -226,20 +234,26 @@ class CollectionManagementScreen extends StatelessWidget {
     );
   }
 
-  // Новая красивая карточка для сводки (адаптивная версия)
   Widget _buildSummaryCard(
-      String title, String value, IconData icon, Color color) {
+      BuildContext context, // ← Добавили BuildContext как параметр
+      String title,
+      String value,
+      IconData icon,
+      Color color) {
+    final isMobile = Responsive.isMobile(context);
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: isMobile ? 140 : 180,
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08), // Исправлено
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)), // Исправлено
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 32),
+          Icon(icon, color: color, size: isMobile ? 28 : 32),
           const SizedBox(width: 12),
           Flexible(
             child: Column(
@@ -248,7 +262,7 @@ class CollectionManagementScreen extends StatelessWidget {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: isMobile ? 20 : 22,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -257,8 +271,8 @@ class CollectionManagementScreen extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 13,
-                    color: color.withValues(alpha: 0.8), // Исправлено
+                    fontSize: isMobile ? 12 : 13,
+                    color: color.withValues(alpha: 0.8),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -270,7 +284,6 @@ class CollectionManagementScreen extends StatelessWidget {
     );
   }
 
-  // Большая красивая карточка для главных разделов
   Widget _buildBigSectionCard(
     BuildContext context, {
     required String title,
@@ -281,28 +294,29 @@ class CollectionManagementScreen extends StatelessWidget {
     required bool hasNotification,
     required VoidCallback onTap,
   }) {
+    final isMobile = Responsive.isMobile(context);
+
     return Card(
-      elevation: 6,
+      elevation: isMobile ? 4 : 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: cardWidth,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isMobile ? 20 : 24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: 48,
+                size: isMobile ? 40 : 48,
                 color: color,
               ),
               const SizedBox(height: 16),
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: isMobile ? 18 : 20,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
@@ -312,7 +326,7 @@ class CollectionManagementScreen extends StatelessWidget {
               Text(
                 subtitle,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: isMobile ? 13 : 14,
                   color: Colors.grey.shade700,
                 ),
                 textAlign: TextAlign.center,

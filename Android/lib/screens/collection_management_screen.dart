@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'wintering_screen.dart';
 import 'care_calendar_screen.dart'; // ←←← ДОБАВИТЬ ЭТУ СТРОКУ
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import '../utils/responsive_helper.dart';
 
 class CollectionManagementScreen extends StatelessWidget {
@@ -12,8 +12,8 @@ class CollectionManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final plantProvider = context.watch<PlantProvider>();
-    final plants = plantProvider.plants
+    final plantCrud = context.watch<PlantCrudProvider>();
+    final plants = plantCrud.plants
         .where((p) => p.status != 'dead' && p.status != 'failed')
         .toList();
 
@@ -25,8 +25,9 @@ class CollectionManagementScreen extends StatelessWidget {
 
     final totalPlants = plants.length;
     final needsWatering = 0; // Можно потом посчитать через провайдер
-    final winteringStatus = plantProvider.winteringStartDate != null &&
-            plantProvider.winteringEndDate != null
+    final wintering = context.watch<WinteringProvider>();
+    final winteringStatus = wintering.winteringStartDate != null &&
+            wintering.winteringEndDate != null
         ? "Активна"
         : "Не настроена";
 
@@ -36,7 +37,7 @@ class CollectionManagementScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            plantProvider.clearNotifications();
+            plantCrud.clearNotifications();
             Navigator.pop(context);
           },
         ),
@@ -113,7 +114,7 @@ class CollectionManagementScreen extends StatelessWidget {
                             color: Colors.blue,
                             cardWidth: cardWidth,
                             hasNotification:
-                                plantProvider.hasUnreadNotifications ||
+                                plantCrud.hasUnreadNotifications ||
                                     overdueCount > 0,
                             onTap: () => Navigator.push(
                               context,
@@ -153,8 +154,9 @@ class CollectionManagementScreen extends StatelessWidget {
                       cardWidth: cardWidth,
                       hasNotification: false,
                       onTap: () async {
-                        final provider = context.read<PlantProvider>();
-                        final success = await provider.restoreFromLocalBackup();
+                        final syncProvider = context.read<SyncProvider>();
+                        final plantCrudProvider = context.read<PlantCrudProvider>();
+                        final success = await syncProvider.restoreFromLocalBackup(plantCrudProvider);
                         if (success && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(

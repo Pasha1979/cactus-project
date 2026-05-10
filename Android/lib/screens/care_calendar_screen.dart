@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import '../utils/responsive_helper.dart';
 
 class CareCalendarScreen extends StatefulWidget {
@@ -40,8 +40,9 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<PlantProvider>();
-    final allPlants = provider.plants
+    final plantCrud = context.watch<PlantCrudProvider>();
+    final watering = context.watch<WateringProvider>();
+    final allPlants = plantCrud.plants
         .where((p) => p.status != 'dead' && p.status != 'failed')
         .toList();
 
@@ -154,14 +155,14 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                       List<Widget> markers = [];
 
                       if (currentTab == 0) {
-                        final isGlobal = provider.globalWateringDates.any((d) =>
+                        final isGlobal = watering.globalWateringDates.any((d) =>
                             d.year == date.year &&
                             d.month == date.month &&
                             d.day == date.day);
                         final individual =
-                            provider.individualWateringDates[normalized] ?? [];
+                            plantCrud.individualWateringDates[normalized] ?? [];
                         final customCount =
-                            provider.customWateringDates[normalized] ?? 0;
+                            plantCrud.customWateringDates[normalized] ?? 0;
 
                         if (isGlobal) {
                           markers.add(const Positioned(
@@ -194,9 +195,9 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                         }
                       } else if (currentTab == 2) {
                         final fertilized =
-                            provider.fertilizationDates[normalized] ?? [];
+                            plantCrud.fertilizationDates[normalized] ?? [];
                         final planned =
-                            provider.plannedFertilizationDates[normalized] ?? [];
+                            plantCrud.plannedFertilizationDates[normalized] ?? [];
                         if (fertilized.isNotEmpty || planned.isNotEmpty) {
                           markers.add(Positioned(
                             bottom: 4,
@@ -243,8 +244,8 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                           style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue.shade600),
                           onPressed: () {
-                            provider.addGlobalWateringDate(_selectedDay!);
-                            provider.updateRecommendedWateringDates();
+                            watering.addGlobalWateringDate(_selectedDay!);
+                            plantCrud.updateRecommendedWateringDates();
                             setState(() {});
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -268,7 +269,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                                   if (currentTab == 1) {
                                     _markGroupAsTransplanted();
                                   } else {
-                                    provider.markGroupAsFertilized(_selectedIds,
+                                    plantCrud.markGroupAsFertilized(_selectedIds,
                                         date: _selectedDay);
                                     setState(() {});
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -355,14 +356,14 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
   }
 
   void _markGroupAsTransplanted() {
-    final provider = context.read<PlantProvider>();
+    final plantCrud = context.read<PlantCrudProvider>();
     for (var id in _selectedIds) {
-      final plant = provider.getPlantById(id);
+      final plant = plantCrud.getPlantById(id)!;
       final updated = plant.copyWith(
         lastRepotting: DateTime.now(),
         plannedTransplantDate: null,
       );
-      provider.updatePlant(id, updated);
+      plantCrud.updatePlant(id, updated);
     }
     setState(() => _selectedIds.clear());
     ScaffoldMessenger.of(context).showSnackBar(
@@ -372,7 +373,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
 
   void _planGroupAction(int tab) async {
     if (!mounted) return;
-    final provider = context.read<PlantProvider>();
+    final plantCrud = context.read<PlantCrudProvider>();
     final selectedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -384,15 +385,15 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
 
     if (tab == 1) {
       for (var id in _selectedIds) {
-        final plant = provider.getPlantById(id);
+        final plant = plantCrud.getPlantById(id)!;
         final updated = plant.copyWith(plannedTransplantDate: selectedDate);
-        provider.updatePlant(id, updated);
+        plantCrud.updatePlant(id, updated);
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Пересадка запланирована')),
       );
     } else if (tab == 2) {
-      provider.planGroupFertilization(_selectedIds, selectedDate);
+      plantCrud.planGroupFertilization(_selectedIds, selectedDate);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Подкормка запланирована')),
       );
@@ -403,7 +404,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
 
   void _clearDataForDate(int tab) {
     if (_selectedDay == null || !mounted) return;
-    final provider = context.read<PlantProvider>();
+    final plantCrud = context.read<PlantCrudProvider>();
 
     showDialog(
       context: context,
@@ -416,9 +417,9 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
           TextButton(
             onPressed: () {
               if (tab == 0) {
-                provider.clearWateringDataForDate(_selectedDay!);
+                plantCrud.clearWateringDataForDate(_selectedDay!);
               } else if (tab == 2) {
-                provider.invalidateFertilizationDatesCache();
+                plantCrud.invalidateFertilizationDatesCache();
               }
               Navigator.pop(ctx);
               setState(() {});
@@ -433,3 +434,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
     );
   }
 }
+
+
+
+

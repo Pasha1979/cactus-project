@@ -6,7 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/plant.dart';
 import '../models/qr_code_file.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import '../widgets/print_preview_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -150,7 +150,7 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
   }
 
   Future<void> _savePdf() async {
-    final plantProvider = context.read<PlantProvider>();
+    final qrProvider = context.read<QrCodeProvider>();
     final pdf = await _generatePdf();
 
     // Формируем понятное имя файла: qr_labels_2024-05-09_15-30-00.pdf
@@ -176,7 +176,7 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
       labelWidthCm: _labelWidthCm,
       labelHeightCm: _labelHeightCm,
     );
-    await plantProvider.saveQRCodeFile(qrFile);
+    await qrProvider.saveQRCodeFile(qrFile);
 
     if (mounted) {
       _showSaveSuccessDialog(file.path);

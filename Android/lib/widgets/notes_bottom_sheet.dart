@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../models/plant.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 
 class NotesBottomSheet extends StatefulWidget {
   final Plant plant;
@@ -171,7 +171,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
                       return; // ← добавили фигурные скобки
                     }
                     final provider =
-                        Provider.of<PlantProvider>(context, listen: false);
+                        context.read<PlantCrudProvider>();
                     final now = DateTime.now();
 
                     if (existing == null) {
@@ -225,7 +225,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
           TextButton(
             onPressed: () {
               final provider =
-                  Provider.of<PlantProvider>(context, listen: false);
+                  context.read<PlantCrudProvider>();
               final updated =
                   widget.plant.notes.where((n) => n.id != note.id).toList();
               provider.updatePlant(widget.plant.permanentId,
@@ -242,3 +242,4 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
     );
   }
 }
+

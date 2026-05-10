@@ -52,6 +52,22 @@ class AuthenticationFailure extends Failure {
   });
 }
 
+/// Ошибка дублированного идентификатора
+class DuplicateFailure extends Failure {
+  const DuplicateFailure({
+    super.message = 'Дублированный идентификатор',
+    super.code = 409,
+  });
+}
+
+/// Ошибка OAuth2 аутентификации
+class OAuth2Failure extends Failure {
+  const OAuth2Failure({
+    super.message = 'Ошибка OAuth2 аутентификации',
+    super.code = 401,
+  });
+}
+
 /// Неизвестная ошибка
 class UnknownFailure extends Failure {
   const UnknownFailure({

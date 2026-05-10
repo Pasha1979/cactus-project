@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
+import '../utils/responsive_helper.dart';
 
 class WinteringScreen extends StatelessWidget {
   const WinteringScreen({super.key});
@@ -32,26 +33,29 @@ class WinteringContent extends StatefulWidget {
 class _WinteringContentState extends State<WinteringContent> {
   @override
   Widget build(BuildContext context) {
-    final plantProvider = Provider.of<PlantProvider>(context);
+    final winteringProvider = Provider.of<WinteringProvider>(context);
+    final isMobile = Responsive.isMobile(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildCalendarSection(plantProvider),
-          const SizedBox(height: 16),
-          _buildTemperatureSection(plantProvider),
-          const SizedBox(height: 16),
-          _buildRecommendationSection(plantProvider),
-          const SizedBox(height: 16),
-          _buildLogSection(plantProvider),
-        ],
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(isMobile ? 12 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCalendarSection(winteringProvider),
+            const SizedBox(height: 16),
+            _buildTemperatureSection(winteringProvider),
+            const SizedBox(height: 16),
+            _buildRecommendationSection(winteringProvider),
+            const SizedBox(height: 16),
+            _buildLogSection(winteringProvider),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCalendarSection(PlantProvider plantProvider) {
+  Widget _buildCalendarSection(WinteringProvider winteringProvider) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -76,12 +80,12 @@ class _WinteringContentState extends State<WinteringContent> {
                       final selectedDate = await showDatePicker(
                         context: context,
                         initialDate:
-                            plantProvider.winteringStartDate ?? DateTime.now(),
+                            winteringProvider.winteringStartDate ?? DateTime.now(),
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2100),
                       );
                       if (selectedDate != null) {
-                        plantProvider.winteringStartDate = selectedDate;
+                        winteringProvider.winteringStartDate = selectedDate;
                       }
                     },
                     child: InputDecorator(
@@ -90,8 +94,8 @@ class _WinteringContentState extends State<WinteringContent> {
                         border: OutlineInputBorder(),
                       ),
                       child: Text(
-                        plantProvider.winteringStartDate != null
-                            ? _formatDate(plantProvider.winteringStartDate!)
+                        winteringProvider.winteringStartDate != null
+                            ? _formatDate(winteringProvider.winteringStartDate!)
                             : 'Выберите дату',
                       ),
                     ),
@@ -104,12 +108,12 @@ class _WinteringContentState extends State<WinteringContent> {
                       final selectedDate = await showDatePicker(
                         context: context,
                         initialDate:
-                            plantProvider.winteringEndDate ?? DateTime.now(),
+                            winteringProvider.winteringEndDate ?? DateTime.now(),
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2100),
                       );
                       if (selectedDate != null) {
-                        plantProvider.winteringEndDate = selectedDate;
+                        winteringProvider.winteringEndDate = selectedDate;
                       }
                     },
                     child: InputDecorator(
@@ -118,8 +122,8 @@ class _WinteringContentState extends State<WinteringContent> {
                         border: OutlineInputBorder(),
                       ),
                       child: Text(
-                        plantProvider.winteringEndDate != null
-                            ? _formatDate(plantProvider.winteringEndDate!)
+                        winteringProvider.winteringEndDate != null
+                            ? _formatDate(winteringProvider.winteringEndDate!)
                             : 'Выберите дату',
                       ),
                     ),
@@ -129,7 +133,7 @@ class _WinteringContentState extends State<WinteringContent> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Статус: ${_getWinteringStatus(plantProvider)}',
+              'Статус: ${_getWinteringStatus(winteringProvider)}',
               style: const TextStyle(fontSize: 16),
             ),
           ],
@@ -138,7 +142,7 @@ class _WinteringContentState extends State<WinteringContent> {
     );
   }
 
-  Widget _buildTemperatureSection(PlantProvider plantProvider) {
+  Widget _buildTemperatureSection(WinteringProvider winteringProvider) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -163,23 +167,23 @@ class _WinteringContentState extends State<WinteringContent> {
               ),
               keyboardType: TextInputType.number,
               controller: TextEditingController(
-                  text: plantProvider.winteringTemperature?.toString()),
+                  text: winteringProvider.winteringTemperature?.toString()),
               onChanged: (value) {
-                plantProvider.winteringTemperature = double.tryParse(value);
-                _showTemperatureWarning(plantProvider);
+                winteringProvider.winteringTemperature = double.tryParse(value);
+                _showTemperatureWarning(winteringProvider);
               },
             ),
-            if (plantProvider.winteringTemperature != null)
+            if (winteringProvider.winteringTemperature != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  plantProvider.winteringTemperature! >= 5 &&
-                          plantProvider.winteringTemperature! <= 13
+                  winteringProvider.winteringTemperature! >= 5 &&
+                          winteringProvider.winteringTemperature! <= 13
                       ? 'Температура в норме'
                       : 'Температура вне диапазона!',
                   style: TextStyle(
-                    color: plantProvider.winteringTemperature! >= 5 &&
-                            plantProvider.winteringTemperature! <= 13
+                    color: winteringProvider.winteringTemperature! >= 5 &&
+                            winteringProvider.winteringTemperature! <= 13
                         ? Colors.green
                         : Colors.red,
                     fontWeight: FontWeight.bold,
@@ -192,7 +196,7 @@ class _WinteringContentState extends State<WinteringContent> {
     );
   }
 
-  Widget _buildRecommendationSection(PlantProvider plantProvider) {
+  Widget _buildRecommendationSection(WinteringProvider winteringProvider) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -210,7 +214,7 @@ class _WinteringContentState extends State<WinteringContent> {
             ),
             const SizedBox(height: 12),
             Text(
-              _getWateringRecommendation(plantProvider),
+              _getWateringRecommendation(winteringProvider),
               style: const TextStyle(fontSize: 16),
             ),
           ],
@@ -219,7 +223,7 @@ class _WinteringContentState extends State<WinteringContent> {
     );
   }
 
-  Widget _buildLogSection(PlantProvider plantProvider) {
+  Widget _buildLogSection(WinteringProvider winteringProvider) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -240,22 +244,22 @@ class _WinteringContentState extends State<WinteringContent> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.add),
-                  onPressed: () => _addLogEntry(plantProvider),
+                  onPressed: () => _addLogEntry(winteringProvider),
                   tooltip: 'Добавить запись',
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            if (plantProvider.winteringLogEntries.isEmpty)
+            if (winteringProvider.winteringLogEntries.isEmpty)
               const Text('Нет записей', style: TextStyle(color: Colors.grey))
             else
               SizedBox(
                 height: 200,
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: plantProvider.winteringLogEntries.length,
+                  itemCount: winteringProvider.winteringLogEntries.length,
                   itemBuilder: (context, index) {
-                    final entry = plantProvider.winteringLogEntries[index];
+                    final entry = winteringProvider.winteringLogEntries[index];
                     return ListTile(
                       title: Text(entry.description),
                       subtitle: Text(_formatDate(entry.date)),
@@ -273,54 +277,54 @@ class _WinteringContentState extends State<WinteringContent> {
     return '${date.day}.${date.month}.${date.year}';
   }
 
-  String _getWinteringStatus(PlantProvider plantProvider) {
+  String _getWinteringStatus(WinteringProvider winteringProvider) {
     final now = DateTime.now();
-    if (plantProvider.winteringStartDate == null ||
-        plantProvider.winteringEndDate == null) {
+    if (winteringProvider.winteringStartDate == null ||
+        winteringProvider.winteringEndDate == null) {
       return 'Не установлены даты зимовки';
     }
-    if (now.isBefore(plantProvider.winteringStartDate!)) {
+    if (now.isBefore(winteringProvider.winteringStartDate!)) {
       return 'Подготовка к зимовке';
-    } else if (now.isAfter(plantProvider.winteringEndDate!)) {
+    } else if (now.isAfter(winteringProvider.winteringEndDate!)) {
       return 'Зимовка завершена';
     } else {
       return 'Активная зимовка';
     }
   }
 
-  String _getWateringRecommendation(PlantProvider plantProvider) {
+  String _getWateringRecommendation(WinteringProvider winteringProvider) {
     final now = DateTime.now();
-    if (plantProvider.winteringStartDate == null ||
-        plantProvider.winteringEndDate == null) {
+    if (winteringProvider.winteringStartDate == null ||
+        winteringProvider.winteringEndDate == null) {
       return 'Установите даты зимовки для получения рекомендаций';
     }
     if (now.month == 9) {
       return 'Сократите полив для подготовки к зимовке';
-    } else if (now.isAfter(plantProvider.winteringStartDate!) &&
-        now.isBefore(plantProvider.winteringEndDate!)) {
+    } else if (now.isAfter(winteringProvider.winteringStartDate!) &&
+        now.isBefore(winteringProvider.winteringEndDate!)) {
       return 'Полив не требуется';
-    } else if (now.month == 3 && now.isAfter(plantProvider.winteringEndDate!)) {
+    } else if (now.month == 3 && now.isAfter(winteringProvider.winteringEndDate!)) {
       return 'Опрыскайте кактусы, через неделю начните скудный полив';
     } else {
       return 'Следуйте обычному графику полива';
     }
   }
 
-  void _showTemperatureWarning(PlantProvider plantProvider) {
-    if (plantProvider.winteringTemperature != null &&
-        (plantProvider.winteringTemperature! < 5 ||
-            plantProvider.winteringTemperature! > 13)) {
+  void _showTemperatureWarning(WinteringProvider winteringProvider) {
+    if (winteringProvider.winteringTemperature != null &&
+        (winteringProvider.winteringTemperature! < 5 ||
+            winteringProvider.winteringTemperature! > 13)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'Температура вне диапазона! Текущая: ${plantProvider.winteringTemperature}°C'),
+              'Температура вне диапазона! Текущая: ${winteringProvider.winteringTemperature}°C'),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  void _addLogEntry(PlantProvider plantProvider) {
+  void _addLogEntry(WinteringProvider winteringProvider) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -329,7 +333,7 @@ class _WinteringContentState extends State<WinteringContent> {
           decoration: const InputDecoration(labelText: 'Описание'),
           onSubmitted: (value) {
             if (value.isNotEmpty) {
-              plantProvider.addWinteringLogEntry(
+              winteringProvider.addWinteringLogEntry(
                 WinteringLogEntry(date: DateTime.now(), description: value),
               );
               Navigator.pop(ctx);

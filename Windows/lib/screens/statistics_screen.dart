@@ -5,8 +5,9 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:collection/collection.dart';
 import '../models/plant.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'package:syncfusion_flutter_treemap/treemap.dart';
+import '../utils/responsive_helper.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -53,7 +54,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     }
   }
 
-  List<Plant> _filterPlants(PlantProvider provider) {
+  List<Plant> _filterPlants(PlantCrudProvider provider) {
     var plants = provider.plants;
     final now = DateTime.now();
 
@@ -102,7 +103,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final filteredPlants = _filterPlants(provider);
         return Scaffold(
@@ -115,6 +116,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             bottom: TabBar(
               controller: _tabController,
               isScrollable: true,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 12),
               tabs: const [
                 Tab(text: 'Статусы', icon: Icon(Icons.pie_chart)),
                 Tab(text: 'Выживаемость', icon: Icon(Icons.show_chart)),
@@ -177,7 +179,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildTreemapChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         List<Map<String, dynamic>> treemapData = [];
         if (_treemapByStatus) {
@@ -362,17 +364,20 @@ class _StatisticsScreenState extends State<StatisticsScreen>
         ? (totalAge / filteredPlants.length).toStringAsFixed(1)
         : 'Нет данных';
 
+    final isMobile = Responsive.isMobile(context);
+
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: EdgeInsets.all(Responsive.defaultPadding(context)),
       child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
+        spacing: isMobile ? 8 : 10,
+        runSpacing: isMobile ? 8 : 10,
         children: [
           _buildNeumorphicCard(
             'Всего растений',
             filteredPlants.length.toString(),
             Colors.blue,
             Icons.eco,
+            isMobile: isMobile,
           ),
           _buildNeumorphicCard(
             'В коллекции',
@@ -382,12 +387,14 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 .toString(),
             Colors.green,
             Icons.collections_bookmark,
+            isMobile: isMobile,
           ),
           _buildNeumorphicCard(
             'Средний возраст',
             averageAge,
             Colors.orange,
             Icons.cake,
+            isMobile: isMobile,
           ),
         ],
       ),
@@ -395,10 +402,11 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildNeumorphicCard(
-      String title, String value, Color color, IconData icon) {
+      String title, String value, Color color, IconData icon,
+      {required bool isMobile}) {
     return Container(
-      width: 180,
-      padding: const EdgeInsets.all(12),
+      width: isMobile ? 150 : 180,
+      padding: EdgeInsets.all(isMobile ? 10 : 12),
       decoration: BoxDecoration(
         color: const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(12),
@@ -417,7 +425,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 28),
+          Icon(icon, color: color, size: isMobile ? 24 : 28),
           const SizedBox(width: 10),
           Flexible(
             child: Column(
@@ -426,7 +434,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: isMobile ? 18 : 20,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -435,7 +443,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: isMobile ? 11 : 12,
                     color: color.withValues(alpha: 0.8),
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -449,7 +457,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildYearFilter() {
-    final provider = context.watch<PlantProvider>();
+    final provider = context.watch<PlantCrudProvider>();
     final years = provider.getUniqueSowingYears();
 
     return Padding(
@@ -691,7 +699,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildStatusChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final data = getStatusCounts(filteredPlants);
         final total = data.values.reduce((a, b) => a + b).toDouble();
@@ -774,7 +782,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildSurvivalChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final years = provider.getUniqueSowingYears();
         final data = years.map((year) {
@@ -872,7 +880,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildCategoryChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final sownCount =
             filteredPlants.where((p) => p.category == 'sown').length;
@@ -903,7 +911,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildAgeDistributionChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final filteredPlantsForAge = _selectedYear != null
             ? filteredPlants.where((p) => p.year == _selectedYear!).toList()
@@ -1017,9 +1025,9 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildWateringHeatmap() {
-    return Consumer<PlantProvider>(
-      builder: (ctx, provider, _) {
-        final events = provider.globalWateringDates.fold<Map<DateTime, int>>({},
+    return Consumer<WateringProvider>(
+      builder: (ctx, wateringProvider, _) {
+        final events = wateringProvider.globalWateringDates.fold<Map<DateTime, int>>({},
             (map, date) {
           final normalized = DateTime(date.year, date.month, date.day);
           map[normalized] = (map[normalized] ?? 0) + 1;
@@ -1108,7 +1116,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildGrowthChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final monthlyGrowth = <String, int>{};
         for (var plant in filteredPlants) {
@@ -1158,10 +1166,10 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildCareActivityChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
-      builder: (ctx, provider, _) {
+    return Consumer<WateringProvider>(
+      builder: (ctx, wateringProvider, _) {
         final monthlyCare = <String, Map<String, int>>{};
-        for (var date in provider.globalWateringDates) {
+        for (var date in wateringProvider.globalWateringDates) {
           final key =
               DateTime(date.year, date.month, 1).toString().substring(0, 7);
           monthlyCare[key] = monthlyCare[key] ?? {'Полив': 0, 'Пересадка': 0};
@@ -1225,7 +1233,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildEventsCalendar(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final now = DateTime.now();
         final startDate = DateTime(now.year, now.month, 1);

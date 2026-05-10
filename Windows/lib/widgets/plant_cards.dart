@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // Сохранено: Для adultImageUrl и userPhotos network.
 import 'dart:io'; // Сохранено: Для Image.file local userPhotos.
-import '../providers/plant_provider.dart'; // Сохранено: Для context.watch/read<PlantProvider>() — selectedIds, getAdultImage, lastGlobalWateringText.
+import '../presentation/providers/providers.dart'; // Сохранено: Для context.watch/read<PlantProvider>() — selectedIds, getAdultImage, lastGlobalWateringText.
 import '../models/plant.dart'; // Сохранено: Для Plant тип, statusText, lastWateringText.
 import '../screens/plant_card_screen.dart';
 import '../theme/cactus_theme.dart';
@@ -30,13 +30,17 @@ class PlantCards extends StatelessWidget {
   Widget _buildSortButton(String column, String label) {
     return TextButton(
       onPressed: () => onSort(column),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: Size.zero,
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14)),
+          Text(label, style: const TextStyle(fontSize: 13)),
           if (sortColumn == column)
             Icon(isAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 16),
+                size: 14),
         ],
       ),
     );
@@ -57,56 +61,8 @@ class PlantCards extends StatelessWidget {
     }
   }
 
-  void _showStatusDialog(BuildContext context, Plant plant) {
-    const validStatuses = [
-      'sown',
-      'growing',
-      'in_collection',
-      'dead',
-      'failed'
-    ];
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Изменить статус ${plant.latinName}'),
-        content: DropdownButton<String>(
-          value: validStatuses.contains(plant.status) ? plant.status : 'failed',
-          items: validStatuses
-              .map((status) => DropdownMenuItem<String>(
-                    value: status,
-                    child: Text(
-                      status == 'sown'
-                          ? 'Посеян'
-                          : status == 'growing'
-                              ? 'Растёт'
-                              : status == 'in_collection'
-                                  ? 'В коллекции'
-                                  : status == 'dead'
-                                      ? 'Погиб'
-                                      : 'Не взошел',
-                    ),
-                  ))
-              .toList(),
-          onChanged: (value) {
-            if (value != null) {
-              final updatedPlant = plant.copyWith(status: value);
-              onUpdate(plant.permanentId, updatedPlant);
-              Navigator.pop(ctx); // Используем ctx вместо context
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx), // Используем ctx
-            child: const Text('Отмена'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showQuickView(BuildContext context, Plant plant) {
-    final provider = context.read<PlantProvider>();
+    final provider = context.read<PlantCrudProvider>();
     final adultImageUrl = provider.getAdultImage(plant.permanentId);
     final userPhotos = plant.userPhotos;
 
@@ -211,7 +167,7 @@ class PlantCards extends StatelessWidget {
                         Text('ID: ${plant.displayId}'),
                         Text('Последний полив: ${plant.lastWateringText}'),
                         Text(
-                            'Последний общий полив: ${provider.lastGlobalWateringText}'),
+                            'Последний общий полив: ${context.read<WateringProvider>().lastGlobalWateringText}'),
                       ],
                     ),
                   ),
@@ -262,15 +218,14 @@ class PlantCards extends StatelessWidget {
     );
   }
 
-  // Улучшенный метод: всегда берёт первое фото из userPhotos как главное
-  String? _getSelectedPhotoUrl(Plant plant, PlantProvider provider) {
-    // Приоритет 1: пользовательские фото (первое всегда главное)
+// Возвращает: String? — URL или путь к файлу.
+  String? _getSelectedPhotoUrl(Plant plant, PlantCrudProvider provider) {
+    // Приоритет 1: пользовательские фото — первое всегда главное
     if (plant.userPhotos.isNotEmpty) {
-      final mainPhoto = plant.userPhotos.first;
-      return mainPhoto;
+      return plant.userPhotos.first;
     }
 
-    // Приоритет 2: adult фото (только если нет своих фото)
+    // Приоритет 2: adult фото (только если нет своих)
     final adultUrl = provider.getAdultImage(plant.permanentId);
     if (adultUrl != null) {
       return adultUrl;
@@ -279,16 +234,13 @@ class PlantCards extends StatelessWidget {
     return null;
   }
 
+  // Улучшенный метод: Показывает полноразмерное фото с ленивым скачиванием
   void _showFullPhoto(BuildContext context, String photoUrl, bool isNetwork) {
+    // ←←← ЛЕНИВОЕ СКАЧИВАНИЕ ПЕРЕД ОТКРЫТИЕМ ПОЛНОГО ФОТО
     if (isNetwork && photoUrl.startsWith('https://')) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!context.mounted) return;
-        final provider = Provider.of<PlantProvider>(context, listen: false);
+        final provider = context.read<PlantCrudProvider>();
         await provider.ensureLocalPhotosExist();
-        if (context.mounted) {
-          // Обновляем UI, чтобы фото перезагрузилось
-          (context as Element).markNeedsBuild();
-        }
       });
     }
 
@@ -328,27 +280,37 @@ class PlantCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<PlantProvider>();
+    final provider = context.watch<PlantCrudProvider>();
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  _buildSortButton('latinName', 'Название'),
-                  const SizedBox(width: 8),
-                  _buildSortButton('status', 'Статус'),
-                  const SizedBox(width: 8),
-                  _buildSortButton('year', 'Год'),
-                  const SizedBox(width: 8),
-                  _buildSortButton('category', 'Категория'),
-                ],
+              // Левая часть — сортировка (делаем компактнее)
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildSortButton('latinName', 'Название'),
+                      const SizedBox(width: 6),
+                      _buildSortButton('status', 'Статус'),
+                      const SizedBox(width: 6),
+                      _buildSortButton('year', 'Год'),
+                      const SizedBox(width: 6),
+                      _buildSortButton('category', 'Категория'),
+                    ],
+                  ),
+                ),
               ),
+
+              // Правая часть — чекбокс «Все» (всегда в границах экрана)
+              const SizedBox(width: 8),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Checkbox(
                     value: provider.selectedIds.length == plants.length &&
@@ -363,6 +325,7 @@ class PlantCards extends StatelessWidget {
                     },
                     activeColor: Colors.green,
                   ),
+                  const SizedBox(width: 4),
                   const Text('Все', style: TextStyle(fontSize: 14)),
                 ],
               ),
@@ -412,7 +375,7 @@ class PlantCards extends StatelessWidget {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   itemCount: plants.length,
                   itemBuilder: (context, index) {
                     final plant = plants[index];
@@ -429,91 +392,23 @@ class PlantCards extends StatelessWidget {
                       ),
                       onLongPress: () => _showQuickView(context, plant),
                       child: Card(
-                        color:
-                            isSelected ? CactusColors.sandBeige : Colors.white,
-                        elevation: 3,
+                        color: isSelected ? Colors.green.shade50 : Colors.white,
+                        elevation: 1.5,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
+                        margin: const EdgeInsets.only(bottom: 8),
                         child: Padding(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.all(12),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Checkbox(
-                                value: isSelected,
-                                onChanged: (value) => context
-                                    .read<PlantProvider>()
-                                    .toggleSelection(plant.permanentId),
-                                activeColor: CactusColors.primaryGreen,
-                              ),
-                              const SizedBox(width: 8),
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: CactusColors.sandLight,
-                                child: Text('${index + 1}',
-                                    style: const TextStyle(
-                                        color: CactusColors.primaryGreen,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(width: 12),
-
-                              // Основная информация
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      plant.latinName,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          plant.category == 'purchased'
-                                              ? Icons.local_offer
-                                              : Icons.eco,
-                                          size: 16,
-                                          color: plant.category == 'purchased'
-                                              ? Colors.blue
-                                              : CactusColors.primaryGreen,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${plant.category == 'purchased' ? 'Куплено' : 'Посев'} ${plant.year}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: plant.category == 'purchased'
-                                                ? Colors.blue
-                                                : CactusColors.primaryGreen,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'ID: ${plant.displayId}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(width: 16),
-
-                              // Главное фото — улучшенная версия
-                              if (!isSelected)
-                                SizedBox(
-                                  width: 80,
-                                  height: 60,
+                              // Фото слева
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: SizedBox(
+                                  width: 68,
+                                  height: 68,
                                   child: _getSelectedPhotoUrl(
                                               plant, provider) !=
                                           null
@@ -527,34 +422,29 @@ class PlantCards extends StatelessWidget {
                                             _showFullPhoto(
                                                 context, photoUrl, isNetwork);
                                           },
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            child: _getSelectedPhotoUrl(
-                                                        plant, provider)!
-                                                    .startsWith('http')
-                                                ? CachedNetworkImage(
-                                                    imageUrl:
-                                                        _getSelectedPhotoUrl(
-                                                            plant, provider)!,
-                                                    fit: BoxFit.cover,
-                                                    placeholder: (_, __) =>
-                                                        const CircularProgressIndicator(
-                                                            strokeWidth: 2),
-                                                    errorWidget: (_, __, ___) =>
-                                                        const Icon(Icons.error,
-                                                            color: Colors.red),
-                                                  )
-                                                : Image.file(
-                                                    File(_getSelectedPhotoUrl(
-                                                        plant, provider)!),
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (_, __,
-                                                            ___) =>
-                                                        const Icon(Icons.error,
-                                                            color: Colors.red),
-                                                  ),
-                                          ),
+                                          child: _getSelectedPhotoUrl(
+                                                      plant, provider)!
+                                                  .startsWith('http')
+                                              ? CachedNetworkImage(
+                                                  imageUrl:
+                                                      _getSelectedPhotoUrl(
+                                                          plant, provider)!,
+                                                  fit: BoxFit.cover,
+                                                  placeholder: (_, __) =>
+                                                      const CircularProgressIndicator(
+                                                          strokeWidth: 2),
+                                                  errorWidget: (_, __, ___) =>
+                                                      const Icon(Icons.error,
+                                                          color: Colors.red),
+                                                )
+                                              : Image.file(
+                                                  File(_getSelectedPhotoUrl(
+                                                      plant, provider)!),
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      const Icon(Icons.error,
+                                                          color: Colors.red),
+                                                ),
                                         )
                                       : Container(
                                           color: Colors.grey.shade200,
@@ -562,40 +452,65 @@ class PlantCards extends StatelessWidget {
                                               size: 32, color: Colors.grey),
                                         ),
                                 ),
+                              ),
 
                               const SizedBox(width: 12),
 
-                              // Статус
-                              GestureDetector(
-                                onTap: () => _showStatusDialog(context, plant),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: statusColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    plant.statusText,
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.white),
-                                  ),
+                              // Основная информация
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            plant.latinName,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox.shrink(),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '${plant.displayId} • ${plant.year} • ${plant.category == "purchased" ? "Куплено" : "Посев"}',
+                                      style: TextStyle(
+                                        // ← убрали const
+                                        fontSize: 13,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
 
                               const SizedBox(width: 8),
 
-                              IconButton(
-                                icon: const Icon(Icons.edit,
-                                    color: CactusColors.primaryGreen),
-                                onPressed: () => onEdit(plant),
-                                tooltip: 'Редактировать',
-                              ),
-                              IconButton(
-                                icon:
-                                    const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => onDelete(plant.permanentId),
-                                tooltip: 'Удалить',
+                              // Статус-бейджик
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                      color:
+                                          statusColor.withValues(alpha: 0.25)),
+                                ),
+                                child: Text(
+                                  plant.statusText,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusColor,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -609,3 +524,5 @@ class PlantCards extends StatelessWidget {
     );
   }
 }
+
+

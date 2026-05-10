@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // Сохранено: Для adultImageUrl и userPhotos network.
 import 'dart:io'; // Сохранено: Для Image.file local userPhotos.
-import '../providers/plant_provider.dart'; // Сохранено: Для context.watch/read<PlantProvider>() — selectedIds, getAdultImage, lastGlobalWateringText.
+import '../presentation/providers/providers.dart'; // Сохранено: Для context.watch/read<PlantProvider>() — selectedIds, getAdultImage, lastGlobalWateringText.
 import '../models/plant.dart'; // Сохранено: Для Plant тип, statusText, lastWateringText.
 import '../screens/plant_card_screen.dart';
 import '../theme/cactus_theme.dart';
@@ -63,7 +63,7 @@ class PlantCards extends StatelessWidget {
   }
 
   void _showQuickView(BuildContext context, Plant plant) {
-    final provider = context.read<PlantProvider>();
+    final provider = context.read<PlantCrudProvider>();
     final adultImageUrl = provider.getAdultImage(plant.permanentId);
     final userPhotos = plant.userPhotos;
 
@@ -168,7 +168,7 @@ class PlantCards extends StatelessWidget {
                         Text('ID: ${plant.displayId}'),
                         Text('Последний полив: ${plant.lastWateringText}'),
                         Text(
-                            'Последний общий полив: ${provider.lastGlobalWateringText}'),
+                            'Последний общий полив: ${context.read<WateringProvider>().lastGlobalWateringText}'),
                       ],
                     ),
                   ),
@@ -220,7 +220,7 @@ class PlantCards extends StatelessWidget {
   }
 
 // Возвращает: String? — URL или путь к файлу.
-  String? _getSelectedPhotoUrl(Plant plant, PlantProvider provider) {
+  String? _getSelectedPhotoUrl(Plant plant, PlantCrudProvider provider) {
     // Приоритет 1: пользовательские фото — первое всегда главное
     if (plant.userPhotos.isNotEmpty) {
       return plant.userPhotos.first;
@@ -240,7 +240,7 @@ class PlantCards extends StatelessWidget {
     // ←←← ЛЕНИВОЕ СКАЧИВАНИЕ ПЕРЕД ОТКРЫТИЕМ ПОЛНОГО ФОТО
     if (isNetwork && photoUrl.startsWith('https://')) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final provider = Provider.of<PlantProvider>(context, listen: false);
+        final provider = context.read<PlantCrudProvider>();
         await provider.ensureLocalPhotosExist();
       });
     }
@@ -281,7 +281,7 @@ class PlantCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<PlantProvider>();
+    final provider = context.watch<PlantCrudProvider>();
 
     return Column(
       children: [
@@ -527,3 +527,4 @@ class PlantCards extends StatelessWidget {
     );
   }
 }
+

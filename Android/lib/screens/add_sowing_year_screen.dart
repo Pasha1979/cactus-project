@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/plant.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 
 class AddSowingYearScreen extends StatefulWidget {
   const AddSowingYearScreen({super.key});
@@ -216,7 +216,7 @@ class AddSowingYearScreenState extends State<AddSowingYearScreen> {
           );
           return;
         }
-        final provider = Provider.of<PlantProvider>(context, listen: false);
+        final provider = Provider.of<PlantCrudProvider>(context, listen: false);
         final existingNumbers = provider.plants
             .where((p) => p.year == _selectedYear && p.category == 'sown')
             .map((p) => p.customNumber)
@@ -254,7 +254,7 @@ class AddSowingYearScreenState extends State<AddSowingYearScreen> {
         return;
       }
     }
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = Provider.of<PlantCrudProvider>(context, listen: false);
     for (final plant in _plants) {
       final existingIndex =
           provider.plants.indexWhere((p) => p.permanentId == plant.permanentId);

@@ -1,8 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/plant.dart';
 import 'package:provider/provider.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/llifle_utils.dart';
 import '../utils/gbif_utils.dart';
@@ -36,9 +36,9 @@ class PlantCardScreen extends StatefulWidget {
 class _PlantCardScreenState extends State<PlantCardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _currentTabIndex = 0; // ←←← ДОБАВЬТЕ ЭТУ СТРОКУ
-  ValueKey? _mapKey; // Ключ для обновления карты
-  Future<String>? _weatherFuture; // Кэш Future для вкладки Уход
+  int _currentTabIndex = 0; // в†ђв†ђв†ђ Р”РћР‘РђР’Р¬РўР• Р­РўРЈ РЎРўР РћРљРЈ
+  ValueKey? _mapKey; // РљР»СЋС‡ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РєР°СЂС‚С‹
+  Future<String>? _weatherFuture; // РљСЌС€ Future РґР»СЏ РІРєР»Р°РґРєРё РЈС…РѕРґ
 
   @override
   void initState() {
@@ -50,14 +50,14 @@ class _PlantCardScreenState extends State<PlantCardScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _weatherFuture ??= Provider.of<PlantProvider>(context, listen: false)
+    _weatherFuture ??= context.read<WeatherProvider>()
         .getWeatherAdvice(widget.plant);
   }
 
   @override
   void didUpdateWidget(PlantCardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Обновляем TabController если изменилось состояние isBatch
+    // РћР±РЅРѕРІР»СЏРµРј TabController РµСЃР»Рё РёР·РјРµРЅРёР»РѕСЃСЊ СЃРѕСЃС‚РѕСЏРЅРёРµ isBatch
     final oldIsBatch = oldWidget.plant.isBatch;
     final newIsBatch = widget.plant.isBatch;
     if (oldIsBatch != newIsBatch) {
@@ -67,9 +67,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         _tabController = TabController(length: newLength, vsync: this);
       }
     }
-    // Обновляем future если открылось другое растение
+    // РћР±РЅРѕРІР»СЏРµРј future РµСЃР»Рё РѕС‚РєСЂС‹Р»РѕСЃСЊ РґСЂСѓРіРѕРµ СЂР°СЃС‚РµРЅРёРµ
     if (oldWidget.plant.permanentId != widget.plant.permanentId) {
-      _weatherFuture = Provider.of<PlantProvider>(context, listen: false)
+      _weatherFuture = context.read<WeatherProvider>()
           .getWeatherAdvice(widget.plant);
     }
   }
@@ -82,9 +82,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PlantProvider>(
-      builder: (context, plantProvider, child) {
-        final updatedPlant = plantProvider.plants.firstWhere(
+    return Consumer<PlantCrudProvider>(
+      builder: (context, plantCrud, child) {
+        final updatedPlant = plantCrud.plants.firstWhere(
           (p) => p.permanentId == widget.plant.permanentId,
           orElse: () => widget.plant,
         );
@@ -94,11 +94,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             title: Text(updatedPlant.latinName),
             elevation: 0,
             actions: [
-              // Кнопка создания/просмотра QR кода
+              // РљРЅРѕРїРєР° СЃРѕР·РґР°РЅРёСЏ/РїСЂРѕСЃРјРѕС‚СЂР° QR РєРѕРґР°
               if (updatedPlant.qrCode == null)
                 IconButton(
                   icon: const Icon(Icons.qr_code),
-                  tooltip: 'Создать QR код',
+                  tooltip: 'РЎРѕР·РґР°С‚СЊ QR РєРѕРґ',
                   onPressed: () {
                     _showCreateQRCodeDialog(context, updatedPlant);
                   },
@@ -106,7 +106,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               else
                 IconButton(
                   icon: const Icon(Icons.qr_code_scanner),
-                  tooltip: 'Показать QR код',
+                  tooltip: 'РџРѕРєР°Р·Р°С‚СЊ QR РєРѕРґ',
                   onPressed: () {
                     _showQRCodeDialog(context, updatedPlant);
                   },
@@ -114,7 +114,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ],
           ),
           floatingActionButton: _currentTabIndex == 3
-              ? null // На вкладке "Галерея" кнопки редактирования нет
+              ? null // РќР° РІРєР»Р°РґРєРµ "Р“Р°Р»РµСЂРµСЏ" РєРЅРѕРїРєРё СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РЅРµС‚
               : FloatingActionButton(
                   onPressed: () async {
                     if (!context.mounted) return;
@@ -125,13 +125,13 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                       ),
                     );
                     if (result != null && context.mounted) {
-                      Provider.of<PlantProvider>(context, listen: false)
+                      context.read<PlantCrudProvider>()
                           .updatePlant(updatedPlant.permanentId, result);
-                      Provider.of<PlantProvider>(context, listen: false)
+                      context.read<PlantCrudProvider>()
                           .savePlants();
                     }
                   },
-                  tooltip: 'Редактировать растение',
+                  tooltip: 'Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ СЂР°СЃС‚РµРЅРёРµ',
                   child: const Icon(Icons.edit),
                 ),
           body: Column(
@@ -149,19 +149,19 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 },
                 tabs: updatedPlant.isBatch
                     ? const [
-                        Tab(icon: Icon(Icons.visibility), text: 'Обзор'),
-                        Tab(icon: Icon(Icons.spa), text: 'Сеянцы'),
-                        Tab(icon: Icon(Icons.local_florist), text: 'Уход'),
-                        Tab(icon: Icon(Icons.history), text: 'История'),
-                        Tab(icon: Icon(Icons.photo_library), text: 'Галерея'),
-                        Tab(icon: Icon(Icons.public), text: 'Распространение'),
+                        Tab(icon: Icon(Icons.visibility), text: 'РћР±Р·РѕСЂ'),
+                        Tab(icon: Icon(Icons.spa), text: 'РЎРµСЏРЅС†С‹'),
+                        Tab(icon: Icon(Icons.local_florist), text: 'РЈС…РѕРґ'),
+                        Tab(icon: Icon(Icons.history), text: 'РСЃС‚РѕСЂРёСЏ'),
+                        Tab(icon: Icon(Icons.photo_library), text: 'Р“Р°Р»РµСЂРµСЏ'),
+                        Tab(icon: Icon(Icons.public), text: 'Р Р°СЃРїСЂРѕСЃС‚СЂР°РЅРµРЅРёРµ'),
                       ]
                     : const [
-                        Tab(icon: Icon(Icons.visibility), text: 'Обзор'),
-                        Tab(icon: Icon(Icons.local_florist), text: 'Уход'),
-                        Tab(icon: Icon(Icons.history), text: 'История'),
-                        Tab(icon: Icon(Icons.photo_library), text: 'Галерея'),
-                        Tab(icon: Icon(Icons.public), text: 'Распространение'),
+                        Tab(icon: Icon(Icons.visibility), text: 'РћР±Р·РѕСЂ'),
+                        Tab(icon: Icon(Icons.local_florist), text: 'РЈС…РѕРґ'),
+                        Tab(icon: Icon(Icons.history), text: 'РСЃС‚РѕСЂРёСЏ'),
+                        Tab(icon: Icon(Icons.photo_library), text: 'Р“Р°Р»РµСЂРµСЏ'),
+                        Tab(icon: Icon(Icons.public), text: 'Р Р°СЃРїСЂРѕСЃС‚СЂР°РЅРµРЅРёРµ'),
                       ],
               ),
               Expanded(
@@ -192,7 +192,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Адаптивная шапка с фото — улучшенная версия
+  // РђРґР°РїС‚РёРІРЅР°СЏ С€Р°РїРєР° СЃ С„РѕС‚Рѕ вЂ” СѓР»СѓС‡С€РµРЅРЅР°СЏ РІРµСЂСЃРёСЏ
   Widget _buildPhotoHeader(BuildContext context, Plant plant) {
     final mainPhoto = plant.userPhotos.isNotEmpty
         ? plant.userPhotos.first
@@ -242,7 +242,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Компактная информация о стране с флагом
+              // РљРѕРјРїР°РєС‚РЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ Рѕ СЃС‚СЂР°РЅРµ СЃ С„Р»Р°РіРѕРј
               if (plant.country != null && plant.country!.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(bottom: 8),
@@ -290,7 +290,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               Wrap(
                 spacing: 8,
                 children: [
-                  _buildChip(Icons.calendar_today, '${plant.age} лет'),
+                  _buildChip(Icons.calendar_today, '${plant.age} Р»РµС‚'),
                   _buildChip(Icons.numbers, plant.displayId),
                   _buildChip(Icons.water_drop, plant.lastWateringText),
                 ],
@@ -312,7 +312,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // === ВКЛАДКА 1: ОБЗОР ===
+  // === Р’РљР›РђР”РљРђ 1: РћР‘Р—РћР  ===
   Widget _buildOverviewTab(BuildContext context, Plant plant) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -328,7 +328,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
           const SizedBox(height: 12),
 
-          // Кнопка Преобразовать в партию (только если живых >= 2 и это не витрина)
+          // РљРЅРѕРїРєР° РџСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РІ РїР°СЂС‚РёСЋ (С‚РѕР»СЊРєРѕ РµСЃР»Рё Р¶РёРІС‹С… >= 2 Рё СЌС‚Рѕ РЅРµ РІРёС‚СЂРёРЅР°)
           if (!plant.isBatch && plant.getCurrentAliveCount >= 2)
             Center(
               child: ElevatedButton.icon(
@@ -336,32 +336,37 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Преобразовать в партию?'),
+                      title: const Text('РџСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РІ РїР°СЂС‚РёСЋ?'),
                       content: Text(
-                        'Создать партию с ${plant.getCurrentAliveCount} сеянцами?\n\n'
-                        'Каждый сеянец получит свой ID (${plant.displayId}-1, ${plant.displayId}-2 и т.д.) '
-                        'и сможет отслеживаться отдельно.',
+                        'РЎРѕР·РґР°С‚СЊ РїР°СЂС‚РёСЋ СЃ ${plant.getCurrentAliveCount} СЃРµСЏРЅС†Р°РјРё?\n\n'
+                        'РљР°Р¶РґС‹Р№ СЃРµСЏРЅРµС† РїРѕР»СѓС‡РёС‚ СЃРІРѕР№ ID (${plant.displayId}-1, ${plant.displayId}-2 Рё С‚.Рґ.) '
+                        'Рё СЃРјРѕР¶РµС‚ РѕС‚СЃР»РµР¶РёРІР°С‚СЊСЃСЏ РѕС‚РґРµР»СЊРЅРѕ.',
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Отмена'),
+                          child: const Text('РћС‚РјРµРЅР°'),
                         ),
                         TextButton(
                           onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Создать',
+                          child: const Text('РЎРѕР·РґР°С‚СЊ',
                               style: TextStyle(color: Colors.green)),
                         ),
                       ],
                     ),
                   );
                   if (confirm == true && context.mounted) {
-                    await Provider.of<PlantProvider>(context, listen: false)
-                        .convertToBatch(plant.permanentId, context);
+                    final count = context.read<PlantCrudProvider>()
+                        .convertToBatch(plant.permanentId);
+                    if (count > 0 && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Создано партию с $count сеянцами')),
+                      );
+                    }
                   }
                 },
                 icon: const Icon(Icons.group_add),
-                label: Text('Преобразовать в партию (${plant.getCurrentAliveCount} шт.)'),
+                label: Text('РџСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РІ РїР°СЂС‚РёСЋ (${plant.getCurrentAliveCount} С€С‚.)'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   padding:
@@ -372,7 +377,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ),
             ),
 
-          // Индикатор что это витрина
+          // РРЅРґРёРєР°С‚РѕСЂ С‡С‚Рѕ СЌС‚Рѕ РІРёС‚СЂРёРЅР°
           if (plant.isBatch)
             Container(
               padding: const EdgeInsets.all(12),
@@ -387,7 +392,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   Icon(Icons.group, color: Colors.blue.shade700),
                   const SizedBox(width: 8),
                   Text(
-                    'Витрина-партия: ${plant.childrenIds.length} сеянцев',
+                    'Р’РёС‚СЂРёРЅР°-РїР°СЂС‚РёСЏ: ${plant.childrenIds.length} СЃРµСЏРЅС†РµРІ',
                     style: TextStyle(
                       color: Colors.blue.shade700,
                       fontWeight: FontWeight.bold,
@@ -401,27 +406,27 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // === ВКЛАДКА 2: УХОД (безопасная версия — только существующие методы) ===
+  // === Р’РљР›РђР”РљРђ 2: РЈРҐРћР” (Р±РµР·РѕРїР°СЃРЅР°СЏ РІРµСЂСЃРёСЏ вЂ” С‚РѕР»СЊРєРѕ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ РјРµС‚РѕРґС‹) ===
   Widget _buildCareTab(BuildContext context, Plant plant) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Заголовок вкладки
+          // Р—Р°РіРѕР»РѕРІРѕРє РІРєР»Р°РґРєРё
           Row(
             children: [
               const Icon(Icons.spa, size: 32, color: Colors.green),
               const SizedBox(width: 12),
               const Text(
-                'Уход за растением',
+                'РЈС…РѕРґ Р·Р° СЂР°СЃС‚РµРЅРёРµРј',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 24),
 
-          // 1. Погода и рекомендация на сегодня
+          // 1. РџРѕРіРѕРґР° Рё СЂРµРєРѕРјРµРЅРґР°С†РёСЏ РЅР° СЃРµРіРѕРґРЅСЏ
           FutureBuilder<String>(
             future: _weatherFuture,
             builder: (context, snapshot) {
@@ -433,7 +438,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   ),
                 );
               }
-              final advice = snapshot.data ?? 'Нет данных о погоде';
+              final advice = snapshot.data ?? 'РќРµС‚ РґР°РЅРЅС‹С… Рѕ РїРѕРіРѕРґРµ';
               return Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -447,7 +452,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         children: [
                           Icon(Icons.wb_sunny, color: Colors.orange),
                           SizedBox(width: 8),
-                          Text('Сегодня',
+                          Text('РЎРµРіРѕРґРЅСЏ',
                               style: TextStyle(fontWeight: FontWeight.bold)),
                         ],
                       ),
@@ -464,18 +469,18 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           ),
           const SizedBox(height: 24),
 
-          // 2. Основные рекомендации по уходу
+          // 2. РћСЃРЅРѕРІРЅС‹Рµ СЂРµРєРѕРјРµРЅРґР°С†РёРё РїРѕ СѓС…РѕРґСѓ
           const Text(
-            'Основные рекомендации',
+            'РћСЃРЅРѕРІРЅС‹Рµ СЂРµРєРѕРјРµРЅРґР°С†РёРё',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           _buildCareTipsSection(context, plant),
           const SizedBox(height: 32),
 
-          // 3. Быстрые действия (с отменой и визуальной обратной связью)
+          // 3. Р‘С‹СЃС‚СЂС‹Рµ РґРµР№СЃС‚РІРёСЏ (СЃ РѕС‚РјРµРЅРѕР№ Рё РІРёР·СѓР°Р»СЊРЅРѕР№ РѕР±СЂР°С‚РЅРѕР№ СЃРІСЏР·СЊСЋ)
           const Text(
-            'Быстрые действия',
+            'Р‘С‹СЃС‚СЂС‹Рµ РґРµР№СЃС‚РІРёСЏ',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
@@ -489,25 +494,25 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             children: [
               _buildActionCard(
                 icon: Icons.water_drop,
-                title: 'Полить сегодня',
+                title: 'РџРѕР»РёС‚СЊ СЃРµРіРѕРґРЅСЏ',
                 color: Colors.blue,
                 onTap: () => _markWateringToday(plant),
               ),
               _buildActionCard(
                 icon: Icons.science,
-                title: 'Удобрить',
+                title: 'РЈРґРѕР±СЂРёС‚СЊ',
                 color: Colors.purple,
                 onTap: () => _planFertilization(plant),
               ),
               _buildActionCard(
                 icon: Icons.yard,
-                title: 'Пересадить',
+                title: 'РџРµСЂРµСЃР°РґРёС‚СЊ',
                 color: Colors.brown,
                 onTap: () => _planRepotting(plant),
               ),
               _buildActionCard(
                 icon: Icons.local_florist,
-                title: 'Отметить цветение',
+                title: 'РћС‚РјРµС‚РёС‚СЊ С†РІРµС‚РµРЅРёРµ',
                 color: Colors.pink,
                 onTap: () => _markFlowering(plant),
               ),
@@ -518,7 +523,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Вкладка История
+  // Р’РєР»Р°РґРєР° РСЃС‚РѕСЂРёСЏ
   Widget _buildHistoryTab(BuildContext context, Plant plant) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -526,8 +531,8 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         children: [
           ListTile(
             leading: const Icon(Icons.edit_note, color: Colors.green),
-            title: const Text('Заметки'),
-            subtitle: Text('${plant.notes.length} заметок'),
+            title: const Text('Р—Р°РјРµС‚РєРё'),
+            subtitle: Text('${plant.notes.length} Р·Р°РјРµС‚РѕРє'),
             onTap: () {
               showModalBottomSheet(
                 context: context,
@@ -539,7 +544,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           const Divider(),
           ListTile(
             leading: const Icon(Icons.bar_chart, color: Colors.purple),
-            title: const Text('Подробная статистика'),
+            title: const Text('РџРѕРґСЂРѕР±РЅР°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР°'),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -552,21 +557,21 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // === ВКЛАДКА 4: ГАЛЕРЕЯ (простая и надёжная версия) ===
+  // === Р’РљР›РђР”РљРђ 4: Р“РђР›Р•Р Р•РЇ (РїСЂРѕСЃС‚Р°СЏ Рё РЅР°РґС‘Р¶РЅР°СЏ РІРµСЂСЃРёСЏ) ===
   Widget _buildGalleryTab(BuildContext context, Plant plant) {
     return StatefulBuilder(
       builder: (context, setGalleryState) {
-        // Текущее состояние фильтра - внутри StatefulBuilder
+        // РўРµРєСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ С„РёР»СЊС‚СЂР° - РІРЅСѓС‚СЂРё StatefulBuilder
         String currentFilter = 'all';
 
-        // Функция для обновления фильтра и фото
+        // Р¤СѓРЅРєС†РёСЏ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ С„РёР»СЊС‚СЂР° Рё С„РѕС‚Рѕ
         void updateFilter(String newFilter) {
           setGalleryState(() {
             currentFilter = newFilter;
           });
         }
 
-        // Функция для получения отфильтрованных фото
+        // Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РѕС‚С„РёР»СЊС‚СЂРѕРІР°РЅРЅС‹С… С„РѕС‚Рѕ
         List<String> getDisplayedPhotos() {
           if (currentFilter == 'my') {
             return List.from(plant.userPhotos);
@@ -575,7 +580,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           } else if (currentFilter == 'gbif') {
             return List.from(plant.gbifPhotoUrls);
           } else {
-            // Объединяем все фото: пользовательские, Llifle и GBIF
+            // РћР±СЉРµРґРёРЅСЏРµРј РІСЃРµ С„РѕС‚Рѕ: РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ, Llifle Рё GBIF
             return [...plant.userPhotos, ...plant.lliflePhotoUrls, ...plant.gbifPhotoUrls];
           }
         }
@@ -587,11 +592,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           children: [
             Column(
               children: [
-                // Счётчик
+                // РЎС‡С‘С‚С‡РёРє
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
                   child: Text(
-                    'Фото: $photoCount',
+                    'Р¤РѕС‚Рѕ: $photoCount',
                     style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w500,
@@ -599,19 +604,19 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   ),
                 ),
 
-                // Фильтры
+                // Р¤РёР»СЊС‚СЂС‹
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildFilterChip(Icons.photo_library, 'Все', 'all',
+                      _buildFilterChip(Icons.photo_library, 'Р’СЃРµ', 'all',
                           currentFilter, () => updateFilter('all'), plant),
                       const SizedBox(width: 10),
-                      _buildFilterChip(Icons.camera_alt, 'Мои', 'my',
+                      _buildFilterChip(Icons.camera_alt, 'РњРѕРё', 'my',
                           currentFilter, () => updateFilter('my'), plant),
                       const SizedBox(width: 10),
-                      _buildFilterChip(Icons.cloud, 'С Llifle', 'llifle',
+                      _buildFilterChip(Icons.cloud, 'РЎ Llifle', 'llifle',
                           currentFilter, () => updateFilter('llifle'), plant),
                       const SizedBox(width: 10),
                       _buildFilterChip(Icons.photo_camera, 'GBIF', 'gbif',
@@ -622,7 +627,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
                 const SizedBox(height: 12),
 
-                // Галерея
+                // Р“Р°Р»РµСЂРµСЏ
                 Expanded(
                   child: displayedPhotos.isEmpty
                       ? const Center(
@@ -632,7 +637,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                               Icon(Icons.photo_library_outlined,
                                   size: 80, color: Colors.grey),
                               SizedBox(height: 16),
-                              Text('В этом фильтре нет фото',
+                              Text('Р’ СЌС‚РѕРј С„РёР»СЊС‚СЂРµ РЅРµС‚ С„РѕС‚Рѕ',
                                   style: TextStyle(
                                       fontSize: 18, color: Colors.grey)),
                             ],
@@ -662,8 +667,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) async {
                                       final provider =
-                                          Provider.of<PlantProvider>(context,
-                                              listen: false);
+                                          context.read<PlantCrudProvider>();
                                       await provider.ensureLocalPhotosExist();
                                     });
                                   }
@@ -715,14 +719,14 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ],
             ),
 
-            // FAB кнопки
+            // FAB РєРЅРѕРїРєРё
             Positioned(
               bottom: 30,
               right: 30,
               child: FloatingActionButton(
                 heroTag: 'fab_add_photo_${plant.permanentId}',
                 onPressed: () => _uploadUserPhoto(context, plant),
-                tooltip: 'Добавить своё фото',
+                tooltip: 'Р”РѕР±Р°РІРёС‚СЊ СЃРІРѕС‘ С„РѕС‚Рѕ',
                 backgroundColor: Colors.green,
                 elevation: 6,
                 child: const Icon(Icons.add_a_photo),
@@ -731,11 +735,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
             Positioned(
               bottom: 30,
-              left: 140, // сдвинули правее, чтобы не накладывалась
+              left: 140, // СЃРґРІРёРЅСѓР»Рё РїСЂР°РІРµРµ, С‡С‚РѕР±С‹ РЅРµ РЅР°РєР»Р°РґС‹РІР°Р»Р°СЃСЊ
               child: FloatingActionButton.small(
                 heroTag: 'fab_llifle_${plant.permanentId}',
                 onPressed: () => _refreshLliflePhotos(context, plant),
-                tooltip: 'Загрузить ещё фото с Llifle',
+                tooltip: 'Р—Р°РіСЂСѓР·РёС‚СЊ РµС‰С‘ С„РѕС‚Рѕ СЃ Llifle',
                 backgroundColor: Colors.orange,
                 child: const Icon(Icons.cloud_download),
               ),
@@ -746,19 +750,19 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // === ВКЛАДКА 5: РАСПРОСТРАНЕНИЕ (GBIF данные) ===
+  // === Р’РљР›РђР”РљРђ 5: Р РђРЎРџР РћРЎРўР РђРќР•РќРР• (GBIF РґР°РЅРЅС‹Рµ) ===
   Widget _buildDistributionTab(BuildContext context, Plant plant) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Заголовок и кнопка обновления
+          // Р—Р°РіРѕР»РѕРІРѕРє Рё РєРЅРѕРїРєР° РѕР±РЅРѕРІР»РµРЅРёСЏ
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Распространение вида',
+                'Р Р°СЃРїСЂРѕСЃС‚СЂР°РЅРµРЅРёРµ РІРёРґР°',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.green.shade700,
@@ -767,17 +771,17 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               IconButton(
                 onPressed: () => _refreshGbifData(context, plant),
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Обновить данные GBIF',
+                tooltip: 'РћР±РЅРѕРІРёС‚СЊ РґР°РЅРЅС‹Рµ GBIF',
               ),
             ],
           ),
           const SizedBox(height: 16),
           
-          // Страна с флагом
+          // РЎС‚СЂР°РЅР° СЃ С„Р»Р°РіРѕРј
           _buildCountryInfo(plant),
           const SizedBox(height: 16),
           
-          // Ареал обитания
+          // РђСЂРµР°Р» РѕР±РёС‚Р°РЅРёСЏ
           if (plant.habitat != null && plant.habitat!.isNotEmpty) ...[
             Card(
               elevation: 2,
@@ -791,7 +795,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         Icon(Icons.terrain, color: Colors.green.shade600),
                         const SizedBox(width: 8),
                         Text(
-                          'Ареал обитания',
+                          'РђСЂРµР°Р» РѕР±РёС‚Р°РЅРёСЏ',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -810,7 +814,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             const SizedBox(height: 16),
           ],
           
-          // GBIF статистика
+          // GBIF СЃС‚Р°С‚РёСЃС‚РёРєР°
           if (plant.gbifOccurrences.isNotEmpty || plant.gbifPhotoUrls.isNotEmpty) ...[
             Card(
               elevation: 2,
@@ -824,7 +828,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         Icon(Icons.public, color: Colors.blue.shade600),
                         const SizedBox(width: 8),
                         Text(
-                          'Данные GBIF',
+                          'Р”Р°РЅРЅС‹Рµ GBIF',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -837,7 +841,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         Expanded(
                           child: _buildStatCard(
                             context,
-                            'Точки наблюдения',
+                            'РўРѕС‡РєРё РЅР°Р±Р»СЋРґРµРЅРёСЏ',
                             plant.gbifOccurrences.length.toString(),
                             Icons.location_on,
                             Colors.red,
@@ -847,7 +851,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         Expanded(
                           child: _buildStatCard(
                             context,
-                            'Фото из природы',
+                            'Р¤РѕС‚Рѕ РёР· РїСЂРёСЂРѕРґС‹',
                             plant.gbifPhotoUrls.length.toString(),
                             Icons.photo_camera,
                             Colors.green,
@@ -858,7 +862,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                     if (plant.lastGbifUpdate != null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'Обновлено: ${_formatDate(plant.lastGbifUpdate!)}',
+                        'РћР±РЅРѕРІР»РµРЅРѕ: ${_formatDate(plant.lastGbifUpdate!)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey,
                         ),
@@ -871,7 +875,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             const SizedBox(height: 16),
           ],
           
-          // Интерактивная карта с occurrence точками GBIF
+          // РРЅС‚РµСЂР°РєС‚РёРІРЅР°СЏ РєР°СЂС‚Р° СЃ occurrence С‚РѕС‡РєР°РјРё GBIF
           if (plant.gbifOccurrences.isNotEmpty) ...[
             Card(
               elevation: 2,
@@ -880,7 +884,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 width: double.infinity,
                 child: Column(
                   children: [
-                    // Заголовок карты с элементами управления
+                    // Р—Р°РіРѕР»РѕРІРѕРє РєР°СЂС‚С‹ СЃ СЌР»РµРјРµРЅС‚Р°РјРё СѓРїСЂР°РІР»РµРЅРёСЏ
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
@@ -894,7 +898,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Точки наблюдения GBIF: ${plant.gbifOccurrences.length}',
+                            'РўРѕС‡РєРё РЅР°Р±Р»СЋРґРµРЅРёСЏ GBIF: ${plant.gbifOccurrences.length}',
                             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -904,13 +908,13 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                               IconButton(
                                 onPressed: () => _resetMapView(context, plant),
                                 icon: const Icon(Icons.center_focus_strong),
-                                tooltip: 'Центрировать карту',
+                                tooltip: 'Р¦РµРЅС‚СЂРёСЂРѕРІР°С‚СЊ РєР°СЂС‚Сѓ',
                                 iconSize: 20,
                               ),
                               IconButton(
                                 onPressed: () => _showFullMapDialog(context, plant),
                                 icon: const Icon(Icons.fullscreen),
-                                tooltip: 'Полноэкранная карта',
+                                tooltip: 'РџРѕР»РЅРѕСЌРєСЂР°РЅРЅР°СЏ РєР°СЂС‚Р°',
                                 iconSize: 20,
                               ),
                             ],
@@ -918,7 +922,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         ],
                       ),
                     ),
-                    // Карта
+                    // РљР°СЂС‚Р°
                     Expanded(
                       child: _buildGbifMap(context, plant),
                     ),
@@ -929,7 +933,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             const SizedBox(height: 16),
           ],
           
-          // Фото из природы GBIF
+          // Р¤РѕС‚Рѕ РёР· РїСЂРёСЂРѕРґС‹ GBIF
           if (plant.gbifPhotoUrls.isNotEmpty) ...[
             Card(
               elevation: 2,
@@ -943,7 +947,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         Icon(Icons.photo_camera, color: Colors.green.shade600),
                         const SizedBox(width: 8),
                         Text(
-                          'Фото из природы (GBIF)',
+                          'Р¤РѕС‚Рѕ РёР· РїСЂРёСЂРѕРґС‹ (GBIF)',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -991,7 +995,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ),
           ],
           
-          // Пустое состояние - если нет GBIF данных
+          // РџСѓСЃС‚РѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ - РµСЃР»Рё РЅРµС‚ GBIF РґР°РЅРЅС‹С…
           if (plant.gbifOccurrences.isEmpty && plant.gbifPhotoUrls.isEmpty)
             _buildEmptyGbifState(context, plant),
             
@@ -1001,7 +1005,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Информация о стране с флагом (замена для отсутствующего _buildCountryRow)
+  // РРЅС„РѕСЂРјР°С†РёСЏ Рѕ СЃС‚СЂР°РЅРµ СЃ С„Р»Р°РіРѕРј (Р·Р°РјРµРЅР° РґР»СЏ РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РµРіРѕ _buildCountryRow)
   Widget _buildCountryInfo(Plant plant) {
     return Card(
       elevation: 2,
@@ -1016,7 +1020,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Страна происхождения',
+                    'РЎС‚СЂР°РЅР° РїСЂРѕРёСЃС…РѕР¶РґРµРЅРёСЏ',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: Colors.grey.shade600,
                       fontWeight: FontWeight.w500,
@@ -1038,7 +1042,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         ),
                       Expanded(
                         child: Text(
-                          plant.country?.isNotEmpty == true ? plant.country! : 'Не указана',
+                          plant.country?.isNotEmpty == true ? plant.country! : 'РќРµ СѓРєР°Р·Р°РЅР°',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -1055,7 +1059,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Пустое состояние для отсутствия GBIF данных
+  // РџСѓСЃС‚РѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ РґР»СЏ РѕС‚СЃСѓС‚СЃС‚РІРёСЏ GBIF РґР°РЅРЅС‹С…
   Widget _buildEmptyGbifState(BuildContext context, Plant plant) {
     return Card(
       elevation: 2,
@@ -1079,7 +1083,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Нет данных GBIF',
+              'РќРµС‚ РґР°РЅРЅС‹С… GBIF',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Colors.grey.shade600,
                 fontWeight: FontWeight.bold,
@@ -1087,7 +1091,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Нажмите кнопку обновления,\nчтобы загрузить данные из природы',
+              'РќР°Р¶РјРёС‚Рµ РєРЅРѕРїРєСѓ РѕР±РЅРѕРІР»РµРЅРёСЏ,\nС‡С‚РѕР±С‹ Р·Р°РіСЂСѓР·РёС‚СЊ РґР°РЅРЅС‹Рµ РёР· РїСЂРёСЂРѕРґС‹',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey.shade500,
@@ -1097,7 +1101,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ElevatedButton.icon(
               onPressed: () => _refreshGbifData(context, plant),
               icon: const Icon(Icons.refresh),
-              label: const Text('Загрузить данные'),
+              label: const Text('Р—Р°РіСЂСѓР·РёС‚СЊ РґР°РЅРЅС‹Рµ'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green.shade600,
                 foregroundColor: Colors.white,
@@ -1113,7 +1117,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Вспомогательный метод для карточки статистики
+  // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РєР°СЂС‚РѕС‡РєРё СЃС‚Р°С‚РёСЃС‚РёРєРё
   Widget _buildStatCard(
     BuildContext context,
     String title,
@@ -1159,20 +1163,20 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Форматирование даты
+  // Р¤РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ РґР°С‚С‹
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}.'
            '${date.month.toString().padLeft(2, '0')}.'
            '${date.year}';
   }
 
-  // Обновление GBIF данных с улучшенной безопасностью и обработкой ошибок
+  // РћР±РЅРѕРІР»РµРЅРёРµ GBIF РґР°РЅРЅС‹С… СЃ СѓР»СѓС‡С€РµРЅРЅРѕР№ Р±РµР·РѕРїР°СЃРЅРѕСЃС‚СЊСЋ Рё РѕР±СЂР°Р±РѕС‚РєРѕР№ РѕС€РёР±РѕРє
   Future<void> _refreshGbifData(BuildContext context, Plant plant) async {
-    // Проверяем начальное состояние
+    // РџСЂРѕРІРµСЂСЏРµРј РЅР°С‡Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ
     if (!mounted) return;
     
     try {
-      // Показываем индикатор загрузки
+      // РџРѕРєР°Р·С‹РІР°РµРј РёРЅРґРёРєР°С‚РѕСЂ Р·Р°РіСЂСѓР·РєРё
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1184,7 +1188,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 ),
                 SizedBox(width: 8),
-                Text('Обновление данных GBIF...'),
+                Text('РћР±РЅРѕРІР»РµРЅРёРµ РґР°РЅРЅС‹С… GBIF...'),
               ],
             ),
             duration: Duration(seconds: 3),
@@ -1193,22 +1197,22 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         );
       }
 
-      // Очищаем кэш для этого растения
+      // РћС‡РёС‰Р°РµРј РєСЌС€ РґР»СЏ СЌС‚РѕРіРѕ СЂР°СЃС‚РµРЅРёСЏ
       await clearGbifCache(plant.latinName);
       
-      // Получаем обновленные данные с таймаутом
+      // РџРѕР»СѓС‡Р°РµРј РѕР±РЅРѕРІР»РµРЅРЅС‹Рµ РґР°РЅРЅС‹Рµ СЃ С‚Р°Р№РјР°СѓС‚РѕРј
       final updatedData = await fetchPlantData(plant.latinName)
           .timeout(const Duration(seconds: 30));
       
       if (updatedData != null && context.mounted) {
-        // Обновляем растение новыми данными
-        final provider = Provider.of<PlantProvider>(context, listen: false);
+        // РћР±РЅРѕРІР»СЏРµРј СЂР°СЃС‚РµРЅРёРµ РЅРѕРІС‹РјРё РґР°РЅРЅС‹РјРё
+        final provider = context.read<PlantCrudProvider>();
         
-        // Безопасная конвертация GBIF данных с валидацией
+        // Р‘РµР·РѕРїР°СЃРЅР°СЏ РєРѕРЅРІРµСЂС‚Р°С†РёСЏ GBIF РґР°РЅРЅС‹С… СЃ РІР°Р»РёРґР°С†РёРµР№
         List<String> gbifPhotoUrls = [];
         List<GbifOccurrence> gbifOccurrences = [];
         
-        // Обработка GBIF фото с валидацией
+        // РћР±СЂР°Р±РѕС‚РєР° GBIF С„РѕС‚Рѕ СЃ РІР°Р»РёРґР°С†РёРµР№
         if (updatedData['gbifPhotoUrls'] != null) {
           try {
             final photoData = updatedData['gbifPhotoUrls'] as List<dynamic>?;
@@ -1218,11 +1222,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 .where((url) => url.startsWith('http'))
                 .toList() ?? [];
           } catch (e) {
-            print('Ошибка обработки GBIF фото: $e');
+            print('РћС€РёР±РєР° РѕР±СЂР°Р±РѕС‚РєРё GBIF С„РѕС‚Рѕ: $e');
           }
         }
         
-        // Обработка GBIF occurrences с валидацией
+        // РћР±СЂР°Р±РѕС‚РєР° GBIF occurrences СЃ РІР°Р»РёРґР°С†РёРµР№
         if (updatedData['gbifOccurrences'] != null) {
           try {
             final occurrenceData = updatedData['gbifOccurrences'] as List<dynamic>?;
@@ -1235,7 +1239,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                     final occ = GbifOccurrence.fromJson(e);
                     return occ.hasValidCoordinates ? occ : null;
                   } else {
-                    // Пробуем создать occurrence из сериализованных данных
+                    // РџСЂРѕР±СѓРµРј СЃРѕР·РґР°С‚СЊ occurrence РёР· СЃРµСЂРёР°Р»РёР·РѕРІР°РЅРЅС‹С… РґР°РЅРЅС‹С…
                     try {
                       final map = Map<String, dynamic>.from(e as Map);
                       final occ = GbifOccurrence.fromJson(map);
@@ -1249,11 +1253,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 .cast<GbifOccurrence>()
                 .toList() ?? [];
           } catch (e) {
-            print('Ошибка обработки GBIF occurrences: $e');
+            print('РћС€РёР±РєР° РѕР±СЂР°Р±РѕС‚РєРё GBIF occurrences: $e');
           }
         }
         
-        // Создаем обновленное растение с безопасными проверками
+        // РЎРѕР·РґР°РµРј РѕР±РЅРѕРІР»РµРЅРЅРѕРµ СЂР°СЃС‚РµРЅРёРµ СЃ Р±РµР·РѕРїР°СЃРЅС‹РјРё РїСЂРѕРІРµСЂРєР°РјРё
         final updatedPlant = plant.copyWith(
           country: updatedData['country']?.toString().trim() ?? plant.country,
           habitat: updatedData['habitat']?.toString().trim() ?? plant.habitat,
@@ -1265,11 +1269,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               : DateTime.now(),
         );
         
-        // Обновляем в Provider
+        // РћР±РЅРѕРІР»СЏРµРј РІ Provider
         provider.updatePlant(plant.permanentId, updatedPlant);
         await provider.savePlants();
         
-        // Обновляем UI с проверкой mounted
+        // РћР±РЅРѕРІР»СЏРµРј UI СЃ РїСЂРѕРІРµСЂРєРѕР№ mounted
         if (mounted) {
           setState(() {});
           
@@ -1283,7 +1287,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   children: [
                     const Icon(Icons.check_circle, color: Colors.white),
                     const SizedBox(width: 8),
-                    Text('Данные обновлены: $occurrenceCount точек, $photoCount фото'),
+                    Text('Р”Р°РЅРЅС‹Рµ РѕР±РЅРѕРІР»РµРЅС‹: $occurrenceCount С‚РѕС‡РµРє, $photoCount С„РѕС‚Рѕ'),
                   ],
                 ),
                 backgroundColor: Colors.green,
@@ -1293,14 +1297,14 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           }
         }
       } else if (context.mounted) {
-        // Данные не получены
+        // Р”Р°РЅРЅС‹Рµ РЅРµ РїРѕР»СѓС‡РµРЅС‹
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
               children: [
                 Icon(Icons.info_outline, color: Colors.white),
                 SizedBox(width: 8),
-                Text('Данные GBIF не найдены для этого растения'),
+                Text('Р”Р°РЅРЅС‹Рµ GBIF РЅРµ РЅР°Р№РґРµРЅС‹ РґР»СЏ СЌС‚РѕРіРѕ СЂР°СЃС‚РµРЅРёСЏ'),
               ],
             ),
             backgroundColor: Colors.orange,
@@ -1309,18 +1313,18 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         );
       }
     } catch (e) {
-      // Обработка ошибок с детальной информацией
+      // РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє СЃ РґРµС‚Р°Р»СЊРЅРѕР№ РёРЅС„РѕСЂРјР°С†РёРµР№
       if (context.mounted) {
-        String errorMessage = 'Ошибка обновления';
+        String errorMessage = 'РћС€РёР±РєР° РѕР±РЅРѕРІР»РµРЅРёСЏ';
         
         if (e.toString().contains('SocketException')) {
-          errorMessage = 'Ошибка сети: проверьте подключение к интернету';
+          errorMessage = 'РћС€РёР±РєР° СЃРµС‚Рё: РїСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє РёРЅС‚РµСЂРЅРµС‚Сѓ';
         } else if (e.toString().contains('TimeoutException')) {
-          errorMessage = 'Превышено время ожидания: попробуйте еще раз';
+          errorMessage = 'РџСЂРµРІС‹С€РµРЅРѕ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ: РїРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰Рµ СЂР°Р·';
         } else if (e.toString().contains('HTTP')) {
-          errorMessage = 'Ошибка сервера GBIF: сервис временно недоступен';
+          errorMessage = 'РћС€РёР±РєР° СЃРµСЂРІРµСЂР° GBIF: СЃРµСЂРІРёСЃ РІСЂРµРјРµРЅРЅРѕ РЅРµРґРѕСЃС‚СѓРїРµРЅ';
         } else {
-          errorMessage = 'Ошибка обновления: ${e.toString().substring(0, 50)}...';
+          errorMessage = 'РћС€РёР±РєР° РѕР±РЅРѕРІР»РµРЅРёСЏ: ${e.toString().substring(0, 50)}...';
         }
         
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1335,7 +1339,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
-              label: 'Повторить',
+              label: 'РџРѕРІС‚РѕСЂРёС‚СЊ',
               textColor: Colors.white,
               onPressed: () => _refreshGbifData(context, plant),
             ),
@@ -1345,20 +1349,20 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     }
   }
 
-  // === МЕТОДЫ ИНТЕРАКТИВНОЙ КАРТЫ GBIF ===
+  // === РњР•РўРћР”Р« РРќРўР•Р РђРљРўРР’РќРћР™ РљРђР РўР« GBIF ===
   
-  // Основной виджет карты с occurrence точками
+  // РћСЃРЅРѕРІРЅРѕР№ РІРёРґР¶РµС‚ РєР°СЂС‚С‹ СЃ occurrence С‚РѕС‡РєР°РјРё
   Widget _buildGbifMap(BuildContext context, Plant plant) {
     if (plant.gbifOccurrences.isEmpty) {
       return Container(
         color: Colors.grey.shade100,
         child: const Center(
-          child: Text('Нет точек наблюдения'),
+          child: Text('РќРµС‚ С‚РѕС‡РµРє РЅР°Р±Р»СЋРґРµРЅРёСЏ'),
         ),
       );
     }
 
-    // Вычисляем центр карты на основе всех occurrence точек
+    // Р’С‹С‡РёСЃР»СЏРµРј С†РµРЅС‚СЂ РєР°СЂС‚С‹ РЅР° РѕСЃРЅРѕРІРµ РІСЃРµС… occurrence С‚РѕС‡РµРє
     final centerPoint = _calculateMapCenter(plant.gbifOccurrences);
     
     return FlutterMap(
@@ -1373,19 +1377,19 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         ),
       ),
       children: [
-        // OpenStreetMap тайлы
+        // OpenStreetMap С‚Р°Р№Р»С‹
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.pavel.mycactus',
           maxZoom: 19,
         ),
-        // Слой с маркерами occurrence точек
+        // РЎР»РѕР№ СЃ РјР°СЂРєРµСЂР°РјРё occurrence С‚РѕС‡РµРє
         MarkerLayer(
           markers: plant.gbifOccurrences.map((occurrence) {
             return _buildOccurrenceMarker(context, occurrence);
           }).toList(),
         ),
-        // Слой с полигонами для визуализации ареала (опционально)
+        // РЎР»РѕР№ СЃ РїРѕР»РёРіРѕРЅР°РјРё РґР»СЏ РІРёР·СѓР°Р»РёР·Р°С†РёРё Р°СЂРµР°Р»Р° (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)
         if (plant.gbifOccurrences.length > 3)
           PolygonLayer(
             polygons: [_buildOccurrencePolygon(plant.gbifOccurrences)],
@@ -1394,10 +1398,10 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Расчет центра карты на основе occurrence точек
+  // Р Р°СЃС‡РµС‚ С†РµРЅС‚СЂР° РєР°СЂС‚С‹ РЅР° РѕСЃРЅРѕРІРµ occurrence С‚РѕС‡РµРє
   LatLng _calculateMapCenter(List<GbifOccurrence> occurrences) {
     if (occurrences.isEmpty) {
-      return const LatLng(0.0, 0.0); // Центр мира по умолчанию
+      return const LatLng(0.0, 0.0); // Р¦РµРЅС‚СЂ РјРёСЂР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
     }
 
     double totalLat = 0.0;
@@ -1419,7 +1423,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     return LatLng(totalLat / validPoints, totalLng / validPoints);
   }
 
-  // Создание маркера для occurrence точки
+  // РЎРѕР·РґР°РЅРёРµ РјР°СЂРєРµСЂР° РґР»СЏ occurrence С‚РѕС‡РєРё
   Marker _buildOccurrenceMarker(BuildContext context, GbifOccurrence occurrence) {
     return Marker(
       point: LatLng(occurrence.latitude, occurrence.longitude),
@@ -1450,7 +1454,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Построение полигона для визуализации ареала (выпуклая оболочка)
+  // РџРѕСЃС‚СЂРѕРµРЅРёРµ РїРѕР»РёРіРѕРЅР° РґР»СЏ РІРёР·СѓР°Р»РёР·Р°С†РёРё Р°СЂРµР°Р»Р° (РІС‹РїСѓРєР»Р°СЏ РѕР±РѕР»РѕС‡РєР°)
   Polygon _buildOccurrencePolygon(List<GbifOccurrence> occurrences) {
     final validPoints = occurrences
         .where((occ) => occ.hasValidCoordinates)
@@ -1458,7 +1462,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         .toList();
 
     if (validPoints.length < 3) {
-      // Создаем простой прямоугольник для 2 точек
+      // РЎРѕР·РґР°РµРј РїСЂРѕСЃС‚РѕР№ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє РґР»СЏ 2 С‚РѕС‡РµРє
       if (validPoints.length == 2) {
         final lat1 = validPoints[0].latitude;
         final lat2 = validPoints[1].latitude;
@@ -1477,11 +1481,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           borderColor: Colors.green.withValues(alpha: 0.6),
         );
       }
-      // Для 1 точки создаем маленький квадрат
+      // Р”Р»СЏ 1 С‚РѕС‡РєРё СЃРѕР·РґР°РµРј РјР°Р»РµРЅСЊРєРёР№ РєРІР°РґСЂР°С‚
       if (validPoints.length == 1) {
         final lat = validPoints[0].latitude;
         final lng = validPoints[0].longitude;
-        final delta = 0.5; // ~50км
+        final delta = 0.5; // ~50РєРј
         
         return Polygon(
           points: [
@@ -1497,7 +1501,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       }
     }
 
-    // Для 3+ точек создаем выпуклую оболочку
+    // Р”Р»СЏ 3+ С‚РѕС‡РµРє СЃРѕР·РґР°РµРј РІС‹РїСѓРєР»СѓСЋ РѕР±РѕР»РѕС‡РєСѓ
     final hullPoints = _calculateConvexHull(validPoints);
     
     return Polygon(
@@ -1508,11 +1512,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Вычисление выпуклой оболочки (алгоритм Грэхема)
+  // Р’С‹С‡РёСЃР»РµРЅРёРµ РІС‹РїСѓРєР»РѕР№ РѕР±РѕР»РѕС‡РєРё (Р°Р»РіРѕСЂРёС‚Рј Р“СЂСЌС…РµРјР°)
   List<LatLng> _calculateConvexHull(List<LatLng> points) {
     if (points.length < 3) return points;
     
-    // Сортировка по x, затем по y
+    // РЎРѕСЂС‚РёСЂРѕРІРєР° РїРѕ x, Р·Р°С‚РµРј РїРѕ y
     final sortedPoints = List<LatLng>.from(points);
     sortedPoints.sort((a, b) {
       if (a.latitude != b.latitude) {
@@ -1521,7 +1525,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       return a.longitude.compareTo(b.longitude);
     });
 
-    // Построение нижней оболочки
+    // РџРѕСЃС‚СЂРѕРµРЅРёРµ РЅРёР¶РЅРµР№ РѕР±РѕР»РѕС‡РєРё
     final List<LatLng> lower = [];
     for (final point in sortedPoints) {
       while (lower.length >= 2 && _crossProduct(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) {
@@ -1530,7 +1534,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       lower.add(point);
     }
 
-    // Построение верхней оболочки
+    // РџРѕСЃС‚СЂРѕРµРЅРёРµ РІРµСЂС…РЅРµР№ РѕР±РѕР»РѕС‡РєРё
     final List<LatLng> upper = [];
     for (final point in sortedPoints.reversed) {
       while (upper.length >= 2 && _crossProduct(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) {
@@ -1539,25 +1543,25 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       upper.add(point);
     }
 
-    // Объединение (удаление последней точки каждой, так как она дублируется)
+    // РћР±СЉРµРґРёРЅРµРЅРёРµ (СѓРґР°Р»РµРЅРёРµ РїРѕСЃР»РµРґРЅРµР№ С‚РѕС‡РєРё РєР°Р¶РґРѕР№, С‚Р°Рє РєР°Рє РѕРЅР° РґСѓР±Р»РёСЂСѓРµС‚СЃСЏ)
     lower.removeLast();
     upper.removeLast();
     
     return [...lower, ...upper];
   }
 
-  // Векторное произведение для определения поворота
+  // Р’РµРєС‚РѕСЂРЅРѕРµ РїСЂРѕРёР·РІРµРґРµРЅРёРµ РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ РїРѕРІРѕСЂРѕС‚Р°
   double _crossProduct(LatLng o, LatLng a, LatLng b) {
     return (a.latitude - o.latitude) * (b.longitude - o.longitude) -
            (a.longitude - o.longitude) * (b.latitude - o.latitude);
   }
 
-  // Показ деталей occurrence точки
+  // РџРѕРєР°Р· РґРµС‚Р°Р»РµР№ occurrence С‚РѕС‡РєРё
   void _showOccurrenceDetails(BuildContext context, GbifOccurrence occurrence) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Точка наблюдения'),
+        title: Text('РўРѕС‡РєР° РЅР°Р±Р»СЋРґРµРЅРёСЏ'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1567,7 +1571,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 children: [
                   const Icon(Icons.flag, size: 16),
                   const SizedBox(width: 4),
-                  Text('Страна: ${occurrence.country}'),
+                  Text('РЎС‚СЂР°РЅР°: ${occurrence.country}'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -1577,7 +1581,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 children: [
                   const Icon(Icons.location_city, size: 16),
                   const SizedBox(width: 4),
-                  Text('Местность: ${occurrence.locality}'),
+                  Text('РњРµСЃС‚РЅРѕСЃС‚СЊ: ${occurrence.locality}'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -1587,7 +1591,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 children: [
                   const Icon(Icons.terrain, size: 16),
                   const SizedBox(width: 4),
-                  Expanded(child: Text('Ареал: ${occurrence.habitat}')),
+                  Expanded(child: Text('РђСЂРµР°Р»: ${occurrence.habitat}')),
                 ],
               ),
               const SizedBox(height: 8),
@@ -1596,7 +1600,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               children: [
                 const Icon(Icons.location_on, size: 16),
                 const SizedBox(width: 4),
-                Text('Координаты: ${occurrence.latitude.toStringAsFixed(4)}, ${occurrence.longitude.toStringAsFixed(4)}'),
+                Text('РљРѕРѕСЂРґРёРЅР°С‚С‹: ${occurrence.latitude.toStringAsFixed(4)}, ${occurrence.longitude.toStringAsFixed(4)}'),
               ],
             ),
             if (occurrence.year != null) ...[
@@ -1605,7 +1609,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 children: [
                   const Icon(Icons.calendar_today, size: 16),
                   const SizedBox(width: 4),
-                  Text('Год: ${occurrence.year}'),
+                  Text('Р“РѕРґ: ${occurrence.year}'),
                 ],
               ),
             ],
@@ -1614,36 +1618,36 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Закрыть'),
+            child: const Text('Р—Р°РєСЂС‹С‚СЊ'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _openInExternalMap(occurrence.latitude, occurrence.longitude);
             },
-            child: const Text('Открыть в картах'),
+            child: const Text('РћС‚РєСЂС‹С‚СЊ РІ РєР°СЂС‚Р°С…'),
           ),
         ],
       ),
     );
   }
 
-  // Открытие координат во внешнем приложении карт
+  // РћС‚РєСЂС‹С‚РёРµ РєРѕРѕСЂРґРёРЅР°С‚ РІРѕ РІРЅРµС€РЅРµРј РїСЂРёР»РѕР¶РµРЅРёРё РєР°СЂС‚
   void _openInExternalMap(double latitude, double longitude) {
     final url = 'https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude#map=15/$latitude/$longitude';
     launchUrl(Uri.parse(url));
   }
 
-  // Сброс вида карты к центру
+  // РЎР±СЂРѕСЃ РІРёРґР° РєР°СЂС‚С‹ Рє С†РµРЅС‚СЂСѓ
   void _resetMapView(BuildContext context, Plant plant) {
     if (!mounted) return;
     setState(() {
-      // Перестраиваем карту для обновления центра
+      // РџРµСЂРµСЃС‚СЂР°РёРІР°РµРј РєР°СЂС‚Сѓ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ С†РµРЅС‚СЂР°
       _mapKey = ValueKey(DateTime.now().millisecondsSinceEpoch);
     });
   }
 
-  // Полноэкранная карта
+  // РџРѕР»РЅРѕСЌРєСЂР°РЅРЅР°СЏ РєР°СЂС‚Р°
   void _showFullMapDialog(BuildContext context, Plant plant) {
     showDialog(
       context: context,
@@ -1659,7 +1663,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Карта распространения: ${plant.latinName}',
+                      'РљР°СЂС‚Р° СЂР°СЃРїСЂРѕСЃС‚СЂР°РЅРµРЅРёСЏ: ${plant.latinName}',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -1685,7 +1689,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
   }
 
   
-  // Вспомогательный чип с иконкой
+  // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ С‡РёРї СЃ РёРєРѕРЅРєРѕР№
   Widget _buildFilterChip(
     IconData icon,
     String label,
@@ -1718,18 +1722,18 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Сделать главным?'),
+        title: const Text('РЎРґРµР»Р°С‚СЊ РіР»Р°РІРЅС‹Рј?'),
         content: const Text(
-            'Это фото будет отображаться в шапке карточки растения.'),
+            'Р­С‚Рѕ С„РѕС‚Рѕ Р±СѓРґРµС‚ РѕС‚РѕР±СЂР°Р¶Р°С‚СЊСЃСЏ РІ С€Р°РїРєРµ РєР°СЂС‚РѕС‡РєРё СЂР°СЃС‚РµРЅРёСЏ.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
+            child: const Text('РћС‚РјРµРЅР°'),
           ),
           ElevatedButton(
             onPressed: () {
               final provider =
-                  Provider.of<PlantProvider>(context, listen: false);
+                  context.read<PlantCrudProvider>();
               final userPhotos = List<String>.from(plant.userPhotos);
               userPhotos.remove(photoUrl);
               userPhotos.insert(0, photoUrl);
@@ -1741,14 +1745,14 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               Navigator.pop(ctx);
               setState(() {});
             },
-            child: const Text('Сделать главным'),
+            child: const Text('РЎРґРµР»Р°С‚СЊ РіР»Р°РІРЅС‹Рј'),
           ),
         ],
       ),
     );
   }
 
-  // Показываем меню при долгом нажатии на своё фото
+  // РџРѕРєР°Р·С‹РІР°РµРј РјРµРЅСЋ РїСЂРё РґРѕР»РіРѕРј РЅР°Р¶Р°С‚РёРё РЅР° СЃРІРѕС‘ С„РѕС‚Рѕ
   void _showPhotoOptions(BuildContext context, Plant plant, String photoUrl) {
     showModalBottomSheet(
       context: context,
@@ -1757,7 +1761,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         children: [
           ListTile(
             leading: const Icon(Icons.star, color: Colors.amber),
-            title: const Text('Сделать главным фото'),
+            title: const Text('РЎРґРµР»Р°С‚СЊ РіР»Р°РІРЅС‹Рј С„РѕС‚Рѕ'),
             onTap: () {
               Navigator.pop(ctx);
               _setAsMainPhoto(context, plant, photoUrl);
@@ -1765,7 +1769,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           ),
           ListTile(
             leading: const Icon(Icons.delete, color: Colors.red),
-            title: const Text('Удалить фото'),
+            title: const Text('РЈРґР°Р»РёС‚СЊ С„РѕС‚Рѕ'),
             onTap: () {
               Navigator.pop(ctx);
               _confirmDeletePhoto(context, plant, photoUrl);
@@ -1777,40 +1781,40 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Подтверждение удаления
+  // РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ СѓРґР°Р»РµРЅРёСЏ
   void _confirmDeletePhoto(BuildContext context, Plant plant, String photoUrl) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Удалить фото?'),
-        content: const Text('Это действие нельзя отменить.'),
+        title: const Text('РЈРґР°Р»РёС‚СЊ С„РѕС‚Рѕ?'),
+        content: const Text('Р­С‚Рѕ РґРµР№СЃС‚РІРёРµ РЅРµР»СЊР·СЏ РѕС‚РјРµРЅРёС‚СЊ.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
+            child: const Text('РћС‚РјРµРЅР°'),
           ),
           TextButton(
             onPressed: () {
               final provider =
-                  Provider.of<PlantProvider>(context, listen: false);
+                  context.read<PlantCrudProvider>();
               
-              // Определяем тип фото и вызываем правильный метод удаления
+              // РћРїСЂРµРґРµР»СЏРµРј С‚РёРї С„РѕС‚Рѕ Рё РІС‹Р·С‹РІР°РµРј РїСЂР°РІРёР»СЊРЅС‹Р№ РјРµС‚РѕРґ СѓРґР°Р»РµРЅРёСЏ
               final isLliflePhoto = plant.lliflePhotoUrls.contains(photoUrl);
               final isUserPhoto = plant.userPhotos.contains(photoUrl);
               
               if (isLliflePhoto && isUserPhoto) {
-                // Если фото в обоих списках, приоритет - userPhotos (локальные файлы)
+                // Р•СЃР»Рё С„РѕС‚Рѕ РІ РѕР±РѕРёС… СЃРїРёСЃРєР°С…, РїСЂРёРѕСЂРёС‚РµС‚ - userPhotos (Р»РѕРєР°Р»СЊРЅС‹Рµ С„Р°Р№Р»С‹)
                 provider.removeUserPhoto(plant.permanentId, photoUrl);
               } else if (isLliflePhoto) {
                 provider.removeLliflePhoto(plant.permanentId, photoUrl);
               } else if (isUserPhoto) {
                 provider.removeUserPhoto(plant.permanentId, photoUrl);
               } else {
-                // Фото не найдено - показываем ошибку
+                // Р¤РѕС‚Рѕ РЅРµ РЅР°Р№РґРµРЅРѕ - РїРѕРєР°Р·С‹РІР°РµРј РѕС€РёР±РєСѓ
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Фото не найдено в галерее'),
+                      content: Text('Р¤РѕС‚Рѕ РЅРµ РЅР°Р№РґРµРЅРѕ РІ РіР°Р»РµСЂРµРµ'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -1823,7 +1827,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               setState(() {});
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Удалить'),
+            child: const Text('РЈРґР°Р»РёС‚СЊ'),
           ),
         ],
       ),
@@ -1835,23 +1839,23 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     final isMain =
         plant.userPhotos.isNotEmpty && plant.userPhotos.first == photoUrl;
 
-    // Определяем дату добавления
-    String dateText = 'Дата неизвестна';
+    // РћРїСЂРµРґРµР»СЏРµРј РґР°С‚Сѓ РґРѕР±Р°РІР»РµРЅРёСЏ
+    String dateText = 'Р”Р°С‚Р° РЅРµРёР·РІРµСЃС‚РЅР°';
     if (!isNetwork && photoUrl.isNotEmpty) {
       try {
         final file = File(photoUrl);
         if (file.existsSync()) {
           final lastModified = file.lastModifiedSync();
           dateText =
-              'Добавлено: ${lastModified.day.toString().padLeft(2, '0')}.'
+              'Р”РѕР±Р°РІР»РµРЅРѕ: ${lastModified.day.toString().padLeft(2, '0')}.'
               '${lastModified.month.toString().padLeft(2, '0')}.'
               '${lastModified.year}';
         }
       } catch (_) {
-        dateText = 'Дата неизвестна';
+        dateText = 'Р”Р°С‚Р° РЅРµРёР·РІРµСЃС‚РЅР°';
       }
     } else {
-      dateText = 'Фото из облака / Llifle';
+      dateText = 'Р¤РѕС‚Рѕ РёР· РѕР±Р»Р°РєР° / Llifle';
     }
 
     showDialog(
@@ -1862,7 +1866,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         insetPadding: EdgeInsets.zero,
         child: Stack(
           children: [
-            // Зум и панорамирование мышкой
+            // Р—СѓРј Рё РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРµ РјС‹С€РєРѕР№
             Center(
               child: InteractiveViewer(
                 boundaryMargin: const EdgeInsets.all(20),
@@ -1890,7 +1894,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ),
             ),
 
-            // Название растения и ID — сверху по центру
+            // РќР°Р·РІР°РЅРёРµ СЂР°СЃС‚РµРЅРёСЏ Рё ID вЂ” СЃРІРµСЂС…Сѓ РїРѕ С†РµРЅС‚СЂСѓ
             Positioned(
               top: 40,
               left: 0,
@@ -1928,7 +1932,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ),
             ),
 
-            // Кнопка закрытия
+            // РљРЅРѕРїРєР° Р·Р°РєСЂС‹С‚РёСЏ
             Positioned(
               top: 40,
               right: 40,
@@ -1938,7 +1942,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ),
             ),
 
-            // Информация снизу
+            // РРЅС„РѕСЂРјР°С†РёСЏ СЃРЅРёР·Сѓ
             Positioned(
               bottom: 40,
               left: 0,
@@ -1959,7 +1963,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         const SizedBox(width: 12),
                       ],
                       Text(
-                        isMain ? 'Главное фото' : 'Обычное фото',
+                        isMain ? 'Р“Р»Р°РІРЅРѕРµ С„РѕС‚Рѕ' : 'РћР±С‹С‡РЅРѕРµ С„РѕС‚Рѕ',
                         style:
                             const TextStyle(color: Colors.white, fontSize: 16),
                       ),
@@ -1979,11 +1983,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       ),
     );
   }
-  // === РАБОЧИЕ БЫСТРЫЕ ДЕЙСТВИЯ С ОТМЕНОЙ ===
+  // === Р РђР‘РћР§РР• Р‘Р«РЎРўР Р«Р• Р”Р•Р™РЎРўР’РРЇ РЎ РћРўРњР•РќРћР™ ===
 
   void _markWateringToday(Plant plant) {
     if (!mounted) return;
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = context.read<PlantCrudProvider>();
     final wateringDate = DateTime.now();
 
     provider.addIndividualWateringDate(plant.permanentId, wateringDate);
@@ -1992,11 +1996,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Растение ${plant.latinName} полито сегодня'),
+        content: Text('Р Р°СЃС‚РµРЅРёРµ ${plant.latinName} РїРѕР»РёС‚Рѕ СЃРµРіРѕРґРЅСЏ'),
         backgroundColor: Colors.blue,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
-          label: 'Отменить',
+          label: 'РћС‚РјРµРЅРёС‚СЊ',
           textColor: Colors.white,
           onPressed: () {
             provider.removeIndividualWateringDate(
@@ -2005,7 +2009,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Полив отменён'), backgroundColor: Colors.grey),
+                  content: Text('РџРѕР»РёРІ РѕС‚РјРµРЅС‘РЅ'), backgroundColor: Colors.grey),
             );
           },
         ),
@@ -2015,7 +2019,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
   void _planFertilization(Plant plant) async {
     if (!mounted) return;
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = context.read<PlantCrudProvider>();
 
     final selectedDate = await showDatePicker(
       context: context,
@@ -2026,7 +2030,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
     if (!mounted || selectedDate == null) return;
 
-    final oldFertilization = plant.lastFertilization; // для возможной отмены
+    final oldFertilization = plant.lastFertilization; // РґР»СЏ РІРѕР·РјРѕР¶РЅРѕР№ РѕС‚РјРµРЅС‹
 
     provider.markAsFertilized(plant.permanentId, date: selectedDate);
     provider.savePlants();
@@ -2035,18 +2039,18 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            'Удобрение отмечено: ${DateFormat('dd.MM.yyyy').format(selectedDate)}'),
+            'РЈРґРѕР±СЂРµРЅРёРµ РѕС‚РјРµС‡РµРЅРѕ: ${DateFormat('dd.MM.yyyy').format(selectedDate)}'),
         backgroundColor: Colors.purple,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
-          label: 'Отменить',
+          label: 'РћС‚РјРµРЅРёС‚СЊ',
           textColor: Colors.white,
           onPressed: () {
             if (oldFertilization != null) {
               provider.markAsFertilized(plant.permanentId,
                   date: oldFertilization);
             } else {
-              // Если не было предыдущей даты — просто сбрасываем
+              // Р•СЃР»Рё РЅРµ Р±С‹Р»Рѕ РїСЂРµРґС‹РґСѓС‰РµР№ РґР°С‚С‹ вЂ” РїСЂРѕСЃС‚Рѕ СЃР±СЂР°СЃС‹РІР°РµРј
               final updated = plant.copyWith(
                   lastFertilization: null, plannedFertilizationDate: null);
               provider.updatePlant(plant.permanentId, updated);
@@ -2055,7 +2059,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Удобрение отменено'),
+                  content: Text('РЈРґРѕР±СЂРµРЅРёРµ РѕС‚РјРµРЅРµРЅРѕ'),
                   backgroundColor: Colors.grey),
             );
           },
@@ -2066,7 +2070,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
   void _planRepotting(Plant plant) async {
     if (!mounted) return;
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = context.read<PlantCrudProvider>();
 
     final selectedDate = await showDatePicker(
       context: context,
@@ -2088,11 +2092,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            'Пересадка запланирована на ${DateFormat('dd.MM.yyyy').format(selectedDate)}'),
+            'РџРµСЂРµСЃР°РґРєР° Р·Р°РїР»Р°РЅРёСЂРѕРІР°РЅР° РЅР° ${DateFormat('dd.MM.yyyy').format(selectedDate)}'),
         backgroundColor: Colors.brown,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
-          label: 'Отменить',
+          label: 'РћС‚РјРµРЅРёС‚СЊ',
           textColor: Colors.white,
           onPressed: () {
             final revertPlant =
@@ -2102,7 +2106,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Планирование пересадки отменено'),
+                  content: Text('РџР»Р°РЅРёСЂРѕРІР°РЅРёРµ РїРµСЂРµСЃР°РґРєРё РѕС‚РјРµРЅРµРЅРѕ'),
                   backgroundColor: Colors.grey),
             );
           },
@@ -2117,20 +2121,20 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     final event = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Отметить цветение'),
+        title: const Text('РћС‚РјРµС‚РёС‚СЊ С†РІРµС‚РµРЅРёРµ'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ElevatedButton.icon(
               icon: const Icon(Icons.local_florist),
-              label: const Text('Расцвело'),
+              label: const Text('Р Р°СЃС†РІРµР»Рѕ'),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               onPressed: () => Navigator.pop(ctx, 'bloomed'),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
               icon: const Icon(Icons.wb_sunny),
-              label: const Text('Завяло'),
+              label: const Text('Р—Р°РІСЏР»Рѕ'),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
               onPressed: () => Navigator.pop(ctx, 'wilted'),
             ),
@@ -2138,14 +2142,14 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('РћС‚РјРµРЅР°')),
         ],
       ),
     );
 
     if (!mounted || event == null) return;
 
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = context.read<PlantCrudProvider>();
     final floweringDate = DateTime.now();
 
     provider.addFloweringEvent(plant.permanentId, floweringDate, event);
@@ -2155,17 +2159,17 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            event == 'bloomed' ? 'Отмечено цветение' : 'Отмечено увядание'),
+            event == 'bloomed' ? 'РћС‚РјРµС‡РµРЅРѕ С†РІРµС‚РµРЅРёРµ' : 'РћС‚РјРµС‡РµРЅРѕ СѓРІСЏРґР°РЅРёРµ'),
         backgroundColor: event == 'bloomed' ? Colors.green : Colors.orange,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
-          label: 'Отменить',
+          label: 'РћС‚РјРµРЅРёС‚СЊ',
           textColor: Colors.white,
           onPressed: () {
-            // Удаляем последнюю запись цветения (простой способ отмены)
+            // РЈРґР°Р»СЏРµРј РїРѕСЃР»РµРґРЅСЋСЋ Р·Р°РїРёСЃСЊ С†РІРµС‚РµРЅРёСЏ (РїСЂРѕСЃС‚РѕР№ СЃРїРѕСЃРѕР± РѕС‚РјРµРЅС‹)
             final updatedHistory =
                 List<FloweringRecord>.from(plant.floweringHistory)
-                  ..removeLast(); // удаляем последнюю добавленную
+                  ..removeLast(); // СѓРґР°Р»СЏРµРј РїРѕСЃР»РµРґРЅСЋСЋ РґРѕР±Р°РІР»РµРЅРЅСѓСЋ
             final updatedPlant =
                 plant.copyWith(floweringHistory: updatedHistory);
             provider.updatePlant(plant.permanentId, updatedPlant);
@@ -2174,7 +2178,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Запись цветения отменена'),
+                  content: Text('Р—Р°РїРёСЃСЊ С†РІРµС‚РµРЅРёСЏ РѕС‚РјРµРЅРµРЅР°'),
                   backgroundColor: Colors.grey),
             );
           },
@@ -2202,7 +2206,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
   }
 
   Widget _buildGeographySection(BuildContext context, Plant plant) {
-    final habitatText = plant.habitat ?? 'Не указано';
+    final habitatText = plant.habitat ?? 'РќРµ СѓРєР°Р·Р°РЅРѕ';
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -2210,7 +2214,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       child: ExpansionTile(
         leading: const Icon(Icons.map, color: Colors.green),
         title: const Text(
-          'Естественный ареал',
+          'Р•СЃС‚РµСЃС‚РІРµРЅРЅС‹Р№ Р°СЂРµР°Р»',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -2227,9 +2231,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ),
             );
             if (result != null && context.mounted) {
-              Provider.of<PlantProvider>(context, listen: false)
+              context.read<PlantCrudProvider>()
                   .updatePlant(plant.permanentId, result);
-              Provider.of<PlantProvider>(context, listen: false).savePlants();
+              context.read<PlantCrudProvider>().savePlants();
             }
           },
         ),
@@ -2251,7 +2255,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     if (!mounted) return;
     if (plantData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось найти фото на Llifle')),
+        const SnackBar(content: Text('РќРµ СѓРґР°Р»РѕСЃСЊ РЅР°Р№С‚Рё С„РѕС‚Рѕ РЅР° Llifle')),
       );
       return;
     }
@@ -2259,7 +2263,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     List<String> adultPhotoUrls =
         List<String>.from(plantData['photoUrls'] ?? []);
 
-    // === УЛУЧШЕННАЯ: Фильтрация и очистка ссылок ===
+    // === РЈР›РЈР§РЁР•РќРќРђРЇ: Р¤РёР»СЊС‚СЂР°С†РёСЏ Рё РѕС‡РёСЃС‚РєР° СЃСЃС‹Р»РѕРє ===
     adultPhotoUrls = adultPhotoUrls
         .where((url) => url.isNotEmpty && url.contains('llifle.com'))
         .map((url) {
@@ -2268,11 +2272,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   'https://llifle.comphotos/', 'https://llifle.com/photos/')
               .replaceAll('+', '_')
               .replaceAll('_m.jpg', '_l.jpg')
-              .replaceAll('_s.jpg', '_l.jpg'); // Добавляем замену маленьких фото
+              .replaceAll('_s.jpg', '_l.jpg'); // Р”РѕР±Р°РІР»СЏРµРј Р·Р°РјРµРЅСѓ РјР°Р»РµРЅСЊРєРёС… С„РѕС‚Рѕ
           return Uri.encodeFull(cleanUrl);
         })
         .where((url) {
-          // Дополнительная валидация URL
+          // Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅР°СЏ РІР°Р»РёРґР°С†РёСЏ URL
           try {
             final uri = Uri.parse(url);
             return uri.hasScheme && uri.hasAuthority && 
@@ -2282,31 +2286,31 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             return false;
           }
         })
-        .toSet() // Убираем дубликаты
+        .toSet() // РЈР±РёСЂР°РµРј РґСѓР±Р»РёРєР°С‚С‹
         .toList();
 
     if (adultPhotoUrls.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Фото не найдены')),
+          const SnackBar(content: Text('Р¤РѕС‚Рѕ РЅРµ РЅР°Р№РґРµРЅС‹')),
         );
       }
       return;
     }
 
-    // Показываем диалог с отфильтрованными фото
+    // РџРѕРєР°Р·С‹РІР°РµРј РґРёР°Р»РѕРі СЃ РѕС‚С„РёР»СЊС‚СЂРѕРІР°РЅРЅС‹РјРё С„РѕС‚Рѕ
     if (mounted) {
       showDialog(
         context: context,
         builder: (ctx) => ImageSelectionDialog(
           imageUrls: adultPhotoUrls,
           onSelect: (selectedUrl) async {
-            final provider = Provider.of<PlantProvider>(context, listen: false);
+            final provider = context.read<PlantCrudProvider>();
             await provider.addLliflePhoto(plant.permanentId, selectedUrl);
 
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Фото с Llifle добавлено')),
+                const SnackBar(content: Text('Р¤РѕС‚Рѕ СЃ Llifle РґРѕР±Р°РІР»РµРЅРѕ')),
               );
             }
           },
@@ -2316,7 +2320,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
   }
 
   Widget _buildDescriptionSection(BuildContext context, Plant plant) {
-    final descriptionText = plant.description ?? 'Добавьте описание...';
+    final descriptionText = plant.description ?? 'Р”РѕР±Р°РІСЊС‚Рµ РѕРїРёСЃР°РЅРёРµ...';
     final descriptionList = descriptionText.split('\n');
 
     return Card(
@@ -2326,7 +2330,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       child: ExpansionTile(
         leading: const Icon(Icons.description, color: Colors.green),
         title: const Text(
-          'Описание',
+          'РћРїРёСЃР°РЅРёРµ',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -2343,9 +2347,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ),
             );
             if (result != null && context.mounted) {
-              Provider.of<PlantProvider>(context, listen: false)
+              context.read<PlantCrudProvider>()
                   .updatePlant(plant.permanentId, result);
-              Provider.of<PlantProvider>(context, listen: false).savePlants();
+              context.read<PlantCrudProvider>().savePlants();
             }
           },
         ),
@@ -2376,7 +2380,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
   }
 
   Widget _buildSynonymsSection(Plant plant) {
-    final synonymsText = plant.synonyms ?? 'Синонимы не указаны';
+    final synonymsText = plant.synonyms ?? 'РЎРёРЅРѕРЅРёРјС‹ РЅРµ СѓРєР°Р·Р°РЅС‹';
     final synonymsList = synonymsText.split('\n');
 
     return Card(
@@ -2386,7 +2390,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       child: ExpansionTile(
         leading: const Icon(Icons.bookmark, color: Colors.green),
         title: const Text(
-          'Синонимы',
+          'РЎРёРЅРѕРЅРёРјС‹',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -2420,7 +2424,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
   }
 
   Widget _buildCareTipsSection(BuildContext context, Plant plant) {
-    final careTipsText = plant.careTips ?? 'Особенности ухода не указаны';
+    final careTipsText = plant.careTips ?? 'РћСЃРѕР±РµРЅРЅРѕСЃС‚Рё СѓС…РѕРґР° РЅРµ СѓРєР°Р·Р°РЅС‹';
     final careTipsList = careTipsText.split('\n');
 
     return Card(
@@ -2430,7 +2434,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       child: ExpansionTile(
         leading: const Icon(Icons.lightbulb, color: Colors.green),
         title: const Text(
-          'Особенности ухода',
+          'РћСЃРѕР±РµРЅРЅРѕСЃС‚Рё СѓС…РѕРґР°',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -2447,9 +2451,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ),
             );
             if (result != null && context.mounted) {
-              Provider.of<PlantProvider>(context, listen: false)
+              context.read<PlantCrudProvider>()
                   .updatePlant(plant.permanentId, result);
-              Provider.of<PlantProvider>(context, listen: false).savePlants();
+              context.read<PlantCrudProvider>().savePlants();
             }
           },
         ),
@@ -2484,8 +2488,8 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     required String title,
     required Color color,
     required VoidCallback onTap,
-    bool isActive = true, // Новое: можно ли нажать
-    String? activeTitle, // Новое: альтернативный текст после действия
+    bool isActive = true, // РќРѕРІРѕРµ: РјРѕР¶РЅРѕ Р»Рё РЅР°Р¶Р°С‚СЊ
+    String? activeTitle, // РќРѕРІРѕРµ: Р°Р»СЊС‚РµСЂРЅР°С‚РёРІРЅС‹Р№ С‚РµРєСЃС‚ РїРѕСЃР»Рµ РґРµР№СЃС‚РІРёСЏ
   }) {
     final displayTitle = activeTitle ?? title;
     final displayColor = isActive ? color : Colors.grey;
@@ -2529,7 +2533,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
 
   Future<void> _uploadUserPhoto(BuildContext context, Plant plant) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = context.read<PlantCrudProvider>();
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
@@ -2541,13 +2545,13 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           await provider.addUserPhoto(plant.permanentId, path);
         }
         if (!mounted) return;
-        setState(() {}); // просто обновляем экран
+        setState(() {}); // РїСЂРѕСЃС‚Рѕ РѕР±РЅРѕРІР»СЏРµРј СЌРєСЂР°РЅ
       }
     } catch (e) {
-      print('Ошибка загрузки фото: $e');
+      print('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё С„РѕС‚Рѕ: $e');
       if (mounted) {
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
+          SnackBar(content: Text('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё: $e')),
         );
       }
     }
@@ -2572,21 +2576,21 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     return _formatDate(date);
   }
 
-  // Обновление фото с Llifle - теперь вызывает выбор фото
+  // РћР±РЅРѕРІР»РµРЅРёРµ С„РѕС‚Рѕ СЃ Llifle - С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°РµС‚ РІС‹Р±РѕСЂ С„РѕС‚Рѕ
   Future<void> _refreshLliflePhotos(BuildContext context, Plant plant) async {
     await _selectAdultImage(plant);
   }
 
-  // === ВКЛАДКА СЕЯНЦЫ (для витрин-партий) ===
+  // === Р’РљР›РђР”РљРђ РЎР•РЇРќР¦Р« (РґР»СЏ РІРёС‚СЂРёРЅ-РїР°СЂС‚РёР№) ===
   Widget _buildSeedlingsTab(BuildContext context, Plant batch) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (context, provider, child) {
         final seedlings = provider.getBatchSeedlings(batch.permanentId);
 
         if (seedlings.isEmpty) {
           return const Center(
             child: Text(
-              'Нет сеянцев в этой партии',
+              'РќРµС‚ СЃРµСЏРЅС†РµРІ РІ СЌС‚РѕР№ РїР°СЂС‚РёРё',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           );
@@ -2601,30 +2605,30 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
                 leading: _buildSeedlingPhoto(seedling),
-                title: Text('${seedling.displayId} — ${seedling.latinName}'),
-                subtitle: Text('Статус: ${seedling.statusText}'),
+                title: Text('${seedling.displayId} вЂ” ${seedling.latinName}'),
+                subtitle: Text('РЎС‚Р°С‚СѓСЃ: ${seedling.statusText}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Кнопка смены статуса
+                    // РљРЅРѕРїРєР° СЃРјРµРЅС‹ СЃС‚Р°С‚СѓСЃР°
                     _buildStatusButton(context, provider, seedling),
-                    // Кнопка удаления
+                    // РљРЅРѕРїРєР° СѓРґР°Р»РµРЅРёСЏ
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () async {
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Text('Удалить сеянец?'),
-                            content: Text('Удалить ${seedling.displayId}?'),
+                            title: const Text('РЈРґР°Р»РёС‚СЊ СЃРµСЏРЅРµС†?'),
+                            content: Text('РЈРґР°Р»РёС‚СЊ ${seedling.displayId}?'),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Отмена'),
+                                child: const Text('РћС‚РјРµРЅР°'),
                               ),
                               TextButton(
                                 onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Удалить',
+                                child: const Text('РЈРґР°Р»РёС‚СЊ',
                                     style: TextStyle(color: Colors.red)),
                               ),
                             ],
@@ -2634,7 +2638,6 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                           await provider.removeSeedlingFromBatch(
                             batch.permanentId,
                             seedling.permanentId,
-                            context,
                           );
                         }
                       },
@@ -2643,7 +2646,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   ],
                 ),
                 onTap: () {
-                  // Открываем карточку сеянца
+                  // РћС‚РєСЂС‹РІР°РµРј РєР°СЂС‚РѕС‡РєСѓ СЃРµСЏРЅС†Р°
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -2659,7 +2662,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Построение миниатюры фото сеянца (с проверкой http vs file)
+  // РџРѕСЃС‚СЂРѕРµРЅРёРµ РјРёРЅРёР°С‚СЋСЂС‹ С„РѕС‚Рѕ СЃРµСЏРЅС†Р° (СЃ РїСЂРѕРІРµСЂРєРѕР№ http vs file)
   Widget _buildSeedlingPhoto(Plant seedling) {
     if (seedling.userPhotos.isEmpty) {
       return Container(
@@ -2712,9 +2715,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Кнопка смены статуса сеянца
-  Widget _buildStatusButton(BuildContext context, PlantProvider provider, Plant seedling) {
-    // Определяем цвет по статусу
+  // РљРЅРѕРїРєР° СЃРјРµРЅС‹ СЃС‚Р°С‚СѓСЃР° СЃРµСЏРЅС†Р°
+  Widget _buildStatusButton(BuildContext context, PlantCrudProvider provider, Plant seedling) {
+    // РћРїСЂРµРґРµР»СЏРµРј С†РІРµС‚ РїРѕ СЃС‚Р°С‚СѓСЃСѓ
     Color statusColor;
     switch (seedling.status) {
       case 'growing':
@@ -2731,7 +2734,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     }
 
     return PopupMenuButton<String>(
-      tooltip: 'Изменить статус',
+      tooltip: 'РР·РјРµРЅРёС‚СЊ СЃС‚Р°С‚СѓСЃ',
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -2745,14 +2748,14 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         ),
       ),
       onSelected: (String newStatus) async {
-        // Обновляем статус сеянца
+        // РћР±РЅРѕРІР»СЏРµРј СЃС‚Р°С‚СѓСЃ СЃРµСЏРЅС†Р°
         final updatedSeedling = seedling.copyWith(status: newStatus);
         provider.updatePlant(seedling.permanentId, updatedSeedling);
 
-        // Показываем уведомление
+        // РџРѕРєР°Р·С‹РІР°РµРј СѓРІРµРґРѕРјР»РµРЅРёРµ
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Статус ${seedling.displayId} изменён на: ${_getStatusText(newStatus)}'),
+            content: Text('РЎС‚Р°С‚СѓСЃ ${seedling.displayId} РёР·РјРµРЅС‘РЅ РЅР°: ${_getStatusText(newStatus)}'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -2764,7 +2767,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             children: [
               Icon(Icons.fiber_manual_record, color: Colors.orange, size: 16),
               SizedBox(width: 8),
-              Text('Растёт'),
+              Text('Р Р°СЃС‚С‘С‚'),
             ],
           ),
         ),
@@ -2774,7 +2777,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             children: [
               Icon(Icons.fiber_manual_record, color: Colors.green, size: 16),
               SizedBox(width: 8),
-              Text('В коллекции'),
+              Text('Р’ РєРѕР»Р»РµРєС†РёРё'),
             ],
           ),
         ),
@@ -2784,7 +2787,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             children: [
               Icon(Icons.fiber_manual_record, color: Colors.grey, size: 16),
               SizedBox(width: 8),
-              Text('Погиб'),
+              Text('РџРѕРіРёР±'),
             ],
           ),
         ),
@@ -2792,33 +2795,33 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  // Вспомогательный метод для получения текста статуса
+  // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ С‚РµРєСЃС‚Р° СЃС‚Р°С‚СѓСЃР°
   String _getStatusText(String status) {
     switch (status) {
       case 'growing':
-        return 'Растёт';
+        return 'Р Р°СЃС‚С‘С‚';
       case 'in_collection':
-        return 'В коллекции';
+        return 'Р’ РєРѕР»Р»РµРєС†РёРё';
       case 'dead':
-        return 'Погиб';
+        return 'РџРѕРіРёР±';
       default:
         return status;
     }
   }
 
-  // === МЕТОДЫ ДЛЯ QR КОДОВ ===
+  // === РњР•РўРћР”Р« Р”Р›РЇ QR РљРћР”РћР’ ===
 
-  /// Показывает диалог создания QR кода
+  /// РџРѕРєР°Р·С‹РІР°РµС‚ РґРёР°Р»РѕРі СЃРѕР·РґР°РЅРёСЏ QR РєРѕРґР°
   void _showCreateQRCodeDialog(BuildContext context, Plant plant) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Создать QR код?'),
+        title: const Text('РЎРѕР·РґР°С‚СЊ QR РєРѕРґ?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Создать QR код для растения:',
+              'РЎРѕР·РґР°С‚СЊ QR РєРѕРґ РґР»СЏ СЂР°СЃС‚РµРЅРёСЏ:',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 8),
@@ -2833,7 +2836,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ),
             const SizedBox(height: 16),
             const Text(
-              'QR код будет содержать ID и название растения. Вы сможете распечатать его на этикетке.',
+              'QR РєРѕРґ Р±СѓРґРµС‚ СЃРѕРґРµСЂР¶Р°С‚СЊ ID Рё РЅР°Р·РІР°РЅРёРµ СЂР°СЃС‚РµРЅРёСЏ. Р’С‹ СЃРјРѕР¶РµС‚Рµ СЂР°СЃРїРµС‡Р°С‚Р°С‚СЊ РµРіРѕ РЅР° СЌС‚РёРєРµС‚РєРµ.',
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
           ],
@@ -2841,23 +2844,23 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
+            child: const Text('РћС‚РјРµРЅР°'),
           ),
           ElevatedButton.icon(
             onPressed: () {
-              final provider = Provider.of<PlantProvider>(context, listen: false);
+              final provider = context.read<PlantCrudProvider>();
               provider.createQRCode(plant.permanentId);
               Navigator.pop(ctx);
 
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('QR код для ${plant.latinName} создан'),
+                  content: Text('QR РєРѕРґ РґР»СЏ ${plant.latinName} СЃРѕР·РґР°РЅ'),
                   backgroundColor: Colors.green,
                 ),
               );
             },
             icon: const Icon(Icons.qr_code),
-            label: const Text('Создать'),
+            label: const Text('РЎРѕР·РґР°С‚СЊ'),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
           ),
         ],
@@ -2865,7 +2868,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 
-  /// Показывает диалог с QR кодом
+  /// РџРѕРєР°Р·С‹РІР°РµС‚ РґРёР°Р»РѕРі СЃ QR РєРѕРґРѕРј
   void _showQRCodeDialog(BuildContext context, Plant plant) {
     showDialog(
       context: context,
@@ -2899,7 +2902,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               ),
               const SizedBox(height: 16),
               const Text(
-                'Отсканируйте для быстрого поиска растения',
+                'РћС‚СЃРєР°РЅРёСЂСѓР№С‚Рµ РґР»СЏ Р±С‹СЃС‚СЂРѕРіРѕ РїРѕРёСЃРєР° СЂР°СЃС‚РµРЅРёСЏ',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
@@ -2920,12 +2923,12 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                       );
                     },
                     icon: const Icon(Icons.print),
-                    label: const Text('Печать'),
+                    label: const Text('РџРµС‡Р°С‚СЊ'),
                   ),
                   TextButton.icon(
                     onPressed: () => Navigator.pop(ctx),
                     icon: const Icon(Icons.close),
-                    label: const Text('Закрыть'),
+                    label: const Text('Р—Р°РєСЂС‹С‚СЊ'),
                   ),
                 ],
               ),
@@ -2936,4 +2939,5 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     );
   }
 }
+
 

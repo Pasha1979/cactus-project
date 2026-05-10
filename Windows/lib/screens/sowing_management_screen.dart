@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'add_sowing_year_screen.dart';
 import '../models/plant.dart';
 import 'package:my_cactus/screens/plant_statistics_screen.dart'; // Убедитесь, что путь к файлу правильный
@@ -11,7 +11,7 @@ class SowingManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<PlantProvider>(context);
+    final provider = context.watch<PlantCrudProvider>();
     final years = provider.getUniqueSowingYears();
 
     return Scaffold(
@@ -107,7 +107,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    final provider = context.read<PlantProvider>();
+    final provider = context.read<PlantCrudProvider>();
     _editablePlants = provider.plants
         .where((p) => p.year == widget.year && p.category == 'sown')
         .map((p) => p.copyWith())
@@ -115,7 +115,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
   }
 
   void _saveChanges() {
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = context.read<PlantCrudProvider>();
     for (final updatedPlant in _editablePlants) {
       final index = provider.plants
           .indexWhere((p) => p.permanentId == updatedPlant.permanentId);

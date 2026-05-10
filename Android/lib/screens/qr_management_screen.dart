@@ -4,7 +4,7 @@ import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../models/plant.dart';
 import '../models/qr_code_file.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'batch_qr_creation_screen.dart';
 import 'print_settings_screen.dart';
 import 'select_plants_for_print_screen.dart';
@@ -29,7 +29,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
   }
 
   Future<void> _loadData() async {
-    await context.read<PlantProvider>().loadQRCodeFiles();
+    await context.read<QrCodeProvider>().loadQRCodeFiles();
   }
 
   @override
@@ -77,9 +77,9 @@ class _QRManagementScreenState extends State<QRManagementScreen>
 
   // === ВКЛАДКА "ФАЙЛЫ" ===
   Widget _buildFilesTab() {
-    return Consumer<PlantProvider>(
-      builder: (context, provider, child) {
-        final files = provider.qrCodeFiles;
+    return Consumer<QrCodeProvider>(
+      builder: (context, qrProvider, child) {
+        final files = qrProvider.qrCodeFiles;
 
         if (files.isEmpty) {
           return const Center(
@@ -106,15 +106,16 @@ class _QRManagementScreenState extends State<QRManagementScreen>
           itemCount: files.length,
           itemBuilder: (context, index) {
             final file = files[index];
-            return _buildFileCard(file, provider);
+            return _buildFileCard(file);
           },
         );
       },
     );
   }
 
-  Widget _buildFileCard(QRCodeFile file, PlantProvider provider) {
-    final plants = provider.plants
+  Widget _buildFileCard(QRCodeFile file) {
+    final plantCrud = context.read<PlantCrudProvider>();
+    final plants = plantCrud.plants
         .where((p) => file.plantIds.contains(p.permanentId))
         .toList();
 
@@ -143,7 +144,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
           ],
         ),
         trailing: PopupMenuButton<String>(
-          onSelected: (value) => _handleFileAction(value, file, provider),
+          onSelected: (value) => _handleFileAction(value, file),
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'print',
@@ -194,8 +195,8 @@ class _QRManagementScreenState extends State<QRManagementScreen>
   Future<void> _handleFileAction(
     String action,
     QRCodeFile file,
-    PlantProvider provider,
   ) async {
+    final plantCrud = context.read<PlantCrudProvider>();
     switch (action) {
       case 'print':
         final pdfFile = File(file.filePath);
@@ -208,7 +209,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
         }
         break;
       case 'recreate':
-        final plants = provider.plants
+        final plants = plantCrud.plants
             .where((p) => file.plantIds.contains(p.permanentId))
             .toList();
         Navigator.push(
@@ -219,15 +220,15 @@ class _QRManagementScreenState extends State<QRManagementScreen>
         );
         break;
       case 'rename':
-        _showRenameDialog(file, provider);
+        _showRenameDialog(file);
         break;
       case 'delete':
-        _showDeleteConfirm(file, provider);
+        _showDeleteConfirm(file);
         break;
     }
   }
 
-  void _showRenameDialog(QRCodeFile file, PlantProvider provider) {
+  void _showRenameDialog(QRCodeFile file) {
     final controller = TextEditingController(
       text: file.fileName.replaceAll('.pdf', ''),
     );
@@ -253,7 +254,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
               if (newName.isNotEmpty) {
                 final navigator = Navigator.of(ctx);
                 final messenger = ScaffoldMessenger.of(ctx);
-                await provider.renameQRCodeFile(file.id, newName);
+                await context.read<QrCodeProvider>().renameQRCodeFile(file.id, newName);
                 if (!mounted) return;
                 navigator.pop();
                 messenger.showSnackBar(
@@ -268,7 +269,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
     );
   }
 
-  void _showDeleteConfirm(QRCodeFile file, PlantProvider provider) {
+  void _showDeleteConfirm(QRCodeFile file) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -284,7 +285,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
             onPressed: () async {
               final navigator = Navigator.of(ctx);
               final messenger = ScaffoldMessenger.of(ctx);
-              await provider.deleteQRCodeFile(file.id);
+              await context.read<QrCodeProvider>().deleteQRCodeFile(file.id);
               if (!mounted) return;
               navigator.pop();
               messenger.showSnackBar(
@@ -301,7 +302,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
 
   // === ВКЛАДКА "РАСТЕНИЯ" ===
   Widget _buildPlantsTab() {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (context, provider, child) {
         final plants = provider.plants;
         final plantsWithQR = provider.getPlantsWithQRCode();
@@ -310,7 +311,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
         return Column(
           children: [
             // Напоминание о новых растениях
-            _buildReminderCard(plantsWithoutQR, provider),
+            _buildReminderCard(plantsWithoutQR),
             // Фильтры
             Padding(
               padding: const EdgeInsets.all(8),
@@ -406,7 +407,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
     );
   }
 
-  Widget _buildReminderCard(List<Plant> plantsWithoutQR, PlantProvider provider) {
+  Widget _buildReminderCard(List<Plant> plantsWithoutQR) {
     // Все растения без QR требуют внимания
     final newPlants = plantsWithoutQR.toList();
 
@@ -427,9 +428,10 @@ class _QRManagementScreenState extends State<QRManagementScreen>
         subtitle: const Text('Нажмите, чтобы создать QR-коды'),
         trailing: ElevatedButton(
           onPressed: () {
-            provider.clearSelections();
+            final plantCrud = context.read<PlantCrudProvider>();
+            plantCrud.clearSelections();
             for (var plant in newPlants) {
-              provider.toggleSelection(plant.permanentId);
+              plantCrud.toggleSelection(plant.permanentId);
             }
             Navigator.push(
               context,

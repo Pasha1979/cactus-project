@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import '../models/plant.dart';
 import 'print_settings_screen.dart';
 
@@ -15,7 +15,7 @@ class BatchQRCreationScreen extends StatefulWidget {
 class _BatchQRCreationScreenState extends State<BatchQRCreationScreen> {
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<PlantProvider>();
+    final provider = context.watch<PlantCrudProvider>();
     final selectedIds = provider.selectedIds;
     final selectedPlants = provider.plants
         .where((p) => selectedIds.contains(p.permanentId))
@@ -147,7 +147,7 @@ class _BatchQRCreationScreenState extends State<BatchQRCreationScreen> {
   }
 
   void _createQRCodesAndPrint(List<Plant> plants) {
-    final provider = context.read<PlantProvider>();
+    final provider = context.read<PlantCrudProvider>();
     final ids = plants.map((p) => p.permanentId).toSet();
     provider.createQRCodeBatch(ids);
 

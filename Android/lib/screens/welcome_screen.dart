@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/cloud_storage_provider.dart';
 import '../main.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -20,7 +20,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PlantProvider>().initLocation();
+      context.read<WeatherProvider>().initLocation();
     });
   }
 
@@ -86,8 +86,8 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         }
 
         if (!mounted) return;
-        final plantProvider = context.read<PlantProvider>();
-        await _syncAfterFirstConnect(plantProvider, cloudProvider);
+        final plantCrudProvider = context.read<PlantCrudProvider>();
+        await _syncAfterFirstConnect(plantCrudProvider, cloudProvider);
 
         if (mounted) {
           Navigator.of(context).pushReplacement(
@@ -117,20 +117,20 @@ class WelcomeScreenState extends State<WelcomeScreen> {
 
   // Безопасная синхронизация после первого подключения
   Future<void> _syncAfterFirstConnect(
-      PlantProvider plantProvider, CloudStorageProvider cloudProvider) async {
+      PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider) async {
     try {
       print('📥 Загружаем данные из Яндекс.Диска...');
 
-      await plantProvider.loadPlants();
+      await plantCrudProvider.loadPlants();
       await cloudProvider.fetchLastCloudUpdate();
 
       if (cloudProvider.lastCloudUpdate != null) {
-        await cloudProvider.loadDataFromCloud(plantProvider);
-        await plantProvider.savePlants();
+        await cloudProvider.loadDataFromCloud(plantCrudProvider);
+        await plantCrudProvider.savePlants();
         print('✅ Данные успешно загружены из облака');
       } else {
         print('⚠️ В облаке пока нет данных, сохраняем локальные...');
-        await cloudProvider.syncData(plantProvider);
+        await cloudProvider.syncData(plantCrudProvider);
       }
     } catch (e) {
       print('❌ Ошибка при синхронизации после подключения: $e');
@@ -219,3 +219,4 @@ class WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 }
+

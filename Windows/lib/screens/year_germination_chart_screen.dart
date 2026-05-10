@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:provider/provider.dart';
 import '../models/plant.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'package:intl/intl.dart';
 
 class YearGerminationChartScreen extends StatefulWidget {
@@ -22,7 +22,7 @@ class _YearGerminationChartScreenState
   @override
   void initState() {
     super.initState();
-    final provider = Provider.of<PlantProvider>(context, listen: false);
+    final provider = Provider.of<PlantCrudProvider>(context, listen: false);
     _plants = provider.plants
         .where((p) => p.year == widget.year && p.category == 'sown')
         .toList();

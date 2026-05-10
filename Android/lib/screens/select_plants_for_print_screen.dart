@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/plant.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'print_settings_screen.dart';
 
 /// Экран выбора растений для печати QR-этикеток
@@ -24,7 +24,7 @@ class _SelectPlantsForPrintScreenState extends State<SelectPlantsForPrintScreen>
   }
 
   List<Plant> get _filteredPlants {
-    final provider = context.read<PlantProvider>();
+    final provider = context.read<PlantCrudProvider>();
     final plants = provider.plants;
     
     if (_searchQuery.isEmpty) {
@@ -40,7 +40,7 @@ class _SelectPlantsForPrintScreenState extends State<SelectPlantsForPrintScreen>
   }
 
   void _selectAllWithQR() {
-    final provider = context.read<PlantProvider>();
+    final provider = context.read<PlantCrudProvider>();
     final plantsWithQR = provider.plants
         .where((p) => p.qrCode != null)
         .map((p) => p.permanentId)
@@ -70,7 +70,7 @@ class _SelectPlantsForPrintScreenState extends State<SelectPlantsForPrintScreen>
       return;
     }
 
-    final provider = context.read<PlantProvider>();
+    final provider = context.read<PlantCrudProvider>();
     final selectedPlants = provider.plants
         .where((p) => _selectedPlantIds.contains(p.permanentId))
         .toList();

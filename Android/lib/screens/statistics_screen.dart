@@ -5,7 +5,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:collection/collection.dart';
 import '../models/plant.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 import 'package:syncfusion_flutter_treemap/treemap.dart';
 import '../utils/responsive_helper.dart';
 
@@ -54,7 +54,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     }
   }
 
-  List<Plant> _filterPlants(PlantProvider provider) {
+  List<Plant> _filterPlants(PlantCrudProvider provider) {
     var plants = provider.plants;
     final now = DateTime.now();
 
@@ -103,7 +103,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final filteredPlants = _filterPlants(provider);
         return Scaffold(
@@ -179,7 +179,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildTreemapChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         List<Map<String, dynamic>> treemapData = [];
         if (_treemapByStatus) {
@@ -457,7 +457,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildYearFilter() {
-    final provider = context.watch<PlantProvider>();
+    final provider = context.watch<PlantCrudProvider>();
     final years = provider.getUniqueSowingYears();
 
     return Padding(
@@ -699,7 +699,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildStatusChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final data = getStatusCounts(filteredPlants);
         final total = data.values.reduce((a, b) => a + b).toDouble();
@@ -782,7 +782,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildSurvivalChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final years = provider.getUniqueSowingYears();
         final data = years.map((year) {
@@ -880,7 +880,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildCategoryChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final sownCount =
             filteredPlants.where((p) => p.category == 'sown').length;
@@ -911,7 +911,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildAgeDistributionChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final filteredPlantsForAge = _selectedYear != null
             ? filteredPlants.where((p) => p.year == _selectedYear!).toList()
@@ -1025,9 +1025,9 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildWateringHeatmap() {
-    return Consumer<PlantProvider>(
-      builder: (ctx, provider, _) {
-        final events = provider.globalWateringDates.fold<Map<DateTime, int>>({},
+    return Consumer<WateringProvider>(
+      builder: (ctx, wateringProvider, _) {
+        final events = wateringProvider.globalWateringDates.fold<Map<DateTime, int>>({},
             (map, date) {
           final normalized = DateTime(date.year, date.month, date.day);
           map[normalized] = (map[normalized] ?? 0) + 1;
@@ -1116,7 +1116,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildGrowthChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final monthlyGrowth = <String, int>{};
         for (var plant in filteredPlants) {
@@ -1166,10 +1166,10 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildCareActivityChart(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
-      builder: (ctx, provider, _) {
+    return Consumer<WateringProvider>(
+      builder: (ctx, wateringProvider, _) {
         final monthlyCare = <String, Map<String, int>>{};
-        for (var date in provider.globalWateringDates) {
+        for (var date in wateringProvider.globalWateringDates) {
           final key =
               DateTime(date.year, date.month, 1).toString().substring(0, 7);
           monthlyCare[key] = monthlyCare[key] ?? {'Полив': 0, 'Пересадка': 0};
@@ -1233,7 +1233,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildEventsCalendar(List<Plant> filteredPlants) {
-    return Consumer<PlantProvider>(
+    return Consumer<PlantCrudProvider>(
       builder: (ctx, provider, _) {
         final now = DateTime.now();
         final startDate = DateTime(now.year, now.month, 1);

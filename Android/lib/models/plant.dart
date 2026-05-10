@@ -62,6 +62,8 @@ class Plant {
   };
 
   Plant({
+    String? permanentId,
+    String? displayId,
     required this.latinName,
     required this.status,
     required this.year,
@@ -103,8 +105,8 @@ class Plant {
     this.parentId,
     // Поле для QR кода
     this.qrCode,
-  })  : permanentId = const Uuid().v4(),
-        displayId = Plant.generateDisplayId(year, customNumber, category),
+  })  : permanentId = permanentId ?? const Uuid().v4(),
+        displayId = displayId ?? Plant.generateDisplayId(year, customNumber, category),
         wateringDates = wateringDates ?? [],
         customWateringDates = customWateringDates ?? [],
         germinationHistory = germinationHistory ?? [],

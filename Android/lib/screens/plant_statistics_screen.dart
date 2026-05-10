@@ -3,7 +3,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
 import '../models/plant.dart';
-import '../providers/plant_provider.dart';
+import '../presentation/providers/providers.dart';
 
 class PlantStatisticsScreen extends StatefulWidget {
   final Plant plant;
@@ -224,7 +224,7 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
   }
 
   Widget _buildFloweringCalendar() {
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
+    final plantCrud = Provider.of<PlantCrudProvider>(context, listen: false);
     final floweringEvents = widget.plant.floweringHistory;
 
     Map<DateTime, List<String>> events = {};
@@ -302,12 +302,12 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
         },
       ),
       onDaySelected: (selectedDay, focusedDay) {
-        _showFloweringDialog(selectedDay, plantProvider);
+        _showFloweringDialog(selectedDay, plantCrud);
       },
     );
   }
 
-  void _showFloweringDialog(DateTime selectedDay, PlantProvider plantProvider) {
+  void _showFloweringDialog(DateTime selectedDay, PlantCrudProvider plantCrud) {
     showDialog(
       context: context,
       builder: (context) {
@@ -319,7 +319,7 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
             children: [
               ElevatedButton(
                 onPressed: () {
-                  plantProvider.addFloweringEvent(
+                  plantCrud.addFloweringEvent(
                       widget.plant.permanentId, selectedDay, 'bloomed');
                   Navigator.pop(context);
                 },
@@ -327,7 +327,7 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
               ),
               ElevatedButton(
                 onPressed: () {
-                  plantProvider.addFloweringEvent(
+                  plantCrud.addFloweringEvent(
                       widget.plant.permanentId, selectedDay, 'wilted');
                   Navigator.pop(context);
                 },
@@ -380,8 +380,8 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
   }
 
   void _clearFloweringData() {
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
-    plantProvider.clearFloweringData(widget.plant.permanentId);
+    final plantCrud = Provider.of<PlantCrudProvider>(context, listen: false);
+    plantCrud.clearFloweringData(widget.plant.permanentId);
     if (mounted) {
       setState(() {}); // Обновляем UI
     }
