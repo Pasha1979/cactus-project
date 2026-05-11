@@ -131,12 +131,14 @@ class MyApp extends StatelessWidget {
 
           await _syncData(plantCrudProvider, cloudProvider);
 
-          // Загрузка данных для специализированных провайдеров
-          await wateringProvider.load();
-          await winteringProvider.load();
-          await photoProvider.load();
-          await qrCodeProvider.loadScanHistory();
-          await qrCodeProvider.loadQRCodeFiles();
+          // Параллельная загрузка специализированных провайдеров
+          await Future.wait([
+            wateringProvider.load(),
+            winteringProvider.load(),
+            photoProvider.load(),
+            qrCodeProvider.loadScanHistory(),
+            qrCodeProvider.loadQRCodeFiles(),
+          ]);
 
           if (startupMessage != null && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
