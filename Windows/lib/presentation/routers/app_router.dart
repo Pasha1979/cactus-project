@@ -63,6 +63,19 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SowingManagementScreen(),
     ),
     GoRoute(
+      path: '/sowing-year/:year',
+      builder: (context, state) {
+        final yearStr = state.pathParameters['year'];
+        final year = int.tryParse(yearStr ?? '');
+        if (year == null) {
+          return const Scaffold(
+            body: Center(child: Text('Некорректный год')),
+          );
+        }
+        return SowingYearDetailsScreen(year: year);
+      },
+    ),
+    GoRoute(
       path: '/collection',
       builder: (context, state) => const CollectionManagementScreen(),
     ),

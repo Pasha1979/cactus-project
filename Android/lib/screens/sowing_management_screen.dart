@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../presentation/providers/providers.dart';
-import 'add_sowing_year_screen.dart';
 import '../models/plant.dart';
-import 'package:my_cactus/screens/plant_statistics_screen.dart'; // Убедитесь, что путь к файлу правильный
-import 'year_germination_chart_screen.dart';
 
 class SowingManagementScreen extends StatelessWidget {
   const SowingManagementScreen({super.key});
@@ -36,13 +34,7 @@ class SowingManagementScreen extends StatelessWidget {
                 margin: const EdgeInsets.all(8),
                 child: InkWell(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            SowingYearDetailsScreen(year: year),
-                      ),
-                    );
+                    context.push('/sowing-year/$year');
                   },
                   child: ListTile(
                     title: Text(year.toString(),
@@ -63,12 +55,7 @@ class SowingManagementScreen extends StatelessWidget {
         shape: CircleBorder(),
         foregroundColor: Colors.white,
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddSowingYearScreen(),
-            ),
-          );
+          context.push('/sowing/add');
         },
         child: Icon(Icons.add),
       ),
@@ -79,10 +66,7 @@ class SowingManagementScreen extends StatelessWidget {
     return Card(
       color: Colors.green[100],
       child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (ctx) => const AddSowingYearScreen()),
-        ),
+        onTap: () => context.push('/sowing/add'),
         child: const Center(
           child: Icon(Icons.add, size: 40),
         ),
@@ -204,13 +188,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
             icon: const Icon(Icons.show_chart, color: Colors.purple, size: 28),
             tooltip: 'График живых сеянцев за год',
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      YearGerminationChartScreen(year: widget.year),
-                ),
-              );
+              context.push('/germination-chart/${widget.year}');
             },
           ),
         ],
@@ -399,12 +377,9 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                                   color: Colors.purple, size: 28),
                               tooltip: 'Статистика всхожести и выживаемости',
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        PlantStatisticsScreen(plant: plant),
-                                  ),
+                                context.push(
+                                  '/plant-statistics',
+                                  extra: plant,
                                 );
                               },
                             ),
