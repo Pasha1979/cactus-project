@@ -29,6 +29,7 @@ dependencies:
   path: ^1.8.3  # Для работы с путями
   dio: ^5.7.0  # Для HTTP-запросов к API Яндекс.Диска
   flutter_secure_storage: ^9.2.2  # Для безопасного хранения токенов
+  go_router: ^14.8.0  # Декларативная навигация + deep linking
   flutter_launcher_icons: ^0.14.3
   msix: ^3.16.8
   image: ^4.1.3
