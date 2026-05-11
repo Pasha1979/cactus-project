@@ -629,6 +629,35 @@ dev_dependencies:
 
 ## ФАЗА 2: ВАЖНЫЕ УЛУЧШЕНИЯ (P1)
 
+### 2.0 Исправления из глубокого аудита (0.5 дня)
+
+> **Выполнять первым в Фазе 2.** Исправляет критические проблемы, выявленные внешним аудитом архитектуры.
+
+**Задачи:**
+2.0.1 Исправить Hive race condition — добавить `if (_isInitialized) return` после цикла ожидания в `hive_database.dart`
+2.0.2 Добавить `dispose()` во все ChangeNotifier-провайдеры (WateringProvider, WinteringProvider, PhotoProvider, BatchProvider, SyncProvider, QrCodeProvider, WeatherProvider)
+2.0.3 Перенести `CloudStorageProvider` из `lib/providers/` в `lib/presentation/providers/`, обновить все импорты
+2.0.4 Параллелизовать загрузку провайдеров в `main.dart` через `Future.wait` вместо последовательных `await`
+2.0.5 Добавить `_parseDateTimeSafe()` в `Plant.fromJson` с fallback для некорректных дат из облака
+2.0.6 Создать `PlantStatusMapper` — вынести маппинг строк статусов в единое место, убрать дублирование
+
+**Файлы:**
+- `data/datasources/local/hive_database.dart`
+- `presentation/providers/*.dart`
+- `providers/cloud_storage_provider.dart`
+- `main.dart`
+- `models/plant.dart`
+- `core/utils/plant_status_mapper.dart`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Нет новых утечек памяти (dispose вызывается корректно)
+- Приложение стартует быстрее (Future.wait)
+- Некорректные даты из облака не ломают парсинг
+- Статусы растений нормализованы единообразно
+
+---
+
 ### 2.1 go_router навигация (2 дня)
 
 **Задачи:**
@@ -763,9 +792,11 @@ dev_dependencies:
 2.7.2 Добавить правила: always_declare_return_types, avoid_print, prefer_single_quotes, sort_constructors_first, require_trailing_commas
 2.7.3 Запустить flutter analyze
 2.7.4 Исправить все предупреждения линтера
+2.7.5 Создать `PlantStatusMapper` — вынести маппинг строк статусов в единое место, убрать дублирование и магические строки
 
 **Файлы:**
 - `analysis_options.yaml`
+- `core/utils/plant_status_mapper.dart`
 
 **Проверка:**
 - flutter analyze проходит без предупреждений
@@ -787,6 +818,33 @@ dev_dependencies:
 - Все функции работают
 - Производительность улучшилась
 - Навигация работает
+
+---
+
+### 2.9 Надёжность синхронизации (1 день)
+
+> **Выполнять после оптимизаций UI.** Добавляет защиту от гонок данных, спама запросами и повреждённых данных из облака.
+
+**Задачи:**
+2.9.1 Добавить `Lock` (synchronized) для критических секций синхронизации — предотвратить изменение данных пользователем во время sync
+2.9.2 Добавить лимит повторных попыток синхронизации (`maxSyncRetries = 3`) с exponential backoff при ошибках сети
+2.9.3 Добавить валидацию входящих данных из облака:
+  - Проверка структуры (`data.containsKey('plants')`)
+  - Лимит количества растений (макс 10000)
+  - `_validatePlantJson()` с проверкой обязательных полей (`permanentId`, `latinName`, год в диапазоне 1900-2100)
+2.9.4 Не перезаписывать локальные данные пустым списком при ошибке загрузки из облака
+2.9.5 Добавить индикатор прогресса синхронизации с возможностью отмены
+
+**Файлы:**
+- `presentation/providers/cloud_storage_provider.dart`
+- `services/sync/sync_manager.dart`
+- `models/plant.dart`
+
+**Проверка:**
+- Нет бесконечных циклов при ошибках сети (max 3 retries)
+- Повреждённые данные из облака не ломают приложение (валидация)
+- Пользовательские изменения во время синхронизации не теряются (Lock)
+- flutter analyze проходит без ошибок
 
 ---
 
