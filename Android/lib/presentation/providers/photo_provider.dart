@@ -17,7 +17,7 @@ import '../../models/plant.dart';
 /// - Adult images
 /// - Локальный кэш облачных фото
 class PhotoProvider with ChangeNotifier {
-  // TODO: подключить PhotoRepository через DI когда будет готов
+  // TODO(1.15.1): подключить PhotoRepository через DI
   // final PhotoRepository _repository = sl<PhotoRepository>();
 
   final Set<String> _deletedUserPhotos = {};

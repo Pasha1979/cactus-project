@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../domain/repositories/watering_repository.dart';
 import '../datasources/local/plant_local_datasource.dart';
 
@@ -35,16 +37,16 @@ class WateringRepositoryImpl implements WateringRepository {
 
   @override
   Future<List<DateTime>> getGlobalWateringDates() async {
-    // TODO: реализовать глобальное хранилище поливов при полной интеграции
+    // TODO(1.15.7): реализовать глобальное хранилище поливов через settings_box в Hive
     return [];
   }
 
   @override
   Future<void> saveGlobalWateringDates(List<DateTime> dates) async {
-    // Реализация назначена на шаг 1.10.10 (создание WateringProvider + settings_box)
-    throw UnimplementedError(
-      'Global watering storage will be implemented at step 1.10.10. '
-      'Currently no-op would silently lose user data.',
-    );
+    // FIXME(1.15.7): Реализовать при создании settings_box в Hive
+    // Сейчас не используется — WateringProvider работает напрямую с SharedPreferences.
+    // No-op безопаснее throw — метод не вызывается из UI.
+    debugPrint(
+        '⚠️ WateringRepositoryImpl.saveGlobalWateringDates: no-op — реализация отложена');
   }
 }

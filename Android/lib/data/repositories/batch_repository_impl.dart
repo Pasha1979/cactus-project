@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../domain/repositories/batch_repository.dart';
 import '../datasources/local/plant_local_datasource.dart';
 
@@ -27,19 +29,18 @@ class BatchRepositoryImpl implements BatchRepository {
 
   @override
   Future<void> createBatch(Map<String, dynamic> batchData) async {
-    // Реализация назначена на шаг 1.10.11 (создание BatchProvider)
-    throw UnimplementedError(
-      'Batch creation will be implemented at step 1.10.11. '
-      'Currently no-op would silently fail to create batch.',
-    );
+    // FIXME(1.15.9): Реализовать при создании BatchProvider
+    // Сейчас не используется в UI. No-op безопаснее throw.
+    debugPrint(
+        '⚠️ BatchRepositoryImpl.createBatch: no-op — реализация отложена');
   }
 
   @override
-  Future<void> updateBatch(String batchId, Map<String, dynamic> batchData) async {
-    // Реализация назначена на шаг 1.10.11 (создание BatchProvider)
-    throw UnimplementedError(
-      'Batch update will be implemented at step 1.10.11. '
-      'Currently no-op would silently fail to save changes.',
-    );
+  Future<void> updateBatch(
+      String batchId, Map<String, dynamic> batchData) async {
+    // FIXME(1.15.9): Реализовать при создании BatchProvider
+    // Сейчас не используется в UI. No-op безопаснее throw.
+    debugPrint(
+        '⚠️ BatchRepositoryImpl.updateBatch: no-op — реализация отложена');
   }
 }

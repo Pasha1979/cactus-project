@@ -9,7 +9,7 @@ import '../../models/plant.dart';
 /// - Управление сеянцами
 /// - Удаление витрин с отвязыванием
 class BatchProvider with ChangeNotifier {
-  // TODO: подключить BatchRepository через DI когда будет готов
+  // TODO(1.15.1): подключить BatchRepository через DI
   // final BatchRepository _repository = sl<BatchRepository>();
 
   /// Находит следующий свободный номер для сеянца в партии

@@ -286,7 +286,7 @@ class DataMigrationManager {
           permanentId: file.plantIds.isNotEmpty ? file.plantIds.first : file.id,
           createdAt: file.createdAt,
           isActive: true,
-          // TODO 1.8.10: filePath будет заполнен при наличии реальных путей
+          // TODO(1.15.8): filePath будет заполнен при наличии реальных путей
         );
         await box.put(dto.plantId, dto);
       }

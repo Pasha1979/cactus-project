@@ -403,7 +403,6 @@ dev_dependencies:
 1.8.7 Протестировать миграцию на реальных данных
 1.8.8 Добавить проверку целостности данных после миграции
 1.8.9 Реализовать возможность отката миграции
-1.8.10 Расширить QRCodeDto полем filePath (TODO из И.3) — реализовать миграцию путей к PDF файлам
 
 **Файлы:**
 - `data/migrations/data_migration_manager.dart`
@@ -449,10 +448,7 @@ dev_dependencies:
 1.10.7 Создать presentation/providers/cache_manager.dart
 1.10.8 Перенести логику из старого PlantProvider в новые провайдеры
 1.10.9 Обновить все экраны для использования новых провайдеров
-1.10.10 Реализовать глобальное хранилище поливов (TODO из И.3) — создать settings_box в Hive
-1.10.11 Реализовать createBatch/updateBatch (TODO из И.3) — бизнес-логика создания партий через PlantDto
-1.10.12 Реализовать setLlifleAsMainPhoto (TODO из И.3) — добавить поле mainLliflePhotoUrl в PlantDto
-1.10.13 Удалить старый PlantProvider
+1.10.10 Удалить старый PlantProvider
 
 **Файлы:**
 - `presentation/providers/plant_provider.dart` (~300 строк)
@@ -487,8 +483,7 @@ dev_dependencies:
 1.11.12 Создать services/platform/platform_adapter.dart
 1.11.13 Перенести логику из старого CloudStorageProvider
 1.11.14 Обновить экраны для использования новых сервисов
-1.11.15 Интегрировать SyncRepositoryImpl с SyncManager (TODO из И.3) — реализовать syncWithCloud и getSyncStatus
-1.11.16 Удалить старый CloudStorageProvider
+1.11.15 Удалить старый CloudStorageProvider
 
 **Файлы:**
 - `services/auth/auth_service.dart`
@@ -582,6 +577,43 @@ dev_dependencies:
 - Все функции работают
 - Производительность улучшилась
 - Нет регрессий
+
+---
+
+### 1.15 Завершение Repository Pattern и DI-интеграция (1-1.5 дня)
+
+**Цель:** Закрыть все оставшиеся TODO из пройденных шагов 1.8–1.11, которые не были реализованы.
+
+**Задачи:**
+1.15.1 Подключить PhotoProvider, BatchProvider, SyncProvider к репозиториям через DI (TODO из photo_provider.dart, batch_provider.dart, sync_provider.dart)
+1.15.2 Реализовать cleanupUnusedPhotosForSelected и deleteAllPhotosForSelected в PhotoProvider (TODO из plant_crud_provider.dart)
+1.15.3 Реализовать exportSelectedToCSV в PlantCrudProvider или отдельном сервисе (TODO из plant_crud_provider.dart)
+1.15.4 Интегрировать SyncRepositoryImpl с SyncManager — реализовать syncWithCloud и getSyncStatus (TODO из sync_repository_impl.dart)
+1.15.5 Реализовать setLlifleAsMainPhoto в PhotoRepositoryImpl — добавить поле mainLliflePhotoUrl в PlantDto (TODO из photo_repository_impl.dart)
+1.15.6 Перенести кэширование cloud-фото из PlantCrudProvider в PhotoSyncService, убрать FIXME (TODO из plant_crud_provider.dart)
+1.15.7 Реализовать settings_box в Hive для globalWateringDates (TODO из watering_repository_impl.dart)
+1.15.8 Расширить QRCodeDto полем filePath — реализовать миграцию путей к PDF файлам (TODO из qr_code_repository_impl.dart, data_migration_manager.dart)
+1.15.9 Реализовать createBatch/updateBatch в BatchRepositoryImpl — бизнес-логика создания партий через PlantDto (TODO из batch_repository_impl.dart)
+1.15.10 Проверить flutter analyze — оба проекта
+1.15.11 Обновить TODO(1.15.x) в коде — заменить на реализацию
+
+**Файлы:**
+- `presentation/providers/photo_provider.dart`
+- `presentation/providers/batch_provider.dart`
+- `presentation/providers/sync_provider.dart`
+- `presentation/providers/plant_crud_provider.dart`
+- `data/repositories/sync_repository_impl.dart`
+- `data/repositories/photo_repository_impl.dart`
+- `data/repositories/watering_repository_impl.dart`
+- `data/repositories/qr_code_repository_impl.dart`
+- `data/repositories/batch_repository_impl.dart`
+- `data/migrations/data_migration_manager.dart`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Все TODO(1.15.x) реализованы и удалены из кода
+- Нет оставшихся заглушек
+- Все TODO в прошлых шагах (1.1–1.14) удалены или перенесены в будущие
 
 ---
 

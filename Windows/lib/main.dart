@@ -13,9 +13,7 @@ import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'screens/collection_management_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
 import 'screens/welcome_screen.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Добавлен импорт
 import '../widgets/plant_cards.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -44,11 +42,6 @@ void main() async {
     print('⚠️ Миграция данных не удалась. Используем резервный режим.');
   }
 
-  const bool isRelease = bool.fromEnvironment('dart.vm.product');
-  if (isRelease) {
-    await _cleanAppData();
-  }
-
   await _initNotifications();
 
   tz.initializeTimeZones();
@@ -59,7 +52,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => PlantCrudProvider()),
         ChangeNotifierProvider(create: (_) => CloudStorageProvider()),
         // Новые специализированные провайдеры (шаг 1.10)
-        ChangeNotifierProvider(create: (_) => PlantCrudProvider()),
         ChangeNotifierProvider(create: (_) => WateringProvider()),
         ChangeNotifierProvider(create: (_) => WinteringProvider()),
         ChangeNotifierProvider(create: (_) => PhotoProvider()),
@@ -75,26 +67,6 @@ void main() async {
       ),
     ),
   );
-}
-
-Future<void> _cleanAppData() async {
-  // === НОВОЕ: Бэкап перед очисткой ===
-  final plantCrudProvider =
-      Provider.of<PlantCrudProvider>(navigatorKey.currentContext!, listen: false);
-  await plantCrudProvider.createLocalBackup();
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.clear();
-
-  // Очистка токенов из FlutterSecureStorage
-  const storage = FlutterSecureStorage();
-  await storage.deleteAll();
-
-  final appDocDir = await getApplicationDocumentsDirectory();
-  final photoDir = Directory('${appDocDir.path}/plant_photos');
-  if (await photoDir.exists()) {
-    await photoDir.delete(recursive: true);
-  }
-  await photoDir.create(recursive: true);
 }
 
 Future<void> _initNotifications() async {
