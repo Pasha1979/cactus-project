@@ -2,6 +2,29 @@ import 'package:uuid/uuid.dart';
 import 'gbif_occurrence.dart';
 import 'qr_code.dart';
 
+/// Безопасный парсинг единичной даты из JSON.
+/// Возвращает [DateTime] или null при ошибке/отсутствии значения.
+DateTime? _parseDateTimeSafe(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  try {
+    return DateTime.parse(value.toString());
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Безопасный парсинг списка дат из JSON.
+/// Пропускает невалидные элементы, возвращает [] при ошибке.
+List<DateTime> _parseDateTimeList(dynamic value) {
+  if (value == null) return const [];
+  if (value is! List) return const [];
+  return value
+      .map((item) => _parseDateTimeSafe(item))
+      .whereType<DateTime>()
+      .toList();
+}
+
 class Plant {
   String permanentId;
   String displayId; // Не final — нужно менять для сеянцев в системе партий
@@ -325,21 +348,11 @@ class Plant {
       countryFlag: json['countryFlag'],
       seedsCount: json['seedsCount'],
       germinatedCount: json['germinatedCount'],
-      wateringDates: (json['wateringDates'] as List<dynamic>?)
-              ?.map((dateStr) => DateTime.parse(dateStr as String))
-              .toList() ??
-          [],
-      customWateringDates: (json['customWateringDates'] as List<dynamic>?)
-              ?.map((dateStr) => DateTime.parse(dateStr as String))
-              .toList() ??
-          [],
+      wateringDates: _parseDateTimeList(json['wateringDates']),
+      customWateringDates: _parseDateTimeList(json['customWateringDates']),
       hasUnreadNotification: json['hasUnreadNotification'] ?? false,
-      lastRepotting: json['lastRepotting'] != null
-          ? DateTime.parse(json['lastRepotting'])
-          : null,
-      plannedTransplantDate: json['plannedTransplantDate'] != null
-          ? DateTime.parse(json['plannedTransplantDate'])
-          : null,
+      lastRepotting: _parseDateTimeSafe(json['lastRepotting']),
+      plannedTransplantDate: _parseDateTimeSafe(json['plannedTransplantDate']),
       germinationHistory: (json['germinationHistory'] as List<dynamic>?)
               ?.map((item) =>
                   GerminationRecord.fromJson(item as Map<String, dynamic>))
@@ -358,25 +371,17 @@ class Plant {
               ?.map((e) => e as String)
               .toList() ??
           [],
-      lastFertilization: json['lastFertilization'] != null
-          ? DateTime.parse(json['lastFertilization'])
-          : null,
-      plannedFertilizationDate: json['plannedFertilizationDate'] != null
-          ? DateTime.parse(json['plannedFertilizationDate'])
-          : null,
+      lastFertilization: _parseDateTimeSafe(json['lastFertilization']),
+      plannedFertilizationDate: _parseDateTimeSafe(json['plannedFertilizationDate']),
       lliflePhotoUrls: List<String>.from(json['lliflePhotoUrls'] ?? []),
-      lastModified: json['lastModified'] != null
-          ? DateTime.tryParse(json['lastModified'])
-          : null, // ← НОВОЕ
+      lastModified: _parseDateTimeSafe(json['lastModified']), // ← НОВОЕ
       // GBIF поля с обратной совместимостью
       gbifPhotoUrls: List<String>.from(json['gbifPhotoUrls'] ?? []),
       gbifOccurrences: (json['gbifOccurrences'] as List<dynamic>?)
               ?.map((e) => GbifOccurrence.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      lastGbifUpdate: json['lastGbifUpdate'] != null
-          ? DateTime.tryParse(json['lastGbifUpdate'])
-          : null,
+      lastGbifUpdate: _parseDateTimeSafe(json['lastGbifUpdate']),
       // Поля для системы партий (обратная совместимость — null если не в JSON)
       aliveCount: json['aliveCount'] as int?,
       isBatch: json['isBatch'] ?? false,
