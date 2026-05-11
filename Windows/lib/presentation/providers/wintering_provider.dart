@@ -156,4 +156,9 @@ class WinteringProvider with ChangeNotifier {
       'entries': _logEntries.map((e) => e.toJson()).toList(),
     };
   }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 }

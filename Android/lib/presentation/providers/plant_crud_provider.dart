@@ -1398,4 +1398,9 @@ class PlantCrudProvider with ChangeNotifier {
     }
     return allRecords..sort((a, b) => a.date.compareTo(b.date));
   }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 }

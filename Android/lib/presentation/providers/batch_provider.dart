@@ -55,4 +55,9 @@ class BatchProvider with ChangeNotifier {
   bool canConvertToBatch(Plant plant) {
     return plant.getCurrentAliveCount >= 2;
   }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 }
