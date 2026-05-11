@@ -416,16 +416,38 @@
 6/6 подшагов ✅ (И.1-И.4 + И.5 + И.6)
 
 ### Прогресс по фазе 2
-0/10 шагов (2.0 🔄 готов к началу, 2.1-2.9 ⏳ ожидают)
+2.5/10 шагов (2.0 ✅, 2.1 🔄 в процессе)
+
+**2.0 Исправления из глубокого аудита — ✅ Завершён:**
+- 2.0.1 Hive race condition fix (Android + Windows)
+- 2.0.2 Удалены пустые dispose() из 8 провайдеров (Android + Windows)
+- 2.0.3 Перенос CloudStorageProvider → presentation/providers (Android + Windows)
+- 2.0.4 Future.wait для параллельной загрузки провайдеров (Android + Windows)
+- 2.0.5 Safe date parsing (_parseDateTimeSafe, _parseDateTimeList) в Plant (Android + Windows)
+- 2.0.6 PlantStatusMapper — централизованный маппер статусов (Android + Windows)
+
+**2.1 go_router — 🔄 В процессе:**
+- 2.1.1 ✅ Добавлен go_router ^14.8.0 в pubspec.yaml (Android + Windows)
+- 2.1.2 ✅ Создан presentation/routers/app_router.dart с 17 (Android) / 16 (Windows) маршрутами
+- 2.1.3 ✅ Маршруты определены (выполнено в рамках 2.1.2)
+- 2.1.4 🔄 Замена Navigator.push — разбито на микро-шаги:
+  - 2.1.4.1 main.dart (7 вызовов: EditPlantScreen, BatchQRCreationScreen, SowingManagementScreen, CollectionManagementScreen, QRScannerScreen, QRManagementScreen, StatisticsScreen)
+  - 2.1.4.2 plant_card_screen.dart + plant_cards.dart (4 вызова: PlantCardScreen, EditPlantScreen, PrintSettingsScreen)
+  - 2.1.4.3 sowing_management_screen.dart (5 вызовов: PlantCardScreen, AddSowingYearScreen, YearGerminationChartScreen, PlantStatisticsScreen)
+  - 2.1.4.4 statistics_screen.dart (4 вызова: _PlantListScreen и внутренние)
+  - 2.1.4.5 qr_management_screen.dart (4 вызова: SelectPlantsForPrintScreen, PrintSettingsScreen, BatchQRCreationScreen)
+  - 2.1.4.6 Остальные экраны (8 вызовов: collection_management, batch_qr_creation, qr_scanner, select_plants_for_print, history_tab, care_tips, description, geography)
+- 2.1.5 ⏳ Deep linking
+- 2.1.6 ⏳ Тестирование навигации
 
 ### Технический долг / Напоминания
 - **dispose() в провайдерах:** удалены пустые `@override void dispose() { super.dispose(); }` из 8 провайдеров (2.0.2). Когда появятся реальные ресурсы (Timer, StreamSubscription, isolate, http client) — добавить `dispose()` с реальной очисткой. Проверить: watering, wintering, photo, batch, sync, qr_code, weather, plant_crud провайдеры.
 
 ### Общий прогресс
-15/41 шагов завершено (35 шагов плана + 6 шагов фазы И)
+18/41 шагов завершено (2.0 ✅ + 2.1.1-2.1.3 ✅)
 
 ### Оценка времени до завершения
-8.5-10.5 недель (обновлено после аудита плана)
+8-10 недель (обновлено после завершения 2.0 и части 2.1)
 
 ### Дополнительно: новые шаги из аудита (внесены в план 2026-05-11)
 - **2.0 Исправления из глубокого аудита** — 6 задач (Hive race condition, dispose(), CloudStorageProvider перемещение, Future.wait, _parseDateTimeSafe, PlantStatusMapper)

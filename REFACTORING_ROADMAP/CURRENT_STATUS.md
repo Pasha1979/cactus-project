@@ -372,17 +372,23 @@
 ## ФАЗА 2: ВАЖНЫЕ УЛУЧШЕНИЯ (P1) - 3-4 недели
 
 ### Шаг 2.1: go_router навигация
-**Статус:** ⏳ Не начато
-**Прогресс:** 0%
+**Статус:** 🔄 В процессе
+**Прогресс:** ~40%
 **Зависимости:** Фаза 1
 **Время:** 2 дня
 
 **Чеклист:**
-- [ ] Прочитал LESSONS_LEARNED.md для избежания повторения ошибок
-- [ ] Добавить go_router в pubspec.yaml
-- [ ] Создать presentation/routers/app_router.dart
-- [ ] Определить все маршруты
-- [ ] Заменить Navigator.push на go_router
+- [x] Прочитал LESSONS_LEARNED.md для избежания повторения ошибок
+- [x] Добавить go_router в pubspec.yaml (Android + Windows)
+- [x] Создать presentation/routers/app_router.dart (Android + Windows)
+- [x] Определить все маршруты (17 Android / 16 Windows)
+- [ ] Заменить Navigator.push на go_router (разбито на микро-шаги):
+  - [ ] 2.1.4.1 main.dart (7 вызовов)
+  - [ ] 2.1.4.2 plant_card_screen.dart + plant_cards.dart (4 вызова)
+  - [ ] 2.1.4.3 sowing_management_screen.dart (5 вызовов)
+  - [ ] 2.1.4.4 statistics_screen.dart (4 вызова)
+  - [ ] 2.1.4.5 qr_management_screen.dart (4 вызова)
+  - [ ] 2.1.4.6 Остальные экраны (8 вызовов)
 - [ ] Реализовать deep linking
 - [ ] Тестирование навигации
 
