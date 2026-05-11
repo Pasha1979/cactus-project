@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
@@ -309,12 +310,9 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                             .toList();
                         title = 'Растения категории: $group';
                       }
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (ctx) => _PlantListScreen(
-                              plants: selectedPlants, title: title),
-                        ),
+                      context.push(
+                        '/plant-list',
+                        extra: {'plants': selectedPlants, 'title': title},
                       );
                     },
                   ),
@@ -757,17 +755,14 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     onPointTap: (ChartPointDetails details) {
                       if (details.pointIndex != null) {
                         final status = data.keys.elementAt(details.pointIndex!);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (ctx) => _PlantListScreen(
-                              plants: filteredPlants
-                                  .where(
-                                      (p) => p.status == status.toLowerCase())
-                                  .toList(),
-                              title: 'Растения со статусом: $status',
-                            ),
-                          ),
+                        context.push(
+                          '/plant-list',
+                          extra: {
+                            'plants': filteredPlants
+                                .where((p) => p.status == status.toLowerCase())
+                                .toList(),
+                            'title': 'Растения со статусом: $status',
+                          },
                         );
                       }
                     },
@@ -850,14 +845,12 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                         final yearPlants = filteredPlants
                             .where((p) => p.year == year)
                             .toList();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (ctx) => _PlantListScreen(
-                              plants: yearPlants,
-                              title: 'Растения $year года',
-                            ),
-                          ),
+                        context.push(
+                          '/plant-list',
+                          extra: {
+                            'plants': yearPlants,
+                            'title': 'Растения $year года',
+                          },
                         );
                       }
                     },
@@ -1004,12 +997,9 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                                 .toList();
                             title = 'Растения возраста $age лет';
                           }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (ctx) => _PlantListScreen(
-                                  plants: selectedPlants, title: title),
-                            ),
+                          context.push(
+                            '/plant-list',
+                            extra: {'plants': selectedPlants, 'title': title},
                           );
                         }
                       },
@@ -1324,11 +1314,11 @@ class ChartData {
   ChartData(this.category, this.value, {this.secondaryValue = 0.0});
 }
 
-class _PlantListScreen extends StatelessWidget {
+class PlantListScreen extends StatelessWidget {
   final List<Plant> plants;
   final String title;
 
-  const _PlantListScreen({required this.plants, required this.title});
+  const PlantListScreen({super.key, required this.plants, required this.title});
 
   @override
   Widget build(BuildContext context) {

@@ -113,6 +113,20 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/plant-list',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final plants = extra?['plants'] as List<Plant>?;
+        final title = extra?['title'] as String?;
+        if (plants == null || title == null) {
+          return const Scaffold(
+            body: Center(child: Text('Некорректные данные')),
+          );
+        }
+        return PlantListScreen(plants: plants, title: title);
+      },
+    ),
+    GoRoute(
       path: '/calendar',
       builder: (context, state) => const CareCalendarScreen(),
     ),
