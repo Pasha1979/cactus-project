@@ -1,15 +1,9 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'models/plant.dart';
-import 'screens/edit_plant_screen.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
-import 'screens/sowing_management_screen.dart';
-import 'screens/statistics_screen.dart';
-import 'screens/collection_management_screen.dart';
-import 'screens/batch_qr_creation_screen.dart';
-import 'screens/qr_management_screen.dart';
-import 'screens/qr_scanner_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'screens/welcome_screen.dart';
@@ -576,9 +570,9 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _openEditForm(Plant plant) async {
-    final result = await Navigator.push<Plant>(
-      context,
-      MaterialPageRoute(builder: (ctx) => EditPlantScreen(plant: plant)),
+    final result = await context.push<Plant>(
+      '/plant/${plant.permanentId}/edit',
+      extra: plant,
     );
     if (result != null && mounted) {
       context.read<PlantCrudProvider>().updatePlant(plant.permanentId, result);
@@ -786,12 +780,7 @@ class HomeScreenState extends State<HomeScreen>
                   if (selectedIds.isEmpty) return;
 
                   if (value == 'create_qr_codes') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (ctx) => const BatchQRCreationScreen(),
-                      ),
-                    );
+                    context.push('/batch-qr');
                   } else if (value == 'cleanup_old') {
                     await provider.cleanupUnusedPhotosForSelected(
                         selectedIds, context);
@@ -884,15 +873,11 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _navigateToSowingManagement() {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (ctx) => const SowingManagementScreen()));
+    context.push('/sowing');
   }
 
   void _navigateToCollectionManagement() {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (ctx) => const CollectionManagementScreen()));
+    context.push('/collection');
   }
 
   Future<void> _connectWeather(BuildContext context) async {
@@ -1043,12 +1028,7 @@ class HomeScreenState extends State<HomeScreen>
           }
         } else if (index == 2) {
           // Сканировать QR
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (ctx) => const QRScannerScreen(),
-            ),
-          );
+          context.push('/qr/scan');
         } else if (index == 3) {
           // Выход
           _showExitDialog();
@@ -1226,12 +1206,7 @@ class HomeScreenState extends State<HomeScreen>
             subtitle: const Text('Файлы и растения'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (ctx) => const QRManagementScreen(),
-                ),
-              );
+              context.push('/qr');
             },
           ),
 
@@ -1285,10 +1260,7 @@ class HomeScreenState extends State<HomeScreen>
             title: const Text('Статистика'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (ctx) => const StatisticsScreen()),
-              );
+              context.push('/statistics');
             },
           ),
         ],

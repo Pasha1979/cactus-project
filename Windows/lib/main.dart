@@ -1,17 +1,13 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'constants/app_constants.dart';
 import 'models/plant.dart';
-import 'screens/edit_plant_screen.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
-import 'screens/sowing_management_screen.dart';
-import 'screens/statistics_screen.dart';
-import 'screens/qr_management_screen.dart';
 import 'dart:io';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
-import 'screens/collection_management_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/welcome_screen.dart';
 import '../widgets/plant_cards.dart';
@@ -478,15 +474,9 @@ class HomeScreenState extends State<HomeScreen>
             } else if (index == 4) {
               _navigateToCollectionManagement();
             } else if (index == 5) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (ctx) => const StatisticsScreen()),
-              );
+              context.push('/statistics');
             } else if (index == 6) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (ctx) => const QRManagementScreen()),
-              );
+              context.push('/qr');
             } else if (index == 7) {
               final provider = context.read<PlantCrudProvider>();
               provider.clearSelections();
@@ -676,9 +666,9 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _openEditForm(Plant plant) async {
-    final result = await Navigator.push<Plant>(
-      context,
-      MaterialPageRoute(builder: (ctx) => EditPlantScreen(plant: plant)),
+    final result = await context.push<Plant>(
+      '/plant/${plant.permanentId}/edit',
+      extra: plant,
     );
     if (result != null && mounted) {
       context.read<PlantCrudProvider>().updatePlant(plant.permanentId, result);
@@ -1182,15 +1172,11 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _navigateToSowingManagement() {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (ctx) => const SowingManagementScreen()));
+    context.push('/sowing');
   }
 
   void _navigateToCollectionManagement() {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (ctx) => const CollectionManagementScreen()));
+    context.push('/collection');
   }
 
   void _confirmMassDelete(BuildContext context) {
