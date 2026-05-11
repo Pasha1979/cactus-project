@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 import 'gbif_occurrence.dart';
 import 'qr_code.dart';
+import '../core/utils/plant_status_mapper.dart';
 
 /// Безопасный парсинг единичной даты из JSON.
 /// Возвращает [DateTime] или null при ошибке/отсутствии значения.
@@ -76,13 +77,7 @@ class Plant {
   // === ПОЛЕ ДЛЯ QR КОДА ===
   QRCode? qrCode;                     // QR код растения (null если не создан)
 
-  static const statusOrder = {
-    'sown': 0,
-    'growing': 1,
-    'in_collection': 2,
-    'dead': 3,
-    'failed': 4,
-  };
+  // Удалено: statusOrder → используйте PlantStatusMapper.sortOrder(status)
 
   Plant({
     String? permanentId,
@@ -138,7 +133,7 @@ class Plant {
             lastModified ?? DateTime.now(), // ← Автоматически ставим время
         childrenIds = childrenIds ?? [];
 
-  int get statusPriority => statusOrder[status] ?? 5;
+  int get statusPriority => PlantStatusMapper.sortOrder(status);
 
   // === ГЕТТЕР ДЛЯ СИСТЕМЫ ПАРТИЙ ===
   // Возвращает aliveCount если задано вручную, иначе авторасчёт
@@ -313,22 +308,7 @@ class Plant {
       };
 
   factory Plant.fromJson(Map<String, dynamic> json) {
-    String status = json['status'].toString().trim().toLowerCase();
-
-    status = switch (status) {
-      'failed' => 'failed',
-      'sown' => 'sown',
-      'growing' => 'growing',
-      'in_collection' => 'in_collection',
-      'dead' => 'dead',
-      'не взошел' => 'failed',
-      'посеян' => 'sown',
-      'растёт' => 'growing',
-      'растет' => 'growing',
-      'в коллекции' => 'in_collection',
-      'погиб' => 'dead',
-      _ => json['status']
-    };
+    final String status = PlantStatusMapper.normalize(json['status']);
 
     return Plant(
       latinName: json['latinName'],
@@ -397,14 +377,7 @@ class Plant {
     )..permanentId = json['permanentId'];
   }
 
-  String get statusText => switch (status) {
-        'sown' => 'Посеян',
-        'growing' => 'Растёт',
-        'in_collection' => 'В коллекции',
-        'dead' => 'Погиб',
-        'failed' => 'Не взошел',
-        _ => 'Неизвестный статус',
-      };
+  String get statusText => PlantStatusMapper.toDisplayText(status);
 
   int get age {
     final currentYear = DateTime.now().year;
