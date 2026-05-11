@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'lib/utils/gbif_utils.dart';
+import 'lib/services/api/gbif_service.dart';
 
 /// Тестовый скрипт для проверки GBIF API
 void main() async {
@@ -72,7 +72,7 @@ void main() async {
         
         // Тестируем нашу функцию
         print('\n🔧 Тест нашей функции fetchGbifData:');
-        final gbifData = await fetchGbifData(testPlant);
+        final gbifData = await GbifService().fetchGbifData(testPlant);
         
         if (gbifData != null) {
           print('✅ Данные получены:');

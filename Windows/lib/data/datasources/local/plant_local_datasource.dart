@@ -1,58 +1,65 @@
 import 'package:hive/hive.dart';
 import '../../../data/models/plant_dto.dart';
+import 'plant_index_manager.dart';
 
-/// Локальный источник данных для растений (Hive)
+/// Локальный источник данных для растений (Hive) с индексным ускорением.
 class PlantLocalDataSource {
   final Box<PlantDto> _plantBox;
+  final PlantIndexManager? _indexManager;
 
-  PlantLocalDataSource(this._plantBox);
+  PlantLocalDataSource(
+    this._plantBox, {
+    PlantIndexManager? indexManager,
+  }) : _indexManager = indexManager;
 
-  /// Получить все растения
   Future<List<PlantDto>> getAllPlants() async {
     return _plantBox.values.toList();
   }
 
-  /// Получить растение по ID
   Future<PlantDto?> getPlantById(String id) async {
-    try {
-      return _plantBox.values.firstWhere(
-        (plant) => plant.permanentId == id,
-      );
-    } catch (e) {
-      return null;
-    }
+    return _plantBox.get(id);
   }
 
-  /// Добавить растение
   Future<void> addPlant(PlantDto plant) async {
     await _plantBox.put(plant.permanentId, plant);
+    _indexManager?.addPlant(plant);
   }
 
-  /// Обновить растение
   Future<void> updatePlant(PlantDto plant) async {
+    final oldPlant = _plantBox.get(plant.permanentId);
+    if (oldPlant != null) {
+      _indexManager?.removePlant(oldPlant);
+    }
     await _plantBox.put(plant.permanentId, plant);
+    _indexManager?.addPlant(plant);
   }
 
-  /// Удалить растение
   Future<void> deletePlant(String id) async {
+    final plant = _plantBox.get(id);
+    if (plant != null) {
+      _indexManager?.removePlant(plant);
+    }
     await _plantBox.delete(id);
   }
 
-  /// Найти растения по статусу
   Future<List<PlantDto>> getPlantsByStatus(String status) async {
-    return _plantBox.values
-        .where((plant) => plant.status == status)
-        .toList();
+    if (_indexManager != null) {
+      final ids = _indexManager!.getIdsByField('status', status);
+      return ids.map((id) => _plantBox.get(id)).whereType<PlantDto>().toList();
+    }
+    return _plantBox.values.where((plant) => plant.status == status).toList();
   }
 
-  /// Найти растения по категории
   Future<List<PlantDto>> getPlantsByCategory(String category) async {
+    if (_indexManager != null) {
+      final ids = _indexManager!.getIdsByField('category', category);
+      return ids.map((id) => _plantBox.get(id)).whereType<PlantDto>().toList();
+    }
     return _plantBox.values
         .where((plant) => plant.category == category)
         .toList();
   }
 
-  /// Поиск растений по названию
   Future<List<PlantDto>> searchPlants(String query) async {
     final lowerQuery = query.toLowerCase();
     return _plantBox.values
@@ -61,8 +68,12 @@ class PlantLocalDataSource {
         .toList();
   }
 
-  /// Очистить все данные
   Future<void> clearAll() async {
     await _plantBox.clear();
+    _indexManager?.rebuildIndex(_plantBox);
+  }
+
+  Future<void> rebuildIndex() async {
+    await _indexManager?.rebuildIndex(_plantBox);
   }
 }

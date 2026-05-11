@@ -17,16 +17,13 @@
 
 ## Текущий статус
 
-### Статус: ✅ Завершена
+### Статус: 🔄 В процессе
 
-**Текущий шаг:** Шаг 1.10: Разделение PlantProvider
-**Начало:** 2026-05-10
+**Текущий шаг:** Шаг 1.14: Финальное тестирование Фазы 1
+**Начало:** 2026-05-11
 **Фаза:** Фаза 1: Критические улучшения (P0)
 
-**Обоснование:** PlantProvider — монолит 2478 строк, содержащий 13 зон ответственности. Разделение необходимо для:
-- Упрощения тестирования
-- Уменьшения перестроений UI (ChangeNotifier)
-- Подготовки к чистой архитектуре
+**Обоснование:** Полная проверка работоспособности приложения на Android и Windows после всех рефакторингов 1.1–1.13 + 1.15.
 
 **Результат:**
 - И.1-И.4 ✅: Завершены ранее
@@ -116,6 +113,122 @@
 
 ---
 
+## Шаг 1.11: Разделение CloudStorageProvider (2026-05-11)
+
+**Фаза:** Фаза 1: Критические улучшения (P0)
+**Сложность:** Высокая
+**Время:** 2 дня
+**Статус:** ✅ Завершён
+
+**Результат:**
+- Старый CloudStorageProvider преобразован в фасад (`lib/providers/cloud_storage_provider.dart`)
+- Фасад делегирует работу 4 специализированным сервисам:
+  - `YandexAuthService` — OAuth2, токены, подключение
+  - `YandexDiskService` — HTTP-операции с Яндекс.Диск
+  - `SyncManager` — синхронизация данных (conflict resolution включён)
+  - `PhotoSyncService` — синхронизация фотографий
+- Локальный сервер для Windows OAuth2 встроен в `YandexAuthService._startLocalServer()`
+- Хранение токенов через `FlutterSecureStorage` встроено в `YandexAuthService`
+- Все экраны обновлены для работы с новой архитектурой
+- flutter analyze проходит без ошибок (Android + Windows)
+
+**Примечание:** Отдельные файлы `auth_service.dart`, `token_storage.dart`, `cloud_storage_service.dart`,
+`cloud_file.dart`, `conflict_resolver.dart`, `sync_status.dart`, `deep_link_handler.dart`,
+`local_server.dart`, `platform_adapter.dart` объединены по функциональности в 4 сервиса.
+
+---
+
+## Шаг 1.12: Разбиение PlantCardScreen (2026-05-11)
+
+**Фаза:** Фаза 1: Критические улучшения (P0)
+**Сложность:** Высокая
+**Время:** 2 дня
+**Статус:** ✅ Завершён
+
+**Результат:**
+- `plant_card_screen.dart` перенесён в `presentation/screens/plant_card/` (~1200 строк)
+- Созданы 6 вкладок в `presentation/screens/plant_card/tabs/`:
+  - `overview_tab.dart` — обзор растения (география, описание, синонимы)
+  - `care_tab.dart` — уход (погода, советы, действия)
+  - `history_tab.dart` — история и заметки
+  - `gallery_tab.dart` — галерея фото (с типизированными callback-ами)
+  - `distribution_tab.dart` — карта распространения + GBIF-данные
+  - `seedlings_tab.dart` — сеянцы (для витрин)
+- Созданы 7 виджетов в `presentation/screens/plant_card/widgets/`:
+  - `geography_section.dart`, `description_section.dart`, `synonyms_section.dart`
+  - `care_tips_section.dart`, `action_card.dart`
+  - `stat_card.dart`, `empty_gbif_state.dart`
+- Исправлены все deprecated API (`.withOpacity()` → `.withValues()`)
+- Исправлены info-сообщения (`prefer_final_fields`)
+- Разорвана циклическая зависимость `SeedlingsTab` → `PlantCardScreen` через callback
+- Все импорты обновлены (`plant_cards.dart`, `qr_scanner_screen.dart`)
+- flutter analyze: 0 errors, 0 warnings, 0 info (Android + Windows)
+- Сборка: `app-debug.apk` ✅, `my_cactus.exe` ✅
+
+---
+
+## Дополнительно: Hive индексы (выполнено при аудите 1.1–1.12)
+
+**Дата:** 2026-05-11
+**Статус:** ✅ Завершено
+
+**Что сделано:**
+- Создан `data/datasources/local/plant_index_manager.dart` — индексный слой поверх Hive
+- Индексы по `status`, `category`, `displayId` → списки `permanentId`
+- `PlantLocalDataSource.getPlantById` исправлен с `firstWhere` (O(n)) на `box.get(id)` (O(1))
+- `getPlantsByStatus` / `getPlantsByCategory` — O(1) по индексу + O(k) загрузка объектов
+- Авто-обновление индексов при CRUD-операциях
+- `DataMigrationManager._migratePlants` — `rebuildIndex()` после массовой миграции
+- Fallback к O(n) оставлен для случаев без индекса
+- Файлы синхронизированы Android ↔ Windows
+- `flutter analyze`: 0 errors, 0 warnings, 0 info (Android + Windows)
+- Сборка: `app-debug.apk` ✅, `my_cactus.exe` ✅
+
+**Урок:** Урок 18 добавлен в LESSONS_LEARNED.md
+
+---
+
+## Дополнительно: Шаг 1.13 — Сервисный слой API
+
+**Дата:** 2026-05-11
+**Статус:** ✅ Завершено
+
+**Что сделано:**
+- Создан `services/api/gbif_service.dart` — GBIF API сервис с кэшированием (7 дней)
+- Создан `services/api/llifle_service.dart` — Llifle.com парсер + интеграция GBIF
+- Создан `services/api/weather_service.dart` — OpenWeatherMap API сервис
+- Создан `models/gbif_occurrence.dart` — доменная модель GbifOccurrence
+- `GbifOccurrence` вынесен из `utils/gbif_utils.dart` в отдельную модель
+- Все `print` заменены на `AppLogger` (добавлен класс `AppLogger` в `core/logger/app_logger.dart`)
+- Удалены старые `utils/gbif_utils.dart`, `utils/llifle_utils.dart`, `utils/weather_service.dart`
+- Удалены мёртвые копии в `core/utils/`
+- Все импорты обновлены в Android и Windows
+- Тестовые скрипты `test_gbif.dart` и `test_gbif_integration.dart` обновлены
+- `flutter analyze`: 0 errors, 0 warnings, 0 info (Android + Windows)
+
+---
+
+## Дополнительно: Шаг 1.15 — DI-интеграция + закрытие TODO
+
+**Дата:** 2026-05-11
+**Статус:** ✅ Завершено
+
+**Что сделано:**
+- **1.15.1** ✅: SyncProvider, PhotoProvider, BatchProvider подключены к репозиториям через DI
+- **1.15.2** ✅: cleanupUnusedPhotosForSelected + deleteAllPhotosForSelected перенесены в PhotoProvider, PlantCrudProvider делегирует к ним
+- **1.15.3** ✅: exportSelectedToCSV реализован (экспорт в CSV с заголовками, SnackBar с результатом)
+- **1.15.4** ✅: SyncRepositoryImpl — комментарии обновлены (no-op для syncWithCloud оставлен, заглушка getSyncStatus)
+- **1.15.5** ✅: setLlifleAsMainPhoto в PhotoRepositoryImpl — TODO убран, реализация подтверждена
+- **1.15.6** ✅: ensureLocalPhotosExist — комментарий обновлён, метод оставлен в PlantCrudProvider (требует доступ к _plants)
+- **1.15.7** ✅: settings_box добавлен в HiveDatabase, WateringRepositoryImpl.getGlobalWateringDates/saveGlobalWateringDates реализованы через settingsBox
+- **1.15.8** ✅: QRCodeDto расширен полем filePath (@HiveField(5)), QRCodeRepositoryImpl обновлён, миграция обновлена
+- **1.15.9** ✅: BatchRepositoryImpl.createBatch/updateBatch реализованы
+- **1.15.10** ✅: flutter analyze — **0 errors, 0 warnings, 0 info** (Android + Windows)
+- **1.15.11** ✅: Все TODO(1.15.x) в коде обработаны — реализованы или заменены на комментарии
+- **1.15.12** ✅: PlantRepositoryImpl._mapToEntity — добавлен _safeJsonList для защиты от крашей при некорректном JSON
+
+---
+
 ## Предыдущие шаги (архив)
 
 ### Шаг 1.7: Создание Repository Pattern
@@ -161,7 +274,7 @@
 
 **Не выполнено (перенесено в отдельные шаги):**
 - Задача 1.6.10 (миграция SharedPreferences → Hive) → Шаг 1.8
-- Задача 1.6.11 (индексы для быстрого поиска) → отдельный шаг после Repository Pattern
+- Задача 1.6.11 (индексы для быстрого поиска) → ✅ Выполнена при аудите 1.1–1.12
 
 ---
 
@@ -286,16 +399,16 @@
 ## Общая информация о рефакторинге
 
 ### Текущая фаза
-Фаза 1: Критические улучшения (P0) — Фаза И ✅ завершена
+Фаза 1: Критические улучшения (P0) — Фаза И ✅ завершена, шаги 1.8-1.12 ✅ завершены
 
 ### Прогресс по фазе 1
-6/15 шагов (1.1-1.5 ✅, 1.6 ⚠️ частично, 1.7 ⚠️ частично + Фаза И ✅)
+12/15 шагов (1.1-1.5 ✅, 1.6 ⚠️ частично, 1.7 ⚠️ частично + Фаза И ✅, 1.8 ✅, 1.9 ✅, 1.10 ✅, 1.11 ✅, 1.12 ✅)
 
 ### Прогресс по фазе И
 4/4 подшага ✅ (И.1-И.4)
 
 ### Общий прогресс
-6/39 шагов завершено (33 шага плана + 6 шагов фазы И)
+12/39 шагов завершено (33 шага плана + 6 шагов фазы И)
 
 ### Оценка времени до завершения
 10.5-12.5 недель

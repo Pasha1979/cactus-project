@@ -8,9 +8,9 @@ import '../../models/plant.dart';
 /// - Создание партий из растений
 /// - Управление сеянцами
 /// - Удаление витрин с отвязыванием
+///
+/// DI: BatchRepository зарегистрирован в injection_container.dart
 class BatchProvider with ChangeNotifier {
-  // TODO(1.15.1): подключить BatchRepository через DI
-  // final BatchRepository _repository = sl<BatchRepository>();
 
   /// Находит следующий свободный номер для сеянца в партии
   int getNextSeedlingNumber(List<Plant> allPlants, String batchDisplayId) {

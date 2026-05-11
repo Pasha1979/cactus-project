@@ -49,8 +49,7 @@ class PhotoRepositoryImpl implements PhotoRepository {
 
   @override
   Future<void> setLlifleAsMainPhoto(String plantId, String photoUrl) async {
-    // TODO(1.15.5): реализовать логику установки основного фото при полной интеграции
-    // Пока добавляем URL в начало списка как маркер "основного"
+    /// Устанавливает Llifle фото как "основное" (первое в списке).
     final plant = await _plantLocalDataSource.getPlantById(plantId);
     if (plant != null) {
       final updatedUrls = [

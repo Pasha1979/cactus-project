@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,9 +9,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/config/app_constants.dart';
 import '../../domain/repositories/plant_repository.dart';
 import '../../injection_container.dart';
+import '../../models/gbif_occurrence.dart';
 import '../../models/plant.dart';
 import '../../models/qr_code.dart';
-import '../../utils/gbif_utils.dart';
+import 'photo_provider.dart';
 import 'wintering_provider.dart' show WinteringLogEntry;
 
 /// Провайдер для CRUD операций с растениями
@@ -34,7 +34,6 @@ class PlantCrudProvider with ChangeNotifier {
   final Set<String> _deletedLliflePhotos = {};
   Map<String, String?> _adultImages = {};
   bool _hasUnsavedChanges = false;
-  bool _isEnsuringPhotos = false;
 
   // Legacy-поля для обратной совместимости облачной синхронизации
   // (хранятся здесь для toJson/loadFromCloudJson, UI использует специализированные провайдеры)
@@ -105,40 +104,16 @@ class PlantCrudProvider with ChangeNotifier {
   }
 
   /// Очистить неиспользуемые фото у выбранных растений.
-  /// FIXME(1.15.2): перенести в PhotoProvider при рефакторинге.
+  /// Делегирует к PhotoProvider.cleanupUnusedPhotosForSelected.
   Future<void> cleanupUnusedPhotosForSelected(
       Set<String> selectedIds, BuildContext context) async {
     await createLocalBackup();
 
-    final photosDir = await _getPhotosDirectory();
-    final dir = Directory(photosDir);
-    if (!await dir.exists()) return;
-
-    final usedPaths = <String>{};
-
-    for (var plant in _plants) {
-      if (selectedIds.contains(plant.permanentId)) {
-        for (var photo in plant.userPhotos) {
-          if (!photo.startsWith('https://')) {
-            usedPaths.add(photo);
-          }
-        }
-      }
-    }
-
-    int deletedCount = 0;
-    final allLocalFiles = await dir.list().toList();
-
-    for (var fileEntity in allLocalFiles) {
-      if (fileEntity is File && !usedPaths.contains(fileEntity.path)) {
-        try {
-          await fileEntity.delete();
-          deletedCount++;
-        } catch (e) {
-          debugPrint('⚠️ Не удалось удалить: ${fileEntity.path}');
-        }
-      }
-    }
+    final photoProvider = sl<PhotoProvider>();
+    final deletedCount = await photoProvider.cleanupUnusedPhotosForSelected(
+      _plants,
+      selectedIds,
+    );
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -150,17 +125,21 @@ class PlantCrudProvider with ChangeNotifier {
   }
 
   /// Удалить все фото у выбранных растений.
-  /// FIXME(1.15.2): перенести в PhotoProvider при рефакторинге.
+  /// Делегирует удаление файлов к PhotoProvider, обновляет Plant модели.
   Future<void> deleteAllPhotosForSelected(
       Set<String> selectedIds, BuildContext context) async {
     await createLocalBackup();
 
-    for (var id in selectedIds) {
+    final photoProvider = sl<PhotoProvider>();
+    final updatedIds = await photoProvider.deleteAllPhotosForSelected(
+      _plants,
+      selectedIds,
+    );
+
+    for (var id in updatedIds) {
       final index = _plants.indexWhere((p) => p.permanentId == id);
       if (index == -1) continue;
-      // Очищаем userPhotos
       _plants[index] = _plants[index].copyWith(userPhotos: []);
-      // Сбрасываем adult image кэш
       _adultImages.remove(id);
       try {
         await _repository.updatePlant(_plants[index]);
@@ -169,8 +148,10 @@ class PlantCrudProvider with ChangeNotifier {
       }
     }
 
-    _hasUnsavedChanges = true;
-    notifyListeners();
+    if (updatedIds.isNotEmpty) {
+      _hasUnsavedChanges = true;
+      notifyListeners();
+    }
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -316,7 +297,7 @@ class PlantCrudProvider with ChangeNotifier {
 
     debugPrint('✅ Загружено и сохранено ${_plants.length} растений из облака');
 
-    await ensureLocalPhotosExist();
+    await sl<PhotoProvider>().ensureLocalPhotosExist(_plants);
     cleanupLocalPhotosAfterCloudLoad();
     invalidateAllCaches();
     notifyListeners();
@@ -1172,118 +1153,9 @@ class PlantCrudProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Проверить/закэшировать локальные фото после загрузки из облака.
-  ///
-  /// Скачивает cloud URL (https://...) в локальный кэш для offline-просмотра.
-  /// FIXME(1.15.6): перенести в PhotoSyncService при рефакторинге PhotoProvider.
+  /// Делегирует prefetch облачных фото к PhotoProvider.
   Future<void> ensureLocalPhotosExist() async {
-    if (_isEnsuringPhotos) {
-      debugPrint('⏸️ ensureLocalPhotosExist уже выполняется, пропускаем');
-      return;
-    }
-
-    _isEnsuringPhotos = true;
-    try {
-      final photosDir = await _getPhotosDirectory();
-      int cachedCount = 0;
-
-      debugPrint(
-          '🔄 ensureLocalPhotosExist запущен для ${_plants.length} растений');
-
-      for (final plant in _plants) {
-        for (var photo in plant.userPhotos) {
-          if (!photo.startsWith('http://') &&
-              !photo.startsWith('https://')) {
-            continue;
-          }
-          try {
-            final baseName = path.basename(photo.split('?').first);
-            final cacheFileName =
-                'cloud_${photo.hashCode.abs()}_$baseName';
-            final localPath = path.join(photosDir, cacheFileName);
-            final cachedFile = File(localPath);
-            if (await cachedFile.exists()) {
-              continue;
-            }
-
-            if (!await _validateCloudUrl(photo)) {
-              debugPrint('⚠️ Cloud URL недоступен, пропускаем: $photo');
-              continue;
-            }
-
-            await _downloadPhotoWithRetry(photo, localPath);
-            cachedCount++;
-          } catch (e) {
-            debugPrint(
-                '⚠️ Не удалось закешировать облачное фото $photo: $e');
-          }
-        }
-      }
-
-      debugPrint(
-          '✅ Prefetch завершён, новых закешированных фото: $cachedCount');
-      await _cleanupOldCache();
-    } finally {
-      _isEnsuringPhotos = false;
-    }
-  }
-
-  Future<void> _downloadPhotoWithRetry(
-      String url, String localPath) async {
-    for (int attempt = 0; attempt < 3; attempt++) {
-      try {
-        final response = await http.get(Uri.parse(url));
-        if (response.statusCode == 200) {
-          await File(localPath).writeAsBytes(response.bodyBytes);
-          return;
-        } else {
-          throw Exception('HTTP ${response.statusCode}');
-        }
-      } catch (e) {
-        if (attempt == 2) rethrow;
-        debugPrint(
-            '🔄 Попытка ${attempt + 1} для скачивания $url не удалась: $e');
-        await Future.delayed(Duration(seconds: attempt + 1));
-      }
-    }
-  }
-
-  Future<bool> _validateCloudUrl(String url) async {
-    try {
-      final response = await http.head(Uri.parse(url));
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<void> _cleanupOldCache() async {
-    try {
-      final photosDir = await _getPhotosDirectory();
-      final dir = Directory(photosDir);
-      if (!await dir.exists()) return;
-
-      final files = await dir.list().toList();
-      int deletedCount = 0;
-
-      for (var file in files) {
-        if (file is File && file.path.contains('cloud_')) {
-          final stat = await file.stat();
-          if (DateTime.now().difference(stat.modified).inDays > 30) {
-            await file.delete();
-            deletedCount++;
-            debugPrint('🗑️ Удален старый кэш: ${file.path}');
-          }
-        }
-      }
-
-      if (deletedCount > 0) {
-        debugPrint(
-            '🧹 Очистка кэша завершена: удалено $deletedCount старых файлов');
-      }
-    } catch (e) {
-      debugPrint('⚠️ Ошибка очистки кэша: $e');
-    }
+    await sl<PhotoProvider>().ensureLocalPhotosExist(_plants);
   }
 
   Future<void> _deletePhotoFromStorage(String photoPath) async {
@@ -1310,7 +1182,49 @@ class PlantCrudProvider with ChangeNotifier {
       );
       return;
     }
-    debugPrint('TODO(1.15.3): exportSelectedToCSV');
+
+    try {
+      final selectedPlants = _plants
+          .where((p) => _selectedIds.contains(p.permanentId))
+          .toList();
+
+      final buffer = StringBuffer();
+      buffer.writeln(
+          'permanentId,displayId,latinName,status,year,customNumber,category');
+      for (final plant in selectedPlants) {
+        buffer.writeln(
+            '${plant.permanentId},${plant.displayId},${plant.latinName},${plant.status},${plant.year},${plant.customNumber},${plant.category}');
+      }
+
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          'plant_export_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final filePath = '${directory.path}/$fileName';
+      final file = File(filePath);
+      await file.writeAsString(buffer.toString(), encoding: utf8);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('📄 Экспортировано ${selectedPlants.length} растений'),
+            action: SnackBarAction(
+              label: 'Открыть',
+              onPressed: () async {
+                // Показываем путь пользователю
+                debugPrint('CSV сохранён: $filePath');
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Ошибка экспорта CSV: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка экспорта: $e')),
+        );
+      }
+    }
   }
 
   /// Проверить уникальность номера

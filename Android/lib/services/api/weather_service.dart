@@ -1,61 +1,65 @@
-
 import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/plant.dart'; // Импорт твоей модели Plant для типа растения.
 
+import '../../core/logger/app_logger.dart';
+import '../../models/plant.dart';
+
+/// Сервис для получения погодных данных через OpenWeatherMap API.
+///
+/// Отвечает за:
+/// - Определение геолокации
+/// - Запрос текущей погоды по координатам или городу
+/// - Кэширование на 1 час
+/// - Формирование рекомендаций по поливу
 class WeatherService {
+  static const String _tag = 'WEATHER';
   static const String _apiKey = '7fd64eefdd81d17943bbcd4e17a87e5d';
   static const String _baseUrl =
       'https://api.openweathermap.org/data/2.5/weather';
   static const String _cacheKey = 'weather_cache';
-  static const Duration _cacheDuration =
-      Duration(hours: 1); // Кэш на час — экономит запросы.
+  static const Duration _cacheDuration = Duration(hours: 1);
 
-  final Dio _dio = Dio(); // Твой Dio — для HTTP.
+  final Dio _dio = Dio();
+
+  // ==================== ГЕОЛОКАЦИЯ ====================
 
   Future<Position?> getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      // Fallback: Покажи диалог "Включи GPS" — но для простоты возвращаем null.
-      return null;
-    }
+    if (!serviceEnabled) return null;
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return null; // Пользователь отказал — используй ручной город позже.
-      }
+      if (permission == LocationPermission.denied) return null;
     }
-
-    if (permission == LocationPermission.deniedForever) {
-      return null; // Отказ навсегда.
-    }
+    if (permission == LocationPermission.deniedForever) return null;
 
     return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high);
   }
 
+  // ==================== ПОГОДА ====================
+
   Future<Map<String, dynamic>?> getCurrentWeather(
       double? lat, double? lon) async {
-    if (lat == null || lon == null) {
-      return null; // Fallback null — handle in caller (PlantProvider.getWeatherAdvice).
-    }
+    if (lat == null || lon == null) return null;
 
     final prefs = await SharedPreferences.getInstance();
     final cached = prefs.getString(_cacheKey);
     final cacheTime = prefs.getInt('${_cacheKey}_time') ?? 0;
+
     if (cached != null &&
         DateTime.now().millisecondsSinceEpoch - cacheTime <
             _cacheDuration.inMilliseconds) {
-      return jsonDecode(cached); // Кэш свежий — возвращаем.
+      return jsonDecode(cached);
     }
 
     try {
       final response = await _dio.get(
-        '$_baseUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric', // units=metric для °C.
+        '$_baseUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric',
       );
       if (response.statusCode == 200) {
         final data = response.data;
@@ -64,27 +68,28 @@ class WeatherService {
             '${_cacheKey}_time', DateTime.now().millisecondsSinceEpoch);
         return data;
       }
-    } catch (e) {
-      print('Ошибка погоды: $e'); // Лог для дебага.
+    } catch (e, stack) {
+      AppLogger.error('Ошибка погоды', error: e, stackTrace: stack, tag: _tag);
     }
-    return null; // Ошибка — null.
+    return null;
   }
 
   Future<Map<String, dynamic>?> getWeatherByCity(String city) async {
-    if (city.isEmpty) return null; // Fallback if no city.
+    if (city.isEmpty) return null;
 
     final prefs = await SharedPreferences.getInstance();
     final cached = prefs.getString('${_cacheKey}_city_$city');
     final cacheTime = prefs.getInt('${_cacheKey}_time_city_$city') ?? 0;
+
     if (cached != null &&
         DateTime.now().millisecondsSinceEpoch - cacheTime <
             _cacheDuration.inMilliseconds) {
-      return jsonDecode(cached); // Кэш свежий — возвращаем.
+      return jsonDecode(cached);
     }
 
     try {
       final response = await _dio.get(
-        '$_baseUrl?q=$city&appid=$_apiKey&units=metric', // q=city for name-based query.
+        '$_baseUrl?q=$city&appid=$_apiKey&units=metric',
       );
       if (response.statusCode == 200) {
         final data = response.data;
@@ -93,20 +98,22 @@ class WeatherService {
             DateTime.now().millisecondsSinceEpoch);
         return data;
       }
-    } catch (e) {
-      print('Ошибка погоды по городу "$city": $e'); // Лог для дебага.
+    } catch (e, stack) {
+      AppLogger.error('Ошибка погоды по городу "$city"',
+          error: e, stackTrace: stack, tag: _tag);
     }
-    return null; // Ошибка — null.
+    return null;
   }
 
+  // ==================== РЕКОМЕНДАЦИИ ====================
+
   String getWateringAdvice(Map<String, dynamic>? weather, Plant plant) {
-    if (weather == null) return 'Проверьте погоду вручную.'; // Fallback.
+    if (weather == null) return 'Проверьте погоду вручную.';
 
     final temp = (weather['main']['temp'] as num?)?.toDouble() ?? 20.0;
     final humidity = (weather['main']['humidity'] as num?)?.toDouble() ?? 50.0;
-    final rain = weather['weather'][0]['main'] == 'Rain'; // Осадки.
-    bool isSensitive = plant.category ==
-        'purchased'; // Купленные — строже (порог 70% вместо 60%).
+    final rain = weather['weather'][0]['main'] == 'Rain';
+    final isSensitive = plant.category == 'purchased';
 
     if (rain || humidity > (isSensitive ? 70 : 60)) {
       return 'Влажная погода — отложите полив на 1–2 дня, чтобы избежать гнили.';

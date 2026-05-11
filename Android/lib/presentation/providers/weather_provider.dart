@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/plant.dart';
-import '../../utils/weather_service.dart';
+import '../../services/api/weather_service.dart';
 
 /// Провайдер для погодных данных и рекомендаций
 ///
@@ -12,7 +12,7 @@ import '../../utils/weather_service.dart';
 /// - Советы по поливу на основе погоды
 class WeatherProvider with ChangeNotifier {
   String? _city;
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   String? get city => _city;
   bool get isLoading => _isLoading;

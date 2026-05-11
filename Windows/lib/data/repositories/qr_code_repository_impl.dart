@@ -45,7 +45,7 @@ class QRCodeRepositoryImpl implements QRCodeRepository {
     return QRCodeFile(
       id: dto.plantId,
       fileName: dto.plantName,
-      filePath: '', // TODO(1.15.8): реализовать хранение пути при полной интеграции
+      filePath: dto.filePath ?? '',
       createdAt: dto.createdAt,
       plantIds: [dto.plantId],
       pageFormat: 'A4',
@@ -62,6 +62,7 @@ class QRCodeRepositoryImpl implements QRCodeRepository {
       permanentId: entity.id,
       createdAt: entity.createdAt,
       isActive: true,
+      filePath: entity.filePath.isNotEmpty ? entity.filePath : null,
     );
   }
 }

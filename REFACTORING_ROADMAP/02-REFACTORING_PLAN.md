@@ -235,7 +235,7 @@ dev_dependencies:
 1.6.8 Запустить build_runner для генерации адаптеров
 1.6.9 Инициализировать Hive в main.dart
 1.6.10 Создать тестовую миграцию SharedPreferences → Hive
-1.6.11 Добавить индексы для быстрого поиска (по permanentId, displayId, статусу)
+1.6.11 ✅ Добавить индексы для быстрого поиска (по permanentId, displayId, статусу, категории)
 
 **Файлы:**
 - `data/models/plant_dto.dart`
@@ -244,6 +244,8 @@ dev_dependencies:
 - `data/models/wintering_log_entry_dto.dart`
 - `data/models/gbif_occurrence_dto.dart`
 - `data/datasources/local/hive_database.dart`
+- `data/datasources/local/plant_index_manager.dart`
+- `data/datasources/local/plant_local_datasource.dart` (с индексной поддержкой)
 
 **Проверка:**
 - build_runner прошел без ошибок
@@ -513,8 +515,8 @@ dev_dependencies:
 1.12.2 Создать presentation/screens/plant_card/tabs/overview_tab.dart
 1.12.3 Создать presentation/screens/plant_card/tabs/care_tab.dart
 1.12.4 Создать presentation/screens/plant_card/tabs/gallery_tab.dart
-1.12.5 Создать presentation/screens/plant_card/tabs/notes_tab.dart
-1.12.6 Создать presentation/screens/plant_card/tabs/map_tab.dart
+1.12.5 Создать presentation/screens/plant_card/tabs/history_tab.dart (бывший notes_tab — содержит историю, заметки и статистику)
+1.12.6 Создать presentation/screens/plant_card/tabs/distribution_tab.dart (бывший map_tab — содержит карту распространения + GBIF-данные)
 1.12.7 Создать presentation/screens/plant_card/tabs/seedlings_tab.dart
 1.12.8 Создать виджеты для PlantCardScreen
 1.12.9 Перенести логику из старого PlantCardScreen
@@ -526,8 +528,8 @@ dev_dependencies:
 - `presentation/screens/plant_card/tabs/overview_tab.dart` (~250 строк)
 - `presentation/screens/plant_card/tabs/care_tab.dart` (~300 строк)
 - `presentation/screens/plant_card/tabs/gallery_tab.dart` (~250 строк)
-- `presentation/screens/plant_card/tabs/notes_tab.dart` (~200 строк)
-- `presentation/screens/plant_card/tabs/map_tab.dart` (~200 строк)
+- `presentation/screens/plant_card/tabs/history_tab.dart` (~200 строк)
+- `presentation/screens/plant_card/tabs/distribution_tab.dart` (~600 строк)
 - `presentation/screens/plant_card/tabs/seedlings_tab.dart` (~200 строк)
 - Виджеты в `presentation/screens/plant_card/widgets/`
 
@@ -540,20 +542,24 @@ dev_dependencies:
 
 ### 1.13 Создание сервисного слоя для API (1 день)
 
+> **Рекомендуемый порядок:** После 1.13 сразу выполнить **1.15** (DI-интеграция + закрытие TODO), пока контекст шагов 1.8–1.12 свеж. Финальное тестирование (**1.14**) оставить на конец Фазы 1.
+
 **Задачи:**
-1.13.1 Создать services/api/gbif_service.dart
-1.13.2 Создать services/api/llifle_service.dart
-1.13.3 Создать services/api/weather_service.dart
-1.13.4 Перенести логику из utils/gbif_utils.dart
-1.13.5 Перенести логику из utils/llifle_utils.dart
-1.13.6 Перенести логику из utils/weather_service.dart
-1.13.7 Обновить провайдеры для использования сервисов
-1.13.8 Удалить старые utils
+1.13.1 ✅ Создать services/api/gbif_service.dart
+1.13.2 ✅ Создать services/api/llifle_service.dart
+1.13.3 ✅ Создать services/api/weather_service.dart
+1.13.4 ✅ Перенести логику из utils/gbif_utils.dart
+1.13.5 ✅ Перенести логику из utils/llifle_utils.dart
+1.13.6 ✅ Перенести логику из utils/weather_service.dart
+1.13.7 ✅ Обновить провайдеры для использования сервисов
+1.13.8 ✅ Удалить старые utils
 
 **Файлы:**
 - `services/api/gbif_service.dart`
 - `services/api/llifle_service.dart`
 - `services/api/weather_service.dart`
+- `models/gbif_occurrence.dart` (вынесен из utils)
+- `core/logger/app_logger.dart` (добавлен класс AppLogger)
 
 **Проверка:**
 - flutter analyze проходит без ошибок
@@ -582,26 +588,30 @@ dev_dependencies:
 
 ### 1.15 Завершение Repository Pattern и DI-интеграция (1-1.5 дня)
 
-**Цель:** Закрыть все оставшиеся TODO из пройденных шагов 1.8–1.11, которые не были реализованы.
+> **Рекомендуемое размещение:** Выполнять **сразу после 1.13**, пока контекст шагов 1.8–1.12 свеж. Не откладывать до 1.14.
+
+**Цель:** Закрыть все оставшиеся TODO из пройденных шагов 1.8–1.12, которые не были реализованы.
 
 **Задачи:**
-1.15.1 Подключить PhotoProvider, BatchProvider, SyncProvider к репозиториям через DI (TODO из photo_provider.dart, batch_provider.dart, sync_provider.dart)
-1.15.2 Реализовать cleanupUnusedPhotosForSelected и deleteAllPhotosForSelected в PhotoProvider (TODO из plant_crud_provider.dart)
-1.15.3 Реализовать exportSelectedToCSV в PlantCrudProvider или отдельном сервисе (TODO из plant_crud_provider.dart)
-1.15.4 Интегрировать SyncRepositoryImpl с SyncManager — реализовать syncWithCloud и getSyncStatus (TODO из sync_repository_impl.dart)
-1.15.5 Реализовать setLlifleAsMainPhoto в PhotoRepositoryImpl — добавить поле mainLliflePhotoUrl в PlantDto (TODO из photo_repository_impl.dart)
-1.15.6 Перенести кэширование cloud-фото из PlantCrudProvider в PhotoSyncService, убрать FIXME (TODO из plant_crud_provider.dart)
-1.15.7 Реализовать settings_box в Hive для globalWateringDates (TODO из watering_repository_impl.dart)
-1.15.8 Расширить QRCodeDto полем filePath — реализовать миграцию путей к PDF файлам (TODO из qr_code_repository_impl.dart, data_migration_manager.dart)
-1.15.9 Реализовать createBatch/updateBatch в BatchRepositoryImpl — бизнес-логика создания партий через PlantDto (TODO из batch_repository_impl.dart)
-1.15.10 Проверить flutter analyze — оба проекта
-1.15.11 Обновить TODO(1.15.x) в коде — заменить на реализацию
+1.15.1 ✅ Подключить PhotoProvider, BatchProvider, SyncProvider к репозиториям через DI
+1.15.2 ✅ Реализовать cleanupUnusedPhotosForSelected и deleteAllPhotosForSelected в PhotoProvider
+1.15.3 ✅ Реализовать exportSelectedToCSV в PlantCrudProvider или отдельном сервисе
+1.15.4 ✅ Интегрировать SyncRepositoryImpl с SyncManager — реализовать syncWithCloud и getSyncStatus
+1.15.5 ✅ Реализовать setLlifleAsMainPhoto в PhotoRepositoryImpl
+1.15.6 ✅ Перенести кэширование cloud-фото из PlantCrudProvider в PhotoSyncService, убрать FIXME
+1.15.7 ✅ Реализовать settings_box в Hive для globalWateringDates
+1.15.8 ✅ Расширить QRCodeDto полем filePath — реализовать миграцию путей к PDF файлам
+1.15.9 ✅ Реализовать createBatch/updateBatch в BatchRepositoryImpl
+1.15.10 ✅ Проверить flutter analyze — оба проекта
+1.15.11 ✅ Обновить TODO(1.15.x) в коде — заменить на реализацию
+1.15.12 ✅ Оптимизировать `PlantRepositoryImpl._mapToEntity`: добавить `_safeJsonList`
 
 **Файлы:**
 - `presentation/providers/photo_provider.dart`
 - `presentation/providers/batch_provider.dart`
 - `presentation/providers/sync_provider.dart`
 - `presentation/providers/plant_crud_provider.dart`
+- `data/repositories/plant_repository_impl.dart` (оптимизация 1.15.12)
 - `data/repositories/sync_repository_impl.dart`
 - `data/repositories/photo_repository_impl.dart`
 - `data/repositories/watering_repository_impl.dart`

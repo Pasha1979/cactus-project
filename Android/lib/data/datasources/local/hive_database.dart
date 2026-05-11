@@ -11,12 +11,16 @@ class HiveDatabase {
   static const String _notesBoxName = 'notes_box';
   static const String _winteringLogsBoxName = 'wintering_logs_box';
   static const String _gbifCacheBoxName = 'gbif_cache_box';
+  static const String _plantIndexBoxName = 'plant_index_box';
+  static const String _settingsBoxName = 'settings_box';
 
   static Box<PlantDto>? _plantsBox;
   static Box<QRCodeDto>? _qrCodesBox;
   static Box<NoteDto>? _notesBox;
   static Box<WinteringLogEntryDto>? _winteringLogsBox;
   static Box<GbifOccurrenceDto>? _gbifCacheBox;
+  static Box<List<dynamic>>? _plantIndexBox;
+  static Box<String>? _settingsBox;
 
   static bool _isInitialized = false;
   static bool _isInitializing = false;
@@ -52,6 +56,8 @@ class HiveDatabase {
       _notesBox = await Hive.openBox<NoteDto>(_notesBoxName);
       _winteringLogsBox = await Hive.openBox<WinteringLogEntryDto>(_winteringLogsBoxName);
       _gbifCacheBox = await Hive.openBox<GbifOccurrenceDto>(_gbifCacheBoxName);
+      _plantIndexBox = await Hive.openBox<List<dynamic>>(_plantIndexBoxName);
+      _settingsBox = await Hive.openBox<String>(_settingsBoxName);
 
       _isInitialized = true;
     } finally {
@@ -112,6 +118,22 @@ class HiveDatabase {
     return _gbifCacheBox!;
   }
 
+  /// Получить коробку индексов растений
+  static Box<List<dynamic>> get plantIndexBox {
+    if (_plantIndexBox == null) {
+      throw Exception('Hive not initialized. Call initialize() first.');
+    }
+    return _plantIndexBox!;
+  }
+
+  /// Получить коробку настроек
+  static Box<String> get settingsBox {
+    if (_settingsBox == null) {
+      throw Exception('Hive not initialized. Call initialize() first.');
+    }
+    return _settingsBox!;
+  }
+
   /// Закрыть все коробки и сбросить состояние
   static Future<void> close() async {
     await _plantsBox?.close();
@@ -119,12 +141,16 @@ class HiveDatabase {
     await _notesBox?.close();
     await _winteringLogsBox?.close();
     await _gbifCacheBox?.close();
+    await _plantIndexBox?.close();
+    await _settingsBox?.close();
 
     _plantsBox = null;
     _qrCodesBox = null;
     _notesBox = null;
     _winteringLogsBox = null;
     _gbifCacheBox = null;
+    _plantIndexBox = null;
+    _settingsBox = null;
     _isInitialized = false;
   }
 
@@ -135,5 +161,7 @@ class HiveDatabase {
     await _notesBox?.clear();
     await _winteringLogsBox?.clear();
     await _gbifCacheBox?.clear();
+    await _plantIndexBox?.clear();
+    await _settingsBox?.clear();
   }
 }

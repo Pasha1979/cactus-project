@@ -1,5 +1,5 @@
 import 'package:uuid/uuid.dart';
-import '../utils/gbif_utils.dart';
+import 'gbif_occurrence.dart';
 import 'qr_code.dart';
 
 class Plant {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../presentation/providers/providers.dart';
-import 'plant_card_screen.dart';
+import '../presentation/screens/plant_card/plant_card_screen.dart';
 
 /// Экран сканирования QR-кодов с камеры
 class QRScannerScreen extends StatefulWidget {

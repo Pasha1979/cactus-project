@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/config/app_constants.dart';
 import '../../models/qr_code_file.dart';
 import '../datasources/local/hive_database.dart';
+import '../datasources/local/plant_index_manager.dart';
 import '../models/plant_dto.dart';
 import '../models/qr_code_dto.dart';
 
@@ -170,6 +171,11 @@ class DataMigrationManager {
     }
 
     print('✅ Перенесено растений: $migratedCount/${plantsJson.length}');
+
+    // Перестроить индексы после массовой миграции
+    final indexManager = PlantIndexManager(HiveDatabase.plantIndexBox);
+    await indexManager.rebuildIndex(box);
+    print('✅ Индексы перестроены после миграции');
   }
 
   /// Конвертирует Map from JSON в PlantDto
@@ -286,7 +292,7 @@ class DataMigrationManager {
           permanentId: file.plantIds.isNotEmpty ? file.plantIds.first : file.id,
           createdAt: file.createdAt,
           isActive: true,
-          // TODO(1.15.8): filePath будет заполнен при наличии реальных путей
+          filePath: file.filePath.isNotEmpty ? file.filePath : null,
         );
         await box.put(dto.plantId, dto);
       }

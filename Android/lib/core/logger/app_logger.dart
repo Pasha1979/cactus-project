@@ -79,3 +79,21 @@ void logWithCategory(LogCategory category, String message, {dynamic error, Stack
   logger.d('$categoryPrefix $message', error: error, stackTrace: stackTrace);
 }
 
+/// Удобная обёртка для логирования с тегом.
+class AppLogger {
+  static void api(String message, {String? tag}) =>
+      logger.i('${tag != null ? '[$tag] ' : ''}$message');
+
+  static void db(String message, {String? tag}) =>
+      logger.d('${tag != null ? '[$tag] ' : ''}$message');
+
+  static void ui(String message, {String? tag}) =>
+      logger.d('${tag != null ? '[$tag] ' : ''}$message');
+
+  static void warning(String message, {String? tag, dynamic error, StackTrace? stackTrace}) =>
+      logger.w('${tag != null ? '[$tag] ' : ''}$message', error: error, stackTrace: stackTrace);
+
+  static void error(String message, {String? tag, dynamic error, StackTrace? stackTrace}) =>
+      logger.e('${tag != null ? '[$tag] ' : ''}$message', error: error, stackTrace: stackTrace);
+}
+

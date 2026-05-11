@@ -4,6 +4,7 @@ import 'core/network/network_info.dart';
 import 'data/datasources/local/gbif_cache_local_datasource.dart';
 import 'data/datasources/local/hive_database.dart';
 import 'data/datasources/local/note_local_datasource.dart';
+import 'data/datasources/local/plant_index_manager.dart';
 import 'data/datasources/local/plant_local_datasource.dart';
 import 'data/datasources/local/qr_code_local_datasource.dart';
 import 'data/datasources/local/wintering_local_datasource.dart';
@@ -43,7 +44,10 @@ Future<void> init() async {
   // ==================== DATA SOURCES ====================
   // Регистрируем как LazySingleton — создаются при первом обращении
   sl.registerLazySingleton(
-    () => PlantLocalDataSource(HiveDatabase.plantsBox),
+    () => PlantLocalDataSource(
+      HiveDatabase.plantsBox,
+      indexManager: PlantIndexManager(HiveDatabase.plantIndexBox),
+    ),
   );
   sl.registerLazySingleton(
     () => NoteLocalDataSource(HiveDatabase.notesBox),

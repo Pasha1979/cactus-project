@@ -1,5 +1,5 @@
-import 'lib/utils/gbif_utils.dart';
-import 'lib/utils/llifle_utils.dart';
+import 'lib/services/api/gbif_service.dart';
+import 'lib/services/api/llifle_service.dart';
 
 /// Тест интеграции GBIF с полной цепочкой обработки
 void main() async {
@@ -11,7 +11,7 @@ void main() async {
   try {
     // Шаг 1: Прямой запрос к GBIF API
     print('📡 Шаг 1: Прямой запрос к GBIF API');
-    final gbifData = await fetchGbifData(testPlant);
+    final gbifData = await GbifService().fetchGbifData(testPlant);
     
     if (gbifData != null) {
       print('✅ GBIF данные получены:');
@@ -46,7 +46,7 @@ void main() async {
     }
     
     print('\n🔧 Шаг 2: Полная цепочка fetchPlantData');
-    final fullData = await fetchPlantData(testPlant);
+    final fullData = await LlifleService().fetchPlantData(testPlant);
     
     if (fullData != null) {
       print('✅ Полные данные получены:');

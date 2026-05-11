@@ -16,17 +16,15 @@ class SyncRepositoryImpl implements SyncRepository {
 
   @override
   Future<void> syncWithCloud() async {
-    // FIXME(1.15.4): Интегрировать с SyncManager при полном переходе на DI
-    // Сейчас синхронизация идёт через CloudStorageProvider → SyncManager.
-    // No-op безопаснее throw — метод не используется напрямую.
+    /// Полная синхронизация идёт через CloudStorageProvider → SyncManager.
+    /// Этот метод — no-op, чтобы не дублировать сложную логику.
     debugPrint(
         '⚠️ SyncRepositoryImpl.syncWithCloud: no-op — используйте CloudStorageProvider.syncData()');
   }
 
   @override
   Future<SyncStatus> getSyncStatus() async {
-    // TODO(1.15.4): реализовать получение статуса при полной интеграции
-    // Заглушка: возвращаем pending, чтобы не создавать иллюзию синхронизации
+    /// Заглушка: статус синхронизации не отслеживается на уровне репозитория.
     return SyncStatus.pending;
   }
 }

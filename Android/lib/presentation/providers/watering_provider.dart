@@ -13,7 +13,7 @@ import '../../models/plant.dart';
 /// - Уведомления о поливе
 class WateringProvider with ChangeNotifier {
   List<DateTime> _globalWateringDates = [];
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   /// Загрузка globalWateringDates из SharedPreferences
   Future<void> load() async {

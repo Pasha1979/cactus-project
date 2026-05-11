@@ -1,11 +1,16 @@
 import 'package:flutter/foundation.dart';
 
+import 'dart:convert';
+
 import '../../domain/repositories/watering_repository.dart';
+import '../datasources/local/hive_database.dart';
 import '../datasources/local/plant_local_datasource.dart';
 
 /// Реализация WateringRepository с использованием Hive (через PlantDto)
 class WateringRepositoryImpl implements WateringRepository {
   final PlantLocalDataSource _plantLocalDataSource;
+
+  static const String _globalWateringKey = 'global_watering_dates';
 
   WateringRepositoryImpl(this._plantLocalDataSource);
 
@@ -37,16 +42,25 @@ class WateringRepositoryImpl implements WateringRepository {
 
   @override
   Future<List<DateTime>> getGlobalWateringDates() async {
-    // TODO(1.15.7): реализовать глобальное хранилище поливов через settings_box в Hive
-    return [];
+    final box = HiveDatabase.settingsBox;
+    final jsonStr = box.get(_globalWateringKey);
+    if (jsonStr == null) return [];
+    try {
+      final list = jsonDecode(jsonStr) as List<dynamic>;
+      return list
+          .map((e) => DateTime.tryParse(e as String))
+          .whereType<DateTime>()
+          .toList();
+    } catch (e) {
+      debugPrint('Ошибка чтения globalWateringDates: $e');
+      return [];
+    }
   }
 
   @override
   Future<void> saveGlobalWateringDates(List<DateTime> dates) async {
-    // FIXME(1.15.7): Реализовать при создании settings_box в Hive
-    // Сейчас не используется — WateringProvider работает напрямую с SharedPreferences.
-    // No-op безопаснее throw — метод не вызывается из UI.
-    debugPrint(
-        '⚠️ WateringRepositoryImpl.saveGlobalWateringDates: no-op — реализация отложена');
+    final box = HiveDatabase.settingsBox;
+    final jsonStr = jsonEncode(dates.map((d) => d.toIso8601String()).toList());
+    await box.put(_globalWateringKey, jsonStr);
   }
 }

@@ -1,0 +1,529 @@
+import 'dart:convert';
+
+import 'package:html/dom.dart';
+import 'package:html/parser.dart' as html_parser;
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../core/logger/app_logger.dart';
+import 'gbif_service.dart';
+
+/// Сервис для получения данных о растениях с Llifle.com.
+///
+/// Отвечает за:
+/// - Поиск растения по латинскому названию
+/// - Парсинг HTML страницы вида
+/// - Извлечение фото, описания, ареала, синонимов, советов по уходу
+/// - Интеграция с GBIF для обогащения данных
+class LlifleService {
+  static const String _tag = 'LLIFLE';
+  static const String _cachePrefix = 'plant_data_';
+  static const int _maxRetries = 3;
+  static const Duration _retryDelay = Duration(seconds: 2);
+
+  final GbifService _gbifService;
+
+  LlifleService({GbifService? gbifService})
+      : _gbifService = gbifService ?? GbifService();
+
+  // ==================== ПУБЛИЧНЫЙ API ====================
+
+  /// Получить данные о растении с Llifle + обогащение GBIF.
+  ///
+  /// Сначала проверяет кэш, затем делает HTTP-запрос к Llifle,
+  /// парсит HTML и обогащает данными из GBIF.
+  Future<Map<String, dynamic>?> fetchPlantData(String latinName) async {
+    final prefs = await SharedPreferences.getInstance();
+    final searchName = latinName.toLowerCase().trim();
+    final cachedData = prefs.getString('$_cachePrefix$searchName');
+
+    // Проверяем кэш
+    if (cachedData != null) {
+      AppLogger.api('Найдены кэшированные данные для $searchName', tag: _tag);
+      final data = jsonDecode(cachedData);
+      // Поддержка старого формата с photoUrl
+      if (data['photoUrl'] != null && data['photoUrls'] == null) {
+        data['photoUrls'] = [data['photoUrl']];
+      }
+      if (data['photoUrls'] is List && (data['photoUrls'] as List).isNotEmpty) {
+        AppLogger.api('Кэшированные photoUrls: ${data['photoUrls']}', tag: _tag);
+        return data;
+      }
+      AppLogger.api(
+          'Кэшированные данные не содержат валидных photoUrls, запрашиваем заново',
+          tag: _tag);
+    }
+
+    // Заголовки для HTTP-запросов
+    final headers = {
+      'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+          '(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+      'Accept':
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Referer': 'https://llifle.com/',
+      'Accept-Language': 'en-US,en;q=0.9',
+    };
+
+    final filterUrl =
+        'https://llifle.com/Encyclopedia/CACTI/Species/all/1/100/?filter=$searchName';
+    AppLogger.api('Поиск данных с фильтром: $filterUrl', tag: _tag);
+
+    int retries = 0;
+    bool fetched = false;
+    String? responseBody;
+
+    // Попытка загрузки страницы с фильтром
+    while (retries < _maxRetries && !fetched) {
+      try {
+        final response = await http.get(Uri.parse(filterUrl), headers: headers);
+        AppLogger.api('HTTP статус: ${response.statusCode}', tag: _tag);
+        if (response.statusCode != 200 || response.body.isEmpty) {
+          AppLogger.warning(
+              'Страница не загружена: статус ${response.statusCode}, '
+              'причина: ${response.reasonPhrase}',
+              tag: _tag);
+          throw Exception('Не удалось загрузить страницу');
+        }
+        responseBody = response.body;
+        fetched = true;
+        AppLogger.api(
+            'Страница успешно загружена, длина ответа: ${responseBody.length}',
+            tag: _tag);
+      } catch (e) {
+        retries++;
+        AppLogger.warning(
+            'Ошибка загрузки страницы с фильтром, '
+            'попытка $retries/$_maxRetries: $e',
+            tag: _tag);
+        if (retries == _maxRetries) {
+          AppLogger.error(
+              'Достигнуто максимальное количество попыток для страницы',
+              tag: _tag);
+          return null;
+        }
+        await Future.delayed(_retryDelay);
+      }
+    }
+
+    if (!fetched || responseBody == null) {
+      AppLogger.error('Не удалось загрузить страницу с фильтром', tag: _tag);
+      return null;
+    }
+
+    // Парсинг страницы с фильтром
+    final document = html_parser.parse(responseBody);
+    final speciesLinks = document
+        .querySelectorAll('a[href*="/Encyclopedia/CACTI/Family/Cactaceae/"]');
+    AppLogger.api('Найдено ссылок на виды: ${speciesLinks.length}', tag: _tag);
+
+    for (var link in speciesLinks) {
+      final href = link.attributes['href'];
+      if (href == null) continue;
+
+      final name = link.text.trim().toLowerCase();
+      AppLogger.api('Проверка ссылки: $name (href: $href)', tag: _tag);
+      if (name == searchName || name.contains(searchName)) {
+        final idMatch = RegExp(r'/Cactaceae/(\d+)/').firstMatch(href);
+        final speciesId = idMatch?.group(1);
+        if (speciesId != null) {
+          return await _fetchSpeciesPage(
+            speciesId: speciesId,
+            latinName: latinName,
+            searchName: searchName,
+            headers: headers,
+            filterUrl: filterUrl,
+            prefs: prefs,
+          );
+        }
+      }
+    }
+
+    AppLogger.warning('Данные для $searchName не найдены', tag: _tag);
+    return null;
+  }
+
+  // ==================== ПАРСИНГ ====================
+
+  /// Парсит данные вида из HTML документа Llifle.
+  Map<String, String> parseLlifleData(Document document) {
+    // Habitat и country из "Origin and Habitat"
+    final originElement = document
+        .querySelector('p.expandable.Description_Sheet_Origin_and_Habitat');
+    String habitat = '';
+    String country = '';
+    if (originElement != null) {
+      habitat = originElement.text.trim();
+
+      final countries = <String>{
+        'Mexico', 'United States', 'Argentina', 'Bolivia', 'Chile', 'Peru',
+        'Brazil', 'Paraguay', 'Uruguay', 'Colombia', 'Ecuador', 'Venezuela',
+        'Spain', 'South Africa', 'Namibia', 'Madagascar', 'Australia',
+        'Guatemala', 'Honduras', 'Costa Rica',
+      };
+      for (final c in countries) {
+        if (habitat.toLowerCase().contains(c.toLowerCase())) {
+          country = c;
+          break;
+        }
+      }
+    }
+
+    // CareTips из "Cultivation and Propagation"
+    final careElement = document.querySelector(
+        'p.expandable.Description_Sheet_Cultivation_and_Propagation');
+    final careTips = careElement?.text.trim() ?? '';
+
+    // Description
+    final descElement = document
+        .querySelector('p.expandable.Description_Sheet_Description');
+    final description =
+        descElement?.text.trim() ?? _parseDescription(document);
+
+    // Synonyms
+    final synonymsElement = document.querySelector('#short_synonyms_list ul');
+    String synonyms = '';
+    if (synonymsElement != null) {
+      synonyms =
+          synonymsElement.text.trim().replaceAll(RegExp(r'\s+'), ' ');
+    }
+
+    return {
+      'country': country,
+      'habitat': habitat,
+      'careTips': careTips,
+      'description': description,
+      'synonyms': synonyms,
+    };
+  }
+
+  // ==================== ВНУТРЕННИЕ МЕТОДЫ ====================
+
+  Future<Map<String, dynamic>?> _fetchSpeciesPage({
+    required String speciesId,
+    required String latinName,
+    required String searchName,
+    required Map<String, String> headers,
+    required String filterUrl,
+    required SharedPreferences prefs,
+  }) async {
+    final speciesUrl =
+        'https://llifle.com/Encyclopedia/CACTI/Family/Cactaceae/$speciesId/';
+    AppLogger.api('Загрузка страницы вида: $speciesUrl', tag: _tag);
+
+    int retries = 0;
+    bool fetched = false;
+    String? speciesBody;
+
+    while (retries < _maxRetries && !fetched) {
+      try {
+        final speciesResponse = await http.get(Uri.parse(speciesUrl), headers: {
+          ...headers,
+          'Referer': filterUrl,
+        });
+        AppLogger.api(
+            'HTTP статус для страницы вида: ${speciesResponse.statusCode}',
+            tag: _tag);
+        if (speciesResponse.statusCode == 200 &&
+            speciesResponse.body.isNotEmpty) {
+          speciesBody = speciesResponse.body;
+          fetched = true;
+          AppLogger.api(
+              'Страница вида загружена, длина ответа: ${speciesBody.length}',
+              tag: _tag);
+        } else {
+          AppLogger.warning(
+              'Ошибка загрузки страницы вида: статус '
+              '${speciesResponse.statusCode}, причина: ${speciesResponse.reasonPhrase}',
+              tag: _tag);
+          throw Exception('Не удалось загрузить страницу вида');
+        }
+      } catch (e) {
+        retries++;
+        AppLogger.warning(
+            'Ошибка загрузки страницы вида, '
+            'попытка $retries/$_maxRetries: $e',
+            tag: _tag);
+        if (retries == _maxRetries) {
+          AppLogger.error(
+              'Достигнуто максимальное количество попыток для страницы вида',
+              tag: _tag);
+          return null;
+        }
+        await Future.delayed(_retryDelay);
+      }
+    }
+
+    if (!fetched || speciesBody == null) {
+      AppLogger.error('Не удалось загрузить страницу вида', tag: _tag);
+      return null;
+    }
+
+    final speciesDocument = html_parser.parse(speciesBody);
+
+    // Извлечение всех фото
+    final mainPhoto =
+        speciesDocument.querySelector('#main_photo_container img');
+    final secondaryPhotos = speciesDocument
+        .querySelectorAll('.secondary_photo_container img.zoom_on_click');
+    final thumbnails = speciesDocument
+        .querySelectorAll('#thumbnail_container img.thumbnail_photo');
+
+    final Set<String> photoUrls = {};
+
+    // Обработка главного фото
+    if (mainPhoto != null && mainPhoto.attributes['src'] != null) {
+      var src = mainPhoto.attributes['src']!;
+      src = src.startsWith('http') ? src : 'https://llifle.com$src';
+      src = src.replaceAll('https://llifle.comphotos/', 'https://llifle.com/photos/');
+      src = src.replaceAll('+', '_');
+      src = src.replaceAll('_m.jpg', '_l.jpg');
+      if (src.contains('llifle.com') && src.endsWith('.jpg')) {
+        AppLogger.api('Добавлен главный URL: $src', tag: _tag);
+        photoUrls.add(Uri.encodeFull(src));
+      } else {
+        AppLogger.warning('Пропущен некорректный главный URL: $src', tag: _tag);
+      }
+    }
+
+    // Обработка второстепенных фото
+    for (var img in secondaryPhotos) {
+      final src = img.attributes['src'];
+      if (src != null) {
+        var photoUrl = src.startsWith('http') ? src : 'https://llifle.com$src';
+        photoUrl = photoUrl.replaceAll(
+            'https://llifle.comphotos/', 'https://llifle.com/photos/');
+        photoUrl = photoUrl.replaceAll('+', '_');
+        photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
+        if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
+          AppLogger.api('Добавлен второстепенный URL: $photoUrl', tag: _tag);
+          photoUrls.add(Uri.encodeFull(photoUrl));
+        } else {
+          AppLogger.warning(
+              'Пропущен некорректный второстепенный URL: $photoUrl',
+              tag: _tag);
+        }
+      }
+    }
+
+    // Обработка миниатюр
+    for (var img in thumbnails) {
+      final src = img.attributes['src'];
+      if (src != null) {
+        var photoUrl = src.startsWith('http') ? src : 'https://llifle.com$src';
+        photoUrl = photoUrl.replaceAll('/thumbnails/', '/photos/');
+        photoUrl = photoUrl.replaceAll(
+            'https://llifle.comphotos/', 'https://llifle.com/photos/');
+        photoUrl = photoUrl.replaceAll('+', '_');
+        photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
+        if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
+          AppLogger.api('Добавлен URL миниатюры: $photoUrl', tag: _tag);
+          photoUrls.add(photoUrl);
+        } else {
+          AppLogger.warning(
+              'Пропущен некорректный URL миниатюры: $photoUrl',
+              tag: _tag);
+        }
+      }
+    }
+
+    // Проверяем альбомы
+    final albumLinks = speciesDocument
+        .querySelectorAll('#thumbnail_container a.screenshot');
+    for (var link in albumLinks) {
+      final rel = link.attributes['rel'];
+      if (rel != null && rel.startsWith('/screenshots/')) {
+        var photoUrl = 'https://llifle.com$rel';
+        photoUrl = photoUrl.replaceAll(
+            'https://llifle.comphotos/', 'https://llifle.com/photos/');
+        photoUrl = photoUrl.replaceAll('+', '_');
+        photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
+        if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
+          AppLogger.api('Добавлен URL альбома: $photoUrl', tag: _tag);
+          photoUrls.add(photoUrl);
+        } else {
+          AppLogger.warning(
+              'Пропущен некорректный URL альбома: $photoUrl',
+              tag: _tag);
+        }
+      }
+    }
+
+    final photoUrlList = photoUrls.toList();
+    AppLogger.api('Найдено фото: $photoUrlList', tag: _tag);
+
+    // Парсинг данных вида
+    final parsedData = parseLlifleData(speciesDocument);
+
+    final habitat = parsedData['habitat'] ?? _parseHabitat(speciesDocument);
+    final description = parsedData['description'] ?? _parseDescription(speciesDocument);
+    String tempCareTips = _parseCareTips(speciesDocument);
+    final careTips = parsedData['careTips'] ??
+        (tempCareTips.isNotEmpty
+            ? tempCareTips
+            : _parseCareTipsFromDescription(description));
+    final synonyms = parsedData['synonyms'] ?? '';
+    final country = parsedData['country'] ?? '';
+
+    AppLogger.api(
+        'Описание: ${description.length > 50 ? description.substring(0, 50) : description}...',
+        tag: _tag);
+    AppLogger.api('Естественный ареал: $habitat', tag: _tag);
+    AppLogger.api('Страна: $country', tag: _tag);
+    AppLogger.api(
+        'Особенности ухода: ${careTips.length > 50 ? careTips.substring(0, 50) : careTips}...',
+        tag: _tag);
+    AppLogger.api('Синонимы: $synonyms', tag: _tag);
+
+    final plantData = {
+      'speciesId': speciesId,
+      'photoUrls': photoUrlList,
+      'habitat': habitat,
+      'description': description,
+      'synonyms': synonyms,
+      'careTips': careTips,
+      'country': country,
+    };
+
+    // === ИНТЕГРАЦИЯ GBIF ===
+    AppLogger.api('Запрос обогащения данных из GBIF для $latinName',
+        tag: _tag);
+    final gbifData = await _gbifService.fetchGbifData(latinName);
+
+    if (gbifData != null) {
+      AppLogger.api('Данные GBIF получены, обогащаем Llifle данные',
+          tag: _tag);
+      final enrichedData = Map<String, dynamic>.from(plantData);
+
+      // Country: GBIF приоритетнее
+      if (gbifData['gbifCountry'] != null &&
+          gbifData['gbifCountry'].toString().isNotEmpty) {
+        enrichedData['country'] = gbifData['gbifCountry'];
+        AppLogger.api('Страна обновлена из GBIF: ${gbifData['gbifCountry']}',
+            tag: _tag);
+      }
+
+      // Habitat: объединяем
+      final llifleHabitat = plantData['habitat'] as String? ?? '';
+      final gbifHabitat = gbifData['gbifHabitat'] as String? ?? '';
+      if (gbifHabitat.isNotEmpty) {
+        enrichedData['habitat'] = llifleHabitat.isNotEmpty
+            ? '$llifleHabitat\n\n$gbifHabitat'
+            : gbifHabitat;
+        AppLogger.api('Ареал обогащен данными GBIF', tag: _tag);
+      }
+
+      // Synonyms: объединяем уникальные
+      final llifleSynonyms = plantData['synonyms'] as String? ?? '';
+      final gbifSynonyms = gbifData['gbifSynonyms'] as String? ?? '';
+      final allSynonyms = <String>{};
+      if (llifleSynonyms.isNotEmpty) {
+        allSynonyms.addAll(llifleSynonyms.split(', ').map((s) => s.trim()));
+      }
+      if (gbifSynonyms.isNotEmpty) {
+        allSynonyms.addAll(gbifSynonyms.split(', ').map((s) => s.trim()));
+        AppLogger.api('Синонимы обогащены из GBIF', tag: _tag);
+      }
+      enrichedData['synonyms'] = allSynonyms.join(', ');
+      if (allSynonyms.isNotEmpty) {
+        AppLogger.api('Всего синонимов: ${allSynonyms.length}', tag: _tag);
+      }
+
+      // GBIF специфические поля
+      enrichedData['gbifPhotoUrls'] = gbifData['gbifPhotoUrls'] ?? [];
+      enrichedData['gbifOccurrences'] = gbifData['gbifOccurrences'] ?? [];
+      enrichedData['gbifOccurrenceCount'] = gbifData['gbifOccurrenceCount'] ?? 0;
+      enrichedData['gbifPhotoCount'] = gbifData['gbifPhotoCount'] ?? 0;
+      enrichedData['lastGbifUpdate'] = gbifData['lastGbifUpdate'];
+
+      AppLogger.api(
+          'Данные успешно обогащены GBIF: '
+          '${gbifData['gbifOccurrenceCount']} occurrence, '
+          '${gbifData['gbifPhotoCount']} фото',
+          tag: _tag);
+
+      await prefs.setString(
+          '$_cachePrefix$searchName', jsonEncode(enrichedData));
+      AppLogger.db('Сохранены обогащенные данные для $searchName', tag: _tag);
+      return enrichedData;
+    } else {
+      AppLogger.warning(
+          'Не удалось получить данные из GBIF, используем только Llifle',
+          tag: _tag);
+      await prefs.setString('$_cachePrefix$searchName', jsonEncode(plantData));
+      AppLogger.db('Сохранены данные Llifle для $searchName', tag: _tag);
+      return plantData;
+    }
+  }
+
+  // ==================== ПРИВАТНЫЕ ПАРСЕРЫ ====================
+
+  String _parseHabitat(Document document) {
+    try {
+      final element =
+          document.querySelector('p.Description_Sheet_Origin_and_Habitat');
+      if (element != null) {
+        return element.text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+      }
+      final originElements = document.querySelectorAll('p, div, b');
+      for (var el in originElements) {
+        if (el.text.contains('Origin and Habitat')) {
+          final text = el.text;
+          final startIndex =
+              text.indexOf('Origin and Habitat') + 'Origin and Habitat'.length;
+          return text.substring(startIndex).replaceAll(':', '').trim();
+        }
+      }
+      return '';
+    } catch (e) {
+      AppLogger.warning('Ошибка парсинга ареала: $e', tag: _tag);
+      return '';
+    }
+  }
+
+  String _parseDescription(Document document) {
+    try {
+      final element =
+          document.querySelector('p.Description_Sheet_Description');
+      if (element != null) {
+        return element.text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+      }
+      return '';
+    } catch (e) {
+      AppLogger.warning('Ошибка парсинга описания: $e', tag: _tag);
+      return '';
+    }
+  }
+
+  String _parseCareTips(Document document) {
+    try {
+      final element = document
+          .querySelector('p.Description_Sheet_Cultivation_and_Propagation');
+      if (element != null) {
+        return element.text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+      }
+      return '';
+    } catch (e) {
+      AppLogger.warning('Ошибка парсинга особенностей ухода: $e', tag: _tag);
+      return '';
+    }
+  }
+
+  String _parseCareTipsFromDescription(String description) {
+    try {
+      final regex = RegExp(
+        r'(Cultivation and Propagation:.*?)(?=\n[A-Z]|$)',
+        caseSensitive: false,
+        dotAll: true,
+      );
+      final match = regex.firstMatch(description);
+      final careTips = match?.group(1)?.trim() ?? '';
+      return careTips.replaceAll(RegExp(r'\s+'), ' ').trim();
+    } catch (e) {
+      AppLogger.warning(
+          'Ошибка парсинга особенностей ухода (резервный способ): $e',
+          tag: _tag);
+      return '';
+    }
+  }
+}

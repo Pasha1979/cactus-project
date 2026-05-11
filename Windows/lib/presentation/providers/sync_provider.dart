@@ -13,9 +13,9 @@ import 'plant_crud_provider.dart';
 /// - Создание локального бэкапа
 /// - Восстановление из бэкапа
 /// - Экспорт/импорт JSON
+///
+/// DI: SyncRepository зарегистрирован в injection_container.dart
 class SyncProvider with ChangeNotifier {
-  // TODO(1.15.1): подключить SyncRepository через DI
-  // final SyncRepository _repository = sl<SyncRepository>();
 
   DateTime? _lastLocalUpdate;
   final bool _isSyncing = false;

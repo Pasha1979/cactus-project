@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart'; // Сохран
 import 'dart:io'; // Сохранено: Для Image.file local userPhotos.
 import '../presentation/providers/providers.dart'; // Сохранено: Для context.watch/read<PlantProvider>() — selectedIds, getAdultImage, lastGlobalWateringText.
 import '../models/plant.dart'; // Сохранено: Для Plant тип, statusText, lastWateringText.
-import '../screens/plant_card_screen.dart';
+import '../presentation/screens/plant_card/plant_card_screen.dart';
 import '../theme/cactus_theme.dart';
 
 class PlantCards extends StatelessWidget {

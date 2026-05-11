@@ -1,8 +1,11 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+
 import '../../domain/repositories/plant_repository.dart';
+import '../../models/gbif_occurrence.dart';
 import '../../models/plant.dart';
 import '../../models/qr_code.dart';
-import '../../utils/gbif_utils.dart';
 import '../datasources/local/plant_local_datasource.dart';
 import '../models/plant_dto.dart';
 
@@ -86,15 +89,18 @@ class PlantRepositoryImpl implements PlantRepository {
       hasUnreadNotification: dto.hasUnreadNotification,
       lastRepotting: dto.lastRepotting,
       plannedTransplantDate: dto.plannedTransplantDate,
-      germinationHistory: dto.germinationHistoryJson
-          .map((json) => GerminationRecord.fromJson(jsonDecode(json)))
-          .toList(),
-      floweringHistory: dto.floweringHistoryJson
-          .map((json) => FloweringRecord.fromJson(jsonDecode(json)))
-          .toList(),
-      notes: dto.notesJson
-          .map((json) => Note.fromJson(jsonDecode(json)))
-          .toList(),
+      germinationHistory: _safeJsonList(
+        dto.germinationHistoryJson,
+        (map) => GerminationRecord.fromJson(map),
+      ),
+      floweringHistory: _safeJsonList(
+        dto.floweringHistoryJson,
+        (map) => FloweringRecord.fromJson(map),
+      ),
+      notes: _safeJsonList(
+        dto.notesJson,
+        (map) => Note.fromJson(map),
+      ),
       userPhotos: dto.userPhotos,
       lliflePhotoUrls: dto.lliflePhotoUrls,
       fieldNumber: dto.fieldNumber,
@@ -168,5 +174,23 @@ class PlantRepositoryImpl implements PlantRepository {
       parentId: entity.parentId,
       qrCodeJson: entity.qrCode != null ? jsonEncode(entity.qrCode!.toJson()) : null,
     );
+  }
+
+  /// Безопасный парсинг списка JSON-строк в объекты модели.
+  /// Пропускает некорректные элементы вместо краша.
+  static List<T> _safeJsonList<T>(
+    List<String> jsonList,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    final result = <T>[];
+    for (final json in jsonList) {
+      try {
+        final map = jsonDecode(json) as Map<String, dynamic>;
+        result.add(fromJson(map));
+      } catch (e) {
+        debugPrint('⚠️ Ошибка парсинга JSON, пропускаем: $e');
+      }
+    }
+    return result;
   }
 }

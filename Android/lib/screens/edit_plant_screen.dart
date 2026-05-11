@@ -7,7 +7,7 @@ import '../models/plant.dart';
 import 'package:provider/provider.dart';
 import '../presentation/providers/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/llifle_utils.dart';
+import '../services/api/llifle_service.dart';
 import '../utils/translation_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -647,7 +647,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
 
     try {
       final plantData =
-          await fetchPlantData(_editedPlant.latinName); // Utils (полный Map)
+          await LlifleService().fetchPlantData(_editedPlant.latinName);
       if (plantData == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -728,7 +728,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
 
     try {
       final plantData =
-          await fetchPlantData(_editedPlant.latinName); // Utils (полный Map)
+          await LlifleService().fetchPlantData(_editedPlant.latinName);
       if (plantData == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -812,7 +812,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
 
     try {
       final plantData =
-          await fetchPlantData(_editedPlant.latinName); // Utils (полный Map)
+          await LlifleService().fetchPlantData(_editedPlant.latinName);
       if (plantData == null) {
         if (mounted) {
           _showCountryNotFoundSnackBar();
@@ -881,7 +881,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
 
     try {
       final plantData =
-          await fetchPlantData(_editedPlant.latinName); // Utils (полный Map)
+          await LlifleService().fetchPlantData(_editedPlant.latinName);
       if (plantData == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -963,7 +963,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
 
     try {
       final plantData =
-          await fetchPlantData(_editedPlant.latinName); // Utils (полный Map)
+          await LlifleService().fetchPlantData(_editedPlant.latinName);
       if (plantData == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

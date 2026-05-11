@@ -19,11 +19,15 @@ class QRCodeDto extends HiveObject {
   @HiveField(4)
   bool isActive;
 
+  @HiveField(5)
+  String? filePath;
+
   QRCodeDto({
     required this.plantId,
     required this.plantName,
     required this.permanentId,
     required this.createdAt,
     this.isActive = true,
+    this.filePath,
   });
 }

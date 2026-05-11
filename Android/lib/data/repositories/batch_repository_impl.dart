@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart';
-
 import '../../domain/repositories/batch_repository.dart';
 import '../datasources/local/plant_local_datasource.dart';
+import '../models/plant_dto.dart';
 
 /// Реализация BatchRepository с использованием Hive (через PlantDto)
 class BatchRepositoryImpl implements BatchRepository {
@@ -29,18 +28,65 @@ class BatchRepositoryImpl implements BatchRepository {
 
   @override
   Future<void> createBatch(Map<String, dynamic> batchData) async {
-    // FIXME(1.15.9): Реализовать при создании BatchProvider
-    // Сейчас не используется в UI. No-op безопаснее throw.
-    debugPrint(
-        '⚠️ BatchRepositoryImpl.createBatch: no-op — реализация отложена');
+    final batch = PlantDto(
+      permanentId: batchData['id'] as String? ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      displayId: batchData['displayId'] as String? ?? 'BATCH-UNKNOWN',
+      latinName: batchData['name'] as String? ?? 'Unknown Batch',
+      status: 'batch',
+      year: batchData['year'] as int? ?? DateTime.now().year,
+      customNumber: batchData['customNumber'] as int? ?? 0,
+      category: 'batch',
+      seedsCount: batchData['seedsCount'] as int? ?? 0,
+      germinatedCount: 0,
+      userPhotos: [],
+      lliflePhotoUrls: [],
+      wateringDates: [],
+      customWateringDates: [],
+      hasUnreadNotification: false,
+      germinationHistoryJson: [],
+      floweringHistoryJson: [],
+      notesJson: [],
+      gbifPhotoUrls: [],
+      gbifOccurrencesJson: [],
+      isBatch: true,
+      childrenIds: batchData['childrenIds'] as List<String>? ?? [],
+    );
+    await _plantLocalDataSource.addPlant(batch);
   }
 
   @override
   Future<void> updateBatch(
       String batchId, Map<String, dynamic> batchData) async {
-    // FIXME(1.15.9): Реализовать при создании BatchProvider
-    // Сейчас не используется в UI. No-op безопаснее throw.
-    debugPrint(
-        '⚠️ BatchRepositoryImpl.updateBatch: no-op — реализация отложена');
+    final batch = await _plantLocalDataSource.getPlantById(batchId);
+    if (batch == null) return;
+
+    final updatedBatch = PlantDto(
+      permanentId: batch.permanentId,
+      displayId: batchData['displayId'] as String? ?? batch.displayId,
+      latinName: batchData['name'] as String? ?? batch.latinName,
+      status: batch.status,
+      year: batchData['year'] as int? ?? batch.year,
+      customNumber: batchData['customNumber'] as int? ?? batch.customNumber,
+      category: batch.category,
+      seedsCount: batchData['seedsCount'] as int? ?? batch.seedsCount,
+      germinatedCount: batch.germinatedCount,
+      userPhotos: batch.userPhotos,
+      lliflePhotoUrls: batch.lliflePhotoUrls,
+      wateringDates: batch.wateringDates,
+      customWateringDates: batch.customWateringDates,
+      hasUnreadNotification: batch.hasUnreadNotification,
+      germinationHistoryJson: batch.germinationHistoryJson,
+      floweringHistoryJson: batch.floweringHistoryJson,
+      notesJson: batch.notesJson,
+      gbifPhotoUrls: batch.gbifPhotoUrls,
+      gbifOccurrencesJson: batch.gbifOccurrencesJson,
+      isBatch: true,
+      childrenIds:
+          batchData['childrenIds'] as List<String>? ?? batch.childrenIds,
+      parentId: batch.parentId,
+      qrCodeJson: batch.qrCodeJson,
+    );
+    await _plantLocalDataSource.updatePlant(updatedBatch);
   }
 }
