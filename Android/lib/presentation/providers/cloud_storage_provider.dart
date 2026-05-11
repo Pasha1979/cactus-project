@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../main.dart' show navigatorKey;
-import '../presentation/providers/plant_crud_provider.dart';
-import '../services/photo_sync_service.dart';
-import '../services/sync_manager.dart';
-import '../services/yandex_auth_service.dart';
-import '../services/yandex_disk_service.dart';
+import '../../main.dart' show navigatorKey;
+import 'plant_crud_provider.dart';
+import '../../services/photo_sync_service.dart';
+import '../../services/sync_manager.dart';
+import '../../services/yandex_auth_service.dart';
+import '../../services/yandex_disk_service.dart';
 
 /// Провайдер для управления облачным хранилищем (фасад).
 ///

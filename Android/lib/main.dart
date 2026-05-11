@@ -2,7 +2,7 @@
 import 'package:provider/provider.dart';
 import 'models/plant.dart';
 import 'screens/edit_plant_screen.dart';
-import 'providers/cloud_storage_provider.dart';
+import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
 import 'screens/sowing_management_screen.dart';
 import 'screens/statistics_screen.dart';

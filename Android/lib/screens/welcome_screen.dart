@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../providers/cloud_storage_provider.dart';
+import '../presentation/providers/cloud_storage_provider.dart';
 import '../main.dart';
 import '../presentation/providers/providers.dart';
 
