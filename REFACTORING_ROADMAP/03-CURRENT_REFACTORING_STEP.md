@@ -431,8 +431,8 @@
 - 2.1.2 ✅ Создан presentation/routers/app_router.dart с 17 (Android) / 16 (Windows) маршрутами
 - 2.1.3 ✅ Маршруты определены (выполнено в рамках 2.1.2)
 - 2.1.4 🔄 Замена Navigator.push — разбито на микро-шаги:
-  - 2.1.4.1 main.dart (7 вызовов: EditPlantScreen, BatchQRCreationScreen, SowingManagementScreen, CollectionManagementScreen, QRScannerScreen, QRManagementScreen, StatisticsScreen)
-  - 2.1.4.2 plant_card_screen.dart + plant_cards.dart (4 вызова: PlantCardScreen, EditPlantScreen, PrintSettingsScreen)
+  - [x] 2.1.4.1 main.dart (7 вызовов: EditPlantScreen, BatchQRCreationScreen, SowingManagementScreen, CollectionManagementScreen, QRScannerScreen, QRManagementScreen, StatisticsScreen)
+  - [x] 2.1.4.2 plant_card_screen.dart + plant_cards.dart (4 вызова: PlantCardScreen, EditPlantScreen, PrintSettingsScreen)
   - 2.1.4.3 sowing_management_screen.dart (5 вызовов: PlantCardScreen, AddSowingYearScreen, YearGerminationChartScreen, PlantStatisticsScreen)
   - 2.1.4.4 statistics_screen.dart (4 вызова: _PlantListScreen и внутренние)
   - 2.1.4.5 qr_management_screen.dart (4 вызова: SelectPlantsForPrintScreen, PrintSettingsScreen, BatchQRCreationScreen)

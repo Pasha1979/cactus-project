@@ -3,13 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../models/gbif_occurrence.dart';
 import '../../../models/plant.dart';
 import '../../providers/providers.dart';
-import '../../../screens/edit_plant_screen.dart';
-import '../../../screens/print_settings_screen.dart';
 import '../../../theme/cactus_theme.dart';
 import '../../../services/api/gbif_service.dart';
 import '../../../services/api/llifle_service.dart';
@@ -115,11 +114,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
               : FloatingActionButton(
                   onPressed: () async {
                     if (!context.mounted) return;
-                    final result = await Navigator.push<Plant>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (ctx) => EditPlantScreen(plant: updatedPlant),
-                      ),
+                    final result = await context.push<Plant>(
+                      '/plant/${updatedPlant.permanentId}/edit',
+                      extra: updatedPlant,
                     );
                     if (result != null && context.mounted) {
                       context.read<PlantCrudProvider>()
@@ -170,11 +167,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                           SeedlingsTab(
                             batch: updatedPlant,
                             onSeedlingTap: (ctx, seedling) {
-                              Navigator.push(
-                                ctx,
-                                MaterialPageRoute(
-                                  builder: (context) => PlantCardScreen(plant: seedling),
-                                ),
+                              ctx.push(
+                                '/plant/${seedling.permanentId}',
+                                extra: seedling,
                               );
                             },
                           ),
@@ -1206,13 +1201,9 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   TextButton.icon(
                     onPressed: () {
                       Navigator.pop(ctx);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (ctx) => PrintSettingsScreen(
-                            plantsToPrint: [plant],
-                          ),
-                        ),
+                      context.push(
+                        '/print/settings',
+                        extra: [plant],
                       );
                     },
                     icon: const Icon(Icons.print),

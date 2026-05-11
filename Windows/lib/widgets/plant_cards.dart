@@ -1,10 +1,10 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // Сохранено: Для adultImageUrl и userPhotos network.
 import 'dart:io'; // Сохранено: Для Image.file local userPhotos.
 import '../presentation/providers/providers.dart'; // Сохранено: Для context.watch/read<PlantProvider>() — selectedIds, getAdultImage, lastGlobalWateringText.
 import '../models/plant.dart'; // Сохранено: Для Plant тип, statusText, lastWateringText.
-import '../presentation/screens/plant_card/plant_card_screen.dart';
 import '../theme/cactus_theme.dart';
 
 class PlantCards extends StatelessWidget {
@@ -384,11 +384,9 @@ class PlantCards extends StatelessWidget {
                     final statusColor = _getStatusColor(plant.status);
 
                     return GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (ctx) => PlantCardScreen(plant: plant),
-                        ),
+                      onTap: () => context.push(
+                        '/plant/${plant.permanentId}',
+                        extra: plant,
                       ),
                       onLongPress: () => _showQuickView(context, plant),
                       child: Card(
