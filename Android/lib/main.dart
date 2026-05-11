@@ -11,7 +11,7 @@ import 'screens/batch_qr_creation_screen.dart';
 import 'screens/qr_management_screen.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io'; // ←←← ДОБАВЬ ЭТУ СТРОКУ
+import 'dart:io';
 import 'screens/welcome_screen.dart';
 import '../widgets/plant_cards.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -19,7 +19,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import '../theme/cactus_theme.dart';
 import '../utils/responsive_helper.dart';
 import 'dart:async';
-import 'package:flutter/services.dart'; // ← добавь эту строку
+import 'package:flutter/services.dart';
 import 'data/datasources/local/hive_database.dart';
 import 'data/migrations/data_migration_manager.dart';
 import 'injection_container.dart' as di;

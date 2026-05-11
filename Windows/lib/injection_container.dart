@@ -24,6 +24,7 @@ import 'domain/repositories/qr_code_repository.dart';
 import 'domain/repositories/sync_repository.dart';
 import 'domain/repositories/watering_repository.dart';
 import 'domain/repositories/wintering_repository.dart';
+import 'presentation/providers/photo_provider.dart';
 
 /// Глобальный Service Locator (DI-контейнер)
 ///
@@ -105,4 +106,8 @@ Future<void> init() async {
   sl.registerLazySingleton<WinteringRepository>(
     () => WinteringRepositoryImpl(sl<WinteringLocalDataSource>()),
   );
+
+  // ==================== PROVIDERS ====================
+  // ChangeNotifier-провайдеры, используемые через sl<>()
+  sl.registerLazySingleton(() => PhotoProvider());
 }

@@ -108,16 +108,17 @@ class PlantRepositoryImpl implements PlantRepository {
       harvestYear: dto.harvestYear,
       lastModified: dto.lastModified,
       gbifPhotoUrls: dto.gbifPhotoUrls,
-      gbifOccurrences: dto.gbifOccurrencesJson
-          .map((json) => GbifOccurrence.fromJson(jsonDecode(json)))
-          .toList(),
+      gbifOccurrences: _safeJsonList(
+        dto.gbifOccurrencesJson,
+        (map) => GbifOccurrence.fromJson(map),
+      ),
       lastGbifUpdate: dto.lastGbifUpdate,
       aliveCount: dto.aliveCount,
       isBatch: dto.isBatch,
       childrenIds: dto.childrenIds,
       parentId: dto.parentId,
       qrCode: dto.qrCodeJson != null
-          ? QRCode.fromJson(jsonDecode(dto.qrCodeJson!))
+          ? _safeJsonDecode(dto.qrCodeJson!, QRCode.fromJson)
           : null,
     );
   }
@@ -174,6 +175,21 @@ class PlantRepositoryImpl implements PlantRepository {
       parentId: entity.parentId,
       qrCodeJson: entity.qrCode != null ? jsonEncode(entity.qrCode!.toJson()) : null,
     );
+  }
+
+  /// Безопасный парсинг одиночной JSON-строки.
+  /// Возвращает null при ошибке вместо краша.
+  static T? _safeJsonDecode<T>(
+    String json,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      return fromJson(map);
+    } catch (e) {
+      debugPrint('⚠️ Ошибка парсинга JSON, возвращаем null: $e');
+      return null;
+    }
   }
 
   /// Безопасный парсинг списка JSON-строк в объекты модели.

@@ -892,9 +892,18 @@ class PlantCrudProvider with ChangeNotifier {
   List<Plant> getBatchSeedlings(String batchId) {
     final batch = _plants.firstWhere(
       (p) => p.permanentId == batchId,
-      orElse: () => throw Exception('Batch not found'),
+      orElse: () => Plant(
+        permanentId: '',
+        displayId: '',
+        latinName: '',
+        status: '',
+        year: 0,
+        customNumber: 0,
+        category: '',
+        isBatch: false,
+      ),
     );
-    if (!batch.isBatch) return [];
+    if (!batch.isBatch || batch.permanentId.isEmpty) return [];
 
     final seedlings = <Plant>[];
     for (var childId in batch.childrenIds) {

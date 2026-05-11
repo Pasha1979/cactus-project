@@ -37,10 +37,9 @@ class BatchProvider with ChangeNotifier {
 
       final seedlings = <Plant>[];
       for (var childId in batch.childrenIds) {
-        final seedling = allPlants.firstWhere(
-          (p) => p.permanentId == childId,
-          orElse: () => throw Exception('Seedling not found'),
-        );
+        final index = allPlants.indexWhere((p) => p.permanentId == childId);
+        if (index == -1) continue;
+        final seedling = allPlants[index];
         if (seedling.parentId == batchId) {
           seedlings.add(seedling);
         }
