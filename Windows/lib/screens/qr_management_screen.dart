@@ -1,13 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-// TODO(окружение): import 'package:printing/printing.dart'; // Временно отключено из-за ошибки сборки pdfium
+import 'package:go_router/go_router.dart';
+// import 'package:printing/printing.dart'; // Отключено: пакет printing не в pubspec.yaml Windows (pdfium)
 import 'package:provider/provider.dart';
 import '../models/plant.dart';
 import '../models/qr_code_file.dart';
 import '../presentation/providers/providers.dart';
-import 'batch_qr_creation_screen.dart';
-import 'print_settings_screen.dart';
-import 'select_plants_for_print_screen.dart';
 
 /// Экран управления QR-кодами и файлами печати
 class QRManagementScreen extends StatefulWidget {
@@ -48,12 +46,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
             icon: const Icon(Icons.add_circle_outline),
             tooltip: 'Создать лист для печати',
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (ctx) => const SelectPlantsForPrintScreen(),
-                ),
-              );
+              context.push('/print/select');
             },
           ),
         ],
@@ -214,11 +207,9 @@ class _QRManagementScreenState extends State<QRManagementScreen>
         final plants = plantCrud.plants
             .where((p) => file.plantIds.contains(p.permanentId))
             .toList();
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (ctx) => PrintSettingsScreen(plantsToPrint: plants),
-          ),
+        context.push(
+          '/print/settings',
+          extra: plants,
         );
         break;
       case 'rename':
@@ -392,12 +383,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
               ? const Icon(Icons.check_circle, color: Colors.green)
               : TextButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (ctx) => BatchQRCreationScreen(),
-                      ),
-                    );
+                    context.push('/batch-qr');
                   },
                   child: const Text('Создать QR'),
                 ),
@@ -431,12 +417,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
             for (var plant in newPlants) {
               plantCrud.toggleSelection(plant.permanentId);
             }
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (ctx) => const BatchQRCreationScreen(),
-              ),
-            );
+            context.push('/batch-qr');
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orange,

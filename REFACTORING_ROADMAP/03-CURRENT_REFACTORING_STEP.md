@@ -435,7 +435,7 @@
   - [x] 2.1.4.2 plant_card_screen.dart + plant_cards.dart (4 вызова: PlantCardScreen, EditPlantScreen, PrintSettingsScreen)
   - [x] 2.1.4.3 sowing_management_screen.dart (5 вызовов: PlantCardScreen, AddSowingYearScreen, YearGerminationChartScreen, PlantStatisticsScreen)
   - [x] 2.1.4.4 statistics_screen.dart (4 вызова: _PlantListScreen и внутренние)
-  - 2.1.4.5 qr_management_screen.dart (4 вызова: SelectPlantsForPrintScreen, PrintSettingsScreen, BatchQRCreationScreen)
+  - [x] 2.1.4.5 qr_management_screen.dart (4 вызова: SelectPlantsForPrintScreen, PrintSettingsScreen, BatchQRCreationScreen)
   - 2.1.4.6 Остальные экраны (8 вызовов: collection_management, batch_qr_creation, qr_scanner, select_plants_for_print, history_tab, care_tips, description, geography)
 - 2.1.5 ⏳ Deep linking
 - 2.1.6 ⏳ Тестирование навигации
