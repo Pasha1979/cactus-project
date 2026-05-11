@@ -74,9 +74,4 @@ class SyncProvider with ChangeNotifier {
       return false;
     }
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

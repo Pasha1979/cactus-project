@@ -61,9 +61,4 @@ class WeatherProvider with ChangeNotifier {
     }
     return service.getWateringAdvice(weather, plant);
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

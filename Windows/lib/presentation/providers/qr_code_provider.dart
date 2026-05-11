@@ -124,9 +124,4 @@ class QrCodeProvider with ChangeNotifier {
       return null;
     }
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

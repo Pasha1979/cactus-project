@@ -132,9 +132,4 @@ class WateringProvider with ChangeNotifier {
     }
     return dates;
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

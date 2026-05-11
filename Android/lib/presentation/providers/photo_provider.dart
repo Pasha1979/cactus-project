@@ -314,9 +314,4 @@ class PhotoProvider with ChangeNotifier {
       debugPrint('⚠️ Ошибка очистки кэша: $e');
     }
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
