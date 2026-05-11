@@ -36,7 +36,10 @@ class HiveDatabase {
       while (_isInitializing) {
         await Future.delayed(const Duration(milliseconds: 10));
       }
-      return;
+      // После ожидания другой поток мог уже всё инициализировать
+      if (_isInitialized) {
+        return;
+      }
     }
 
     _isInitializing = true;
