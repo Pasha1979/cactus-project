@@ -1,0 +1,9 @@
+msix_version: 1.0.0.0
+display_name: My Cactus
+publisher_display_name: PolyakoFF
+identity_name: PolyakoFF.MyCactus
+publisher: CN=PolyakoFF
+logo_path: assets/icons/Icon 1.png
+architecture: x64
+capabilities:
+  - internetClient
