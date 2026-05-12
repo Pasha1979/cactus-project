@@ -30,12 +30,20 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Deep link для Яндекс.Диска -->
-            <intent-filter android:autoVerify="true">
+            <!-- Deep link для Яндекс.Диска (OAuth callback) -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="mycactus" />
+            </intent-filter>
+
+            <!-- Deep links для go_router навигации -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="cactusapp" android:host="*" android:pathPattern="/.*" />
             </intent-filter>
 
             <meta-data

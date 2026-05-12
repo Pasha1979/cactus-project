@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import 'models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
+import 'presentation/routers/app_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
-import 'screens/welcome_screen.dart';
 import '../widgets/plant_cards.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -22,7 +22,7 @@ enum GroupAction { changeStatus, delete }
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -170,11 +170,8 @@ class MyApp extends StatelessWidget {
           );
         }
 
-        final showWelcomeScreen = snapshot.data?['show_welcome'] ?? true;
-
         if (snapshot.hasData) {
           final data = snapshot.data!;
-          final showWelcomeScreen = data['show_welcome'] ?? true;
           final startupMessage = data['startup_message'] as String?;
           final cloudProvider =
               Provider.of<CloudStorageProvider>(context, listen: false);
@@ -219,24 +216,21 @@ class MyApp extends StatelessWidget {
             }
           });
 
-          return MaterialApp(
-            navigatorKey: navigatorKey,
+          return MaterialApp.router(
             debugShowCheckedModeBanner: false,
             theme: CactusTheme.light(),
             darkTheme: CactusTheme.dark(),
             themeMode: ThemeMode.system,
-            home:
-                showWelcomeScreen ? const WelcomeScreen() : const HomeScreen(),
+            routerConfig: appRouter,
           );
         }
 
-        return MaterialApp(
-          navigatorKey: navigatorKey,
+        return MaterialApp.router(
           debugShowCheckedModeBanner: false,
           theme: CactusTheme.light(),
           darkTheme: CactusTheme.dark(),
           themeMode: ThemeMode.system,
-          home: showWelcomeScreen ? const WelcomeScreen() : const HomeScreen(),
+          routerConfig: appRouter,
         );
       },
     );
