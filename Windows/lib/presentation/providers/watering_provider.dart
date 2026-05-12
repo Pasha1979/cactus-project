@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/ui/ui_state.dart';
 import '../../models/plant.dart';
 
 /// Провайдер для управления поливами
@@ -13,10 +14,12 @@ import '../../models/plant.dart';
 /// - Уведомления о поливе
 class WateringProvider with ChangeNotifier {
   List<DateTime> _globalWateringDates = [];
-  final bool _isLoading = false;
+  UiState<List<DateTime>> _uiState = const UiLoading();
 
   /// Загрузка globalWateringDates из SharedPreferences
   Future<void> load() async {
+    _uiState = const UiLoading();
+    notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
       final datesJson = prefs.getStringList(PrefsKeys.globalWateringDates);
@@ -28,11 +31,17 @@ class WateringProvider with ChangeNotifier {
       } else {
         _globalWateringDates = [];
       }
+      _uiState = UiSuccess(List.unmodifiable(_globalWateringDates));
       notifyListeners();
       debugPrint('✅ WateringProvider loaded: ${_globalWateringDates.length} dates');
     } catch (e) {
       debugPrint('❌ WateringProvider load error: $e');
       _globalWateringDates = [];
+      _uiState = UiError(
+        'Ошибка загрузки данных полива: $e',
+        onRetry: load,
+      );
+      notifyListeners();
     }
   }
 
@@ -50,7 +59,7 @@ class WateringProvider with ChangeNotifier {
 
   // ==================== ГЕТТЕРЫ ====================
   List<DateTime> get globalWateringDates => List.unmodifiable(_globalWateringDates);
-  bool get isLoading => _isLoading;
+  UiState<List<DateTime>> get uiState => _uiState;
 
   DateTime? get lastGlobalWateringDate {
     if (_globalWateringDates.isEmpty) return null;
@@ -72,6 +81,7 @@ class WateringProvider with ChangeNotifier {
   Future<void> addGlobalWateringDate(DateTime date) async {
     _globalWateringDates.add(date);
     await _save();
+    _uiState = UiSuccess(List.unmodifiable(_globalWateringDates));
     notifyListeners();
   }
 
@@ -79,6 +89,7 @@ class WateringProvider with ChangeNotifier {
     _globalWateringDates.removeWhere((d) =>
         d.year == date.year && d.month == date.month && d.day == date.day);
     await _save();
+    _uiState = UiSuccess(List.unmodifiable(_globalWateringDates));
     notifyListeners();
   }
 

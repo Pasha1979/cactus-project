@@ -453,8 +453,14 @@
 ### Технический долг / Напоминания
 - **dispose() в провайдерах:** удалены пустые `@override void dispose() { super.dispose(); }` из 8 провайдеров (2.0.2). Когда появятся реальные ресурсы (Timer, StreamSubscription, isolate, http client) — добавить `dispose()` с реальной очисткой. Проверить: watering, wintering, photo, batch, sync, qr_code, weather, plant_crud провайдеры.
 
+**2.2 UiState pattern — ✅ Завершён:**
+- 2.2.1 ✅ Создан `core/ui/ui_state.dart` — sealed class `UiState<T>` с `UiLoading`/`UiSuccess`/`UiError`
+- 2.2.2 ✅ Интегрирован в `WateringProvider` — `_uiState` с `onRetry: load`
+- 2.2.3 ✅ Интегрирован в `PlantCrudProvider` — `_plantsState` для `loadPlants`/`addPlant`/`updatePlant`/`deletePlant`/`savePlants`
+- 2.2.4 ✅ Создан `UiStateBuilder<T>` + `ErrorCard` с кнопкой «Повторить»
+
 ### Общий прогресс
-21/41 шагов завершено (2.0 ✅ + 2.1 ✅)
+22/41 шагов завершено (2.0 ✅ + 2.1 ✅ + 2.2 ✅)
 
 ### Оценка времени до завершения
 8-10 недель (обновлено после завершения 2.0 и части 2.1)

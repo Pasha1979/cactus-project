@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/ui/ui_state.dart';
 import '../../domain/repositories/plant_repository.dart';
 import '../../injection_container.dart';
 import '../../models/gbif_occurrence.dart';
@@ -28,7 +29,7 @@ class PlantCrudProvider with ChangeNotifier {
 
   List<Plant> _plants = [];
   final Set<String> _selectedIds = {};
-  bool _isLoading = false;
+  UiState<List<Plant>> _plantsState = const UiLoading();
   DateTime? _lastLocalUpdate;
   final Set<String> _deletedUserPhotos = {};
   final Set<String> _deletedLliflePhotos = {};
@@ -47,7 +48,8 @@ class PlantCrudProvider with ChangeNotifier {
   bool get hasUnsavedChanges => _hasUnsavedChanges;
   List<Plant> get plants => List.unmodifiable(_plants);
   Set<String> get selectedIds => Set.unmodifiable(_selectedIds);
-  bool get isLoading => _isLoading;
+  bool get isLoading => _plantsState is UiLoading;
+  UiState<List<Plant>> get plantsState => _plantsState;
   bool get hasSelection => _selectedIds.isNotEmpty;
   int get plantCount => _plants.length;
   DateTime? get lastLocalUpdate => _lastLocalUpdate;
@@ -420,17 +422,21 @@ class PlantCrudProvider with ChangeNotifier {
 
   // ==================== CRUD ====================
   Future<void> loadPlants() async {
-    _isLoading = true;
+    _plantsState = const UiLoading();
     notifyListeners();
 
     try {
       _plants = await _repository.getAllPlants();
       await _loadLegacyData();
+      _plantsState = UiSuccess(List.unmodifiable(_plants));
     } catch (e) {
       debugPrint('Ошибка загрузки растений: $e');
       _plants = [];
+      _plantsState = UiError(
+        'Ошибка загрузки растений: $e',
+        onRetry: loadPlants,
+      );
     } finally {
-      _isLoading = false;
       notifyListeners();
     }
   }
@@ -440,6 +446,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.addPlant(plantWithTime);
       _plants.add(plantWithTime);
+      _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
     } catch (e) {
       debugPrint('Ошибка добавления растения: $e');
@@ -454,6 +461,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(plantWithTime);
       _plants[index] = plantWithTime;
+      _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
     } catch (e) {
       debugPrint('Ошибка обновления растения: $e');
@@ -465,6 +473,7 @@ class PlantCrudProvider with ChangeNotifier {
       await _repository.deletePlant(id);
       _plants.removeWhere((p) => p.permanentId == id);
       _selectedIds.remove(id);
+      _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
     } catch (e) {
       debugPrint('Ошибка удаления растения: $e');
@@ -550,8 +559,18 @@ class PlantCrudProvider with ChangeNotifier {
   /// В новой архитектуре растения сохраняются в Hive автоматически,
   /// но globalWateringDates, adultImages, wintering* — пока ещё в SharedPreferences.
   Future<void> savePlants() async {
-    await _saveLegacyData();
-    notifyListeners();
+    try {
+      await _saveLegacyData();
+      _plantsState = UiSuccess(List.unmodifiable(_plants));
+    } catch (e) {
+      debugPrint('Ошибка сохранения данных: $e');
+      _plantsState = UiError(
+        'Ошибка сохранения данных: $e',
+        onRetry: savePlants,
+      );
+    } finally {
+      notifyListeners();
+    }
   }
 
   /// Есть ли непрочитанные уведомления
