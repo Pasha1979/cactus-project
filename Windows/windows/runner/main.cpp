@@ -17,6 +17,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
+  // Register deep link protocol handler for cactusapp://
+  {
+    HKEY hKey;
+    const wchar_t* subKey = L"SOFTWARE\\Classes\\cactusapp";
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, subKey, 0, nullptr, 0, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS) {
+      const wchar_t* defaultValue = L"URL:cactusapp Protocol";
+      RegSetValueExW(hKey, nullptr, 0, REG_SZ, (const BYTE*)defaultValue, (wcslen(defaultValue) + 1) * sizeof(wchar_t));
+      const wchar_t* urlProtocol = L"";
+      RegSetValueExW(hKey, L"URL Protocol", 0, REG_SZ, (const BYTE*)urlProtocol, (wcslen(urlProtocol) + 1) * sizeof(wchar_t));
+
+      HKEY hCmdKey;
+      if (RegCreateKeyExW(hKey, L"shell\\open\\command", 0, nullptr, 0, KEY_WRITE, nullptr, &hCmdKey, nullptr) == ERROR_SUCCESS) {
+        wchar_t exePath[MAX_PATH];
+        GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+        std::wstring cmd = std::wstring(exePath) + L" \"%1\"";
+        RegSetValueExW(hCmdKey, nullptr, 0, REG_SZ, (const BYTE*)cmd.c_str(), (cmd.length() + 1) * sizeof(wchar_t));
+        RegCloseKey(hCmdKey);
+      }
+      RegCloseKey(hKey);
+    }
+  }
+
   flutter::DartProject project(L"data");
 
   std::vector<std::string> command_line_arguments =

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/plant.dart';
 import '../../screens/add_sowing_year_screen.dart';
 import '../../screens/batch_qr_creation_screen.dart';
@@ -24,8 +25,24 @@ import '../../main.dart' show HomeScreen;
 /// Маршруты с параметрами-объектами (`Plant`, `List<Plant>`) принимают данные
 /// через `state.extra`. Deep linking для таких маршрутов требует
 /// доработки конструкторов экранов (загрузка по ID из Provider).
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 final GoRouter appRouter = GoRouter(
+  navigatorKey: navigatorKey,
   initialLocation: '/',
+  redirect: (context, state) async {
+    // Не редиректим если уже на /welcome
+    if (state.uri.path == '/welcome') return null;
+    // Не редиректим deep links (путь != корневому) — сохраняем внешние URL
+    if (state.uri.path != '/') return null;
+    // Только для корневого запуска проверяем welcome screen
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenWelcome = prefs.getBool('has_seen_welcome') ?? false;
+    if (!hasSeenWelcome) {
+      return '/welcome';
+    }
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',
@@ -160,7 +177,7 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/add-sowing-year',
+      path: '/sowing/add',
       builder: (context, state) => const AddSowingYearScreen(),
     ),
   ],

@@ -5,6 +5,7 @@ import 'constants/app_constants.dart';
 import 'models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
+import 'presentation/routers/app_router.dart';
 import 'dart:io';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
@@ -79,14 +80,12 @@ Future<void> _initNotifications() async {
   await flutterLocalNotificationsPlugin.initialize(
       initializationSettings); // Базовая инициализация — ждет 1 сек max, не блокирует main().
 
-  // Разрешения для Android 13+ (на Windows — не нужно, работает сразу после init).
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.requestNotificationsPermission();
+  // Разрешения для Android 13+ (Windows — не применимо).
+  // await flutterLocalNotificationsPlugin
+  //     .resolvePlatformSpecificImplementation<
+  //         AndroidFlutterLocalNotificationsPlugin>()?
+  //     .requestNotificationsPermission();
 }
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -109,7 +108,6 @@ class MyApp extends StatelessWidget {
           );
         }
 
-        final showWelcomeScreen = snapshot.data?['show_welcome'] ?? true;
         final startupMessage = snapshot.data?['startup_message'] as String?;
 
         // Загрузка данных после первого фрейма
@@ -146,17 +144,12 @@ class MyApp extends StatelessWidget {
           }
         });
 
-        return MaterialApp(
-          navigatorKey:
-              navigatorKey, // Сохранено: Ваш ключ для SnackBar и навигации — не меняется, работает как раньше.
-          debugShowCheckedModeBanner: false, // Сохранено: Без баннера отладки.
+        return MaterialApp.router(
+          debugShowCheckedModeBanner: false,
           theme: CactusTheme.light(),
           darkTheme: CactusTheme.dark(),
-          themeMode: ThemeMode
-              .system,
-          home: showWelcomeScreen
-              ? const WelcomeScreen()
-              : const HomeScreen(), // Сохранено: Ваша логика показа экранов — не меняется.
+          themeMode: ThemeMode.system,
+          routerConfig: appRouter,
         );
       }, // Исправлено: Закрывающая скобка для builder — фиксирует синтаксис (expected ';').
     ); // Исправлено: Закрывающая скобка для FutureBuilder — фиксирует unexpected token и missing identifier.
