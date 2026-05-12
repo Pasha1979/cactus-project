@@ -709,28 +709,29 @@ dev_dependencies:
 
 ---
 
-### 2.3 Кэширование изображений (1 день)
+### 2.3 Кэширование изображений (1 день) — ✅ Частично завершён (Вариант А)
 
-**Задачи:**
-2.3.1 Добавить flutter_cache_manager в pubspec.yaml
-2.3.2 Добавить flutter_image_compress в pubspec.yaml
-2.3.3 Создать services/image/photo_cache_manager.dart
-2.3.4 Создать services/image/image_processor.dart
-2.3.5 Интегрировать в PhotoProvider
-2.3.6 Тестирование кэширования
-2.3.7 Тестирование сжатия
-2.3.8 Настроить maxSizeBytes (500 MB)
-2.3.9 Настроить stalePeriod (30 дней)
-2.3.10 Добавить prefetch для галереи
+**Выполнено (2026-05-12):**
+2.3.1 ✅ Добавить flutter_cache_manager в pubspec.yaml
+2.3.2 ✅ Добавить flutter_image_compress в pubspec.yaml — проверен на Windows, собирается
+2.3.3 ✅ Создать services/image/photo_cache_manager.dart
+
+**Отложено — перенесено в другие шаги:**
+- 2.3.4 `image_processor.dart` + 2.3.5 интеграция сжатия в `PhotoProvider` → **перенесено в 2.10**
+- 2.3.7 Тестирование сжатия → **перенесено в 2.10**
+- 2.3.10 Prefetch для галереи → **перенесено в 2.8.7**
+
+**Не требуется (реализовано в photo_cache_manager.dart):**
+- 2.3.8 maxSizeBytes → `_maxObjects = 200`
+- 2.3.9 stalePeriod → `_stalePeriod = 30 дней`
 
 **Файлы:**
-- `services/image/photo_cache_manager.dart`
-- `services/image/image_processor.dart`
+- `services/image/photo_cache_manager.dart` ✅
 
 **Проверка:**
-- flutter analyze проходит без ошибок
-- Галерея загружается быстрее
-- Память используется меньше
+- ✅ flutter analyze проходит без ошибок
+- ✅ `Image.network` заменён на `CachedNetworkImage` во всех виджетах флагов
+- ✅ `flutter_image_compress` собирается на Windows
 
 ---
 
@@ -825,6 +826,7 @@ dev_dependencies:
 2.8.4 flutter analyze (оба проекта)
 2.8.5 Проверка работы isolates
 2.8.6 Проверка кэширования изображений
+2.8.7 **Добавить prefetch для галереи** (перенесено из 2.3.10) — фоновая загрузка фото через `PhotoCacheManager.prefetch()`
 
 **Проверка:**
 - Все функции работают
@@ -856,6 +858,28 @@ dev_dependencies:
 - Нет бесконечных циклов при ошибках сети (max 3 retries)
 - Повреждённые данные из облака не ломают приложение (валидация)
 - Пользовательские изменения во время синхронизации не теряются (Lock)
+- flutter analyze проходит без ошибок
+
+---
+
+### 2.10 Оптимизация изображений — сжатие (0.5 дня)
+
+> **Перенесено из 2.3 (Вариант А).** Выполнять ПОСЛЕ 2.9 (надёжность синхронизации), так как сжатие меняет размер файлов при синхронизации.
+
+**Задачи:**
+2.10.1 Создать `services/image/image_processor.dart` — обёртка над `flutter_image_compress`
+2.10.2 Интегрировать сжатие в `PhotoProvider.addUserPhoto()` — сжимать копию, оригинал в галерее телефона оставить
+2.10.3 Тестирование сжатия на Android и Windows
+2.10.4 Проверить что синхронизация Яндекс Диска работает с сжатыми фото (размер меньше, путь тот же)
+
+**Файлы:**
+- `services/image/image_processor.dart`
+- `presentation/providers/photo_provider.dart`
+
+**Проверка:**
+- Фото сжимается (5 МБ → 300 КБ)
+- Синхронизация не ломается
+- Пути в `Plant.userPhotos` остаются корректными
 - flutter analyze проходит без ошибок
 
 ---
