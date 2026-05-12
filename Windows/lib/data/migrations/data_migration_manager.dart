@@ -331,7 +331,17 @@ class DataMigrationManager {
     if (json == null || json.isEmpty) return;
 
     try {
-      final dates = (jsonDecode(json) as List<dynamic>)
+      List<dynamic> rawData;
+      // Handle case where data might already be a List (not JSON string)
+      try {
+        rawData = jsonDecode(json) as List<dynamic>;
+      } catch (e) {
+        // If JSON decode fails, data might be corrupted, skip migration
+        print('⚠️ Ошибка декодирования JSON дат полива: $e');
+        return;
+      }
+
+      final dates = rawData
           .map((d) => d is String ? DateTime.tryParse(d) : null)
           .whereType<DateTime>()
           .toList();

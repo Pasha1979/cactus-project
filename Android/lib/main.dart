@@ -1,19 +1,20 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'constants/app_constants.dart';
 import 'models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/routers/app_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'package:excel/excel.dart' as excel;
+import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/welcome_screen.dart';
 import '../widgets/plant_cards.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import '../theme/cactus_theme.dart';
-import '../utils/responsive_helper.dart';
-import 'dart:async';
-import 'package:flutter/services.dart';
 import 'data/datasources/local/hive_database.dart';
 import 'data/migrations/data_migration_manager.dart';
 import 'injection_container.dart' as di;
@@ -38,56 +39,10 @@ void main() async {
     print('⚠️ Миграция данных не удалась. Используем резервный режим.');
   }
 
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    print('=== FLUTTER ERROR ===');
-    print(details.exception);
-    print(details.stack);
-  };
-
   await _initNotifications();
+
   tz.initializeTimeZones();
 
-if (Platform.isAndroid) {
-  const deepLinkChannel = MethodChannel('deep_link');
-
-  deepLinkChannel.setMethodCallHandler((call) async {
-    print('=== DEEP LINK CHANNEL CALL === method: ${call.method}, arguments: ${call.arguments}');
-
-    if (call.method == 'deepLink') {
-      final String? url = call.arguments as String?;
-      if (url != null && url.startsWith('mycactus://')) {
-        print('✅ Получен deep link: $url');
-
-        final uri = Uri.parse(url);
-        if (uri.scheme == 'mycactus' && uri.host == 'callback') {
-          print('✅ Это наш callback от Яндекса!');
-
-          try {
-            final context = navigatorKey.currentContext;
-            if (context == null || !context.mounted) {
-              print('⚠️ Контекст недоступен');
-              return;
-            }
-
-            final cloudProvider = Provider.of<CloudStorageProvider>(
-              context,
-              listen: false,
-            );
-            await cloudProvider.handleDeepLink(uri);
-            print('✅ handleDeepLink выполнен успешно');
-          } catch (e, stack) {
-            print('❌ Ошибка в handleDeepLink: $e');
-            print(stack);
-          }
-        }
-      }
-    }
-    return null;
-  });
-
-  print('✅ Метод-канал deep_link зарегистрирован');
-}
   runApp(
     MultiProvider(
       providers: [
@@ -102,12 +57,14 @@ if (Platform.isAndroid) {
         ChangeNotifierProvider(create: (_) => QrCodeProvider()),
         ChangeNotifierProvider(create: (_) => WeatherProvider()),
       ],
-      child: const MyApp(),
+      child: MaterialApp(
+        // Перенесите MaterialApp сюда
+        debugShowCheckedModeBanner: false,
+        home: MyApp(), // MyApp теперь внутри MaterialApp
+      ),
     ),
   );
 }
-
-// Обработка возврата из браузера после авторизации Яндекс.Диска
 
 Future<void> _initNotifications() async {
   // Инициализация для Android/Windows (твоя иконка из mipmap/ic_launcher.png в android/app/src/main/res — сохранена для consistency).
@@ -123,14 +80,12 @@ Future<void> _initNotifications() async {
   await flutterLocalNotificationsPlugin.initialize(
       initializationSettings); // Базовая инициализация — ждет 1 сек max, не блокирует main().
 
-  // Разрешения для Android 13+ (на Windows — не нужно, работает сразу после init).
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.requestNotificationsPermission();
+  // Разрешения для Android 13+ (Windows — не применимо).
+  // await flutterLocalNotificationsPlugin
+  //     .resolvePlatformSpecificImplementation<
+  //         AndroidFlutterLocalNotificationsPlugin>()?
+  //     .requestNotificationsPermission();
 }
-
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -143,8 +98,9 @@ class MyApp extends StatelessWidget {
     return FutureBuilder<Map<String, dynamic>>(
       future: _initializeAndCheckStatus(cloudProvider),
       builder: (context, snapshot) {
+        // Сохранено: Временный MaterialApp для loading — не меняется, работает как раньше (CircularProgressIndicator).
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const MaterialApp(
+          return MaterialApp(
             debugShowCheckedModeBanner: false,
             home: Scaffold(
               body: Center(child: CircularProgressIndicator()),
@@ -152,78 +108,41 @@ class MyApp extends StatelessWidget {
           );
         }
 
-        if (snapshot.hasError) {
-          return MaterialApp(
-            debugShowCheckedModeBanner: false,
-            home: Scaffold(
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    'Ошибка запуска:\n${snapshot.error}',
-                    style: const TextStyle(color: Colors.red, fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+        final startupMessage = snapshot.data?['startup_message'] as String?;
+
+        // Загрузка данных после первого фрейма
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          final plantCrudProvider =
+              Provider.of<PlantCrudProvider>(context, listen: false);
+          final wateringProvider =
+              Provider.of<WateringProvider>(context, listen: false);
+          final winteringProvider =
+              Provider.of<WinteringProvider>(context, listen: false);
+          final photoProvider =
+              Provider.of<PhotoProvider>(context, listen: false);
+          final qrCodeProvider =
+              Provider.of<QrCodeProvider>(context, listen: false);
+
+          await _syncData(plantCrudProvider, cloudProvider);
+
+          // Параллельная загрузка специализированных провайдеров
+          await Future.wait([
+            wateringProvider.load(),
+            winteringProvider.load(),
+            photoProvider.load(),
+            qrCodeProvider.loadScanHistory(),
+            qrCodeProvider.loadQRCodeFiles(),
+          ]);
+
+          if (startupMessage != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(startupMessage),
+                backgroundColor: Colors.orange,
               ),
-            ),
-          );
-        }
-
-        if (snapshot.hasData) {
-          final data = snapshot.data!;
-          final startupMessage = data['startup_message'] as String?;
-          final cloudProvider =
-              Provider.of<CloudStorageProvider>(context, listen: false);
-
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            if (!context.mounted) return;
-
-            final plantCrudProvider =
-                Provider.of<PlantCrudProvider>(context, listen: false);
-            final qrCodeProvider =
-                Provider.of<QrCodeProvider>(context, listen: false);
-            final wateringProvider =
-                Provider.of<WateringProvider>(context, listen: false);
-            final winteringProvider =
-                Provider.of<WinteringProvider>(context, listen: false);
-            final photoProvider =
-                Provider.of<PhotoProvider>(context, listen: false);
-
-            if (cloudProvider.isConnected) {
-              print('🔄 Запуск автоматической синхронизации при старте...');
-              await _performAutoSync(plantCrudProvider, cloudProvider);
-            } else {
-              await plantCrudProvider.loadPlants();
-            }
-
-            // Параллельная загрузка специализированных провайдеров
-            await Future.wait([
-              wateringProvider.load(),
-              winteringProvider.load(),
-              photoProvider.load(),
-              qrCodeProvider.loadScanHistory(),
-              qrCodeProvider.loadQRCodeFiles(),
-            ]);
-
-            if (startupMessage != null && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(startupMessage),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            }
-          });
-
-          return MaterialApp.router(
-            debugShowCheckedModeBanner: false,
-            theme: CactusTheme.light(),
-            darkTheme: CactusTheme.dark(),
-            themeMode: ThemeMode.system,
-            routerConfig: appRouter,
-          );
-        }
+            );
+          }
+        });
 
         return MaterialApp.router(
           debugShowCheckedModeBanner: false,
@@ -232,8 +151,8 @@ class MyApp extends StatelessWidget {
           themeMode: ThemeMode.system,
           routerConfig: appRouter,
         );
-      },
-    );
+      }, // Исправлено: Закрывающая скобка для builder — фиксирует синтаксис (expected ';').
+    ); // Исправлено: Закрывающая скобка для FutureBuilder — фиксирует unexpected token и missing identifier.
   }
 
   Future<Map<String, dynamic>> _initializeAndCheckStatus(
@@ -241,74 +160,63 @@ class MyApp extends StatelessWidget {
     final prefs = await SharedPreferences.getInstance();
     String? startupMessage;
 
-    // Загружаем учётные данные
-    try {
-      await cloudProvider.loadCredentials();
-      // После await cloudProvider.loadCredentials();
-      if (Platform.isAndroid) {
-        // Можно добавить обработчик deep link, если используешь go_router или uni_links
-        // Пока достаточно текущей логики
-      }
-    } catch (e) {
-      print('Ошибка загрузки учётных данных: $e');
-      cloudProvider.disconnect();
-    }
+    await cloudProvider.loadCredentials();
 
     final hasSeenWelcome = prefs.getBool('has_seen_welcome') ?? false;
     final rememberMe = prefs.getBool('remember_me') ?? false;
 
-    // Тихое подключение, если пользователь выбрал "Запомнить меня"
     if (rememberMe && !cloudProvider.isConnected) {
-      print('Попытка тихого подключения к Яндекс.Диску...');
       try {
         await cloudProvider.connectToYandexDiskSilently();
       } catch (e) {
-        print('Тихое подключение не удалось: $e');
-        startupMessage =
-            'Переподключение к Яндекс.Диску не удалось. Работаем локально.';
+        startupMessage = 'Переподключение к Яндекс.Диску не удалось. Работаем локально.';
       }
       if (!cloudProvider.isConnected) {
-        startupMessage =
-            'Переподключение к Яндекс.Диску не удалось. Работаем локально.';
+        startupMessage = 'Переподключение к Яндекс.Диску не удалось. Работаем локально.';
       }
     }
 
-    // Показываем WelcomeScreen только если:
-    // - пользователь ещё не видел его ИЛИ
-    // - не включено "Запомнить меня" И диск не подключён
     final showWelcomeScreen =
         !hasSeenWelcome || (!rememberMe && !cloudProvider.isConnected);
 
     return {
       'show_welcome': showWelcomeScreen,
-      'remember_me': rememberMe,
+      'remember_me': prefs.getBool('remember_me') ?? false,
       'is_connected': cloudProvider.isConnected,
       'startup_message': startupMessage,
     };
   }
 
-  Future<void> _performAutoSync(
+  Future<void> _syncData(
       PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider) async {
-    try {
-      print('🔄 Запуск автоматической синхронизации при старте приложения...');
-
-      // 1. Сначала всегда загружаем локальные данные
-      await plantCrudProvider.loadPlants();
-
-      if (!cloudProvider.isConnected) {
-        print(
-            '☁️ Яндекс.Диск не подключён — работаем только с локальными данными');
-        return;
-      }
-
-      //    (внутри уже есть: бэкап → сравнение lastLocalUpdate / lastCloudUpdate → upload или load)
+    await plantCrudProvider.loadPlants();
+    if (!cloudProvider.isConnected) {
+      print('Нет подключения к облаку, синхронизация пропущена');
+      return;
+    }
+    await cloudProvider.fetchLastCloudUpdate();
+    final localUpdate = plantCrudProvider.lastLocalUpdate;
+    final cloudUpdate = cloudProvider.lastCloudUpdate;
+    print('Локальное обновление: $localUpdate');
+    print('Облачное обновление: $cloudUpdate');
+    if (localUpdate == null && cloudUpdate == null) {
+      print('Оба хранилища пусты, синхронизация не требуется');
+      return;
+    }
+    if (plantCrudProvider.plants.isEmpty && cloudUpdate != null) {
+      print('Локальные данные пусты, загружаем из облака');
+      await cloudProvider.loadDataFromCloud(plantCrudProvider);
+      await plantCrudProvider.savePlants();
+    } else if (cloudUpdate == null ||
+        (localUpdate != null && localUpdate.isAfter(cloudUpdate))) {
+      print('Локальные данные новее или облако пусто, синхронизируем в облако');
       await cloudProvider.syncData(plantCrudProvider);
-
-      print('✅ Автоматическая синхронизация успешно завершена');
-    } catch (e) {
-      print('❌ Ошибка автоматической синхронизации при запуске: $e');
-      // Не показываем ошибку пользователю при автозапуске — только логи
-      // Пользователь увидит уведомления только при ручной синхронизации
+    } else if (localUpdate == null || cloudUpdate.isAfter(localUpdate)) {
+      print('Облачные данные новее или локальные пусты, загружаем из облака');
+      await cloudProvider.loadDataFromCloud(plantCrudProvider);
+      await plantCrudProvider.savePlants();
+    } else {
+      print('Данные синхронизированы, ничего не требуется');
     }
   }
 }
@@ -328,21 +236,12 @@ class HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _addController;
   String _currentFilter = 'all';
-  // bool _isSearching = false;   // больше не используется
+  bool _isSownExpanded = false;
   String _sortColumn = 'latinName';
   bool _isAscending = true;
-  // bool _isSearching = false;   // закомментировано — больше не используется
-  String? _selectedSowingYear;
-  // === Поиск ===
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-
-  // История поиска (последние 5 запросов)
-  List<String> _searchHistory = [];
-  static const String _searchHistoryKey = 'search_history';
-
-  // === КЭШ СЕЗОННОГО СОВЕТА (п.2.2) ===
   String? _cachedSeasonalTip;
   int? _cachedSeasonalTipHash;
 
@@ -353,18 +252,17 @@ class HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-
-    _loadSearchHistory(); // Загружаем историю поиска
-
-    context.read<PlantCrudProvider>().loadPlants();
-
-    if (widget.initialFilter != null) {
-      _currentFilter = 'custom_filter';
-      context.read<PlantCrudProvider>().clearSelections();
-      context
-          .read<PlantCrudProvider>()
-          .selectAll(widget.initialFilter!.map((p) => p.permanentId).toList());
-    }
+    // Defer loadPlants to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PlantCrudProvider>().loadPlants();
+      if (widget.initialFilter != null) {
+        _currentFilter = 'custom_filter';
+        context.read<PlantCrudProvider>().clearSelections();
+        context
+            .read<PlantCrudProvider>()
+            .selectAll(widget.initialFilter!.map((p) => p.permanentId).toList());
+      }
+    });
   }
 
   @override
@@ -379,42 +277,34 @@ class HomeScreenState extends State<HomeScreen>
     required String title,
     required int count,
     required Color color,
-    String? onTapFilter,
+    String?
+        onTapFilter, // Новый param: onTapFilter для setState _currentFilter (e.g., 'in_collection' for tap).
   }) {
-    final isMobile = Responsive.isMobile(context);
-
     return InkWell(
       onTap: onTapFilter != null
           ? () => setState(() => _currentFilter = onTapFilter)
           : null,
-      borderRadius: BorderRadius.circular(12),
       child: Card(
-        color: color.withValues(alpha: 0.09),
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: color.withValues(alpha: 0.1),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Column(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: isMobile ? 19 : 21),
-              const SizedBox(height: 3),
-              Text(
-                count.toString(),
-                style: TextStyle(
-                  fontSize: isMobile ? 15 : 17,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: isMobile ? 9.5 : 10.5,
-                  color: color.withValues(alpha: 0.75),
-                  height: 1.0,
-                ),
-                textAlign: TextAlign.center,
+              Icon(icon, color: color, size: 28),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$count',
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: color)),
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 14, color: color.withValues(alpha: 0.8))),
+                ],
               ),
             ],
           ),
@@ -434,65 +324,62 @@ class HomeScreenState extends State<HomeScreen>
     // Витрины-партии
     final batchesCount = plants.where((p) => p.isBatch).length;
     final inCollectionCount =
-        mainPlants.where((p) => p.status == 'in_collection').length;
+        mainPlants.where((p) => p.status == PlantStatus.inCollection).length;
     final sownInCollection = mainPlants
-        .where((p) => p.category == 'sown' && p.status == 'in_collection')
+        .where((p) => p.category == PlantCategory.sown && p.status == PlantStatus.inCollection)
         .length;
     final purchasedInCollection = mainPlants
-        .where((p) => p.category == 'purchased' && p.status == 'in_collection')
+        .where((p) => p.category == PlantCategory.purchased && p.status == PlantStatus.inCollection)
         .length;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Wrap(
-        spacing: 6,
-        runSpacing: 5,
-        alignment: WrapAlignment.spaceEvenly,
+        spacing: 12,
+        runSpacing: 12,
         children: [
           _buildStatCard(
-            icon: Icons.all_inclusive,
-            title: 'Все',
-            count: total,
-            color: Colors.grey,
-            onTapFilter: 'all',
-          ),
+              icon: Icons.all_inclusive,
+              title: 'Всего',
+              count: total,
+              color: Colors.grey,
+              onTapFilter:
+                  'all'),
           _buildStatCard(
-            icon: Icons.collections,
-            title: 'Коллекция',
-            count: inCollectionCount,
-            color: Colors.green,
-            onTapFilter: 'in_collection',
-          ),
+              icon: Icons.collections,
+              title: 'В коллекции',
+              count: inCollectionCount,
+              color: Colors.green,
+              onTapFilter:
+                  'in_collection'), // Обновлён: onTapFilter 'in_collection' (instead of if title).
           _buildStatCard(
-            icon: Icons.spa,
-            title: 'Семена',
-            count: sownInCollection,
-            color: Colors.orange,
-            onTapFilter: 'sown_in_collection',
-          ),
+              icon: Icons.spa,
+              title: 'Выращено из семян',
+              count: sownInCollection,
+              color: Colors.orange,
+              onTapFilter:
+                  'sown_in_collection'), // Обновлён: onTapFilter 'sown_in_collection'.
           _buildStatCard(
-            icon: Icons.shopping_cart,
-            title: 'Покупка',
-            count: purchasedInCollection,
-            color: Colors.blue,
-            onTapFilter: 'purchased_in_collection',
-          ),
+              icon: Icons.shopping_cart,
+              title: 'Купленные',
+              count: purchasedInCollection,
+              color: Colors.blue,
+              onTapFilter:
+                  'purchased_in_collection'), // Обновлён: onTapFilter 'purchased_in_collection'.
           if (seedlingsCount > 0)
             _buildStatCard(
-              icon: Icons.spa,
-              title: 'Сеянцы',
-              count: seedlingsCount,
-              color: Colors.teal,
-              onTapFilter: null,
-            ),
+                icon: Icons.spa,
+                title: 'Сеянцы',
+                count: seedlingsCount,
+                color: Colors.teal,
+                onTapFilter: null), // Сеянцы не кликабельны - они не на главном экране
           if (batchesCount > 0)
             _buildStatCard(
-              icon: Icons.group,
-              title: 'Партий',
-              count: batchesCount,
-              color: Colors.indigo,
-              onTapFilter: null,
-            ),
+                icon: Icons.group,
+                title: 'Партий',
+                count: batchesCount,
+                color: Colors.indigo,
+                onTapFilter: null), // Партии не кликабельны отдельно
         ],
       ),
     );
@@ -563,6 +450,217 @@ class HomeScreenState extends State<HomeScreen>
     return result;
   }
 
+  Widget _buildNavigationRail() {
+    final provider = context.watch<PlantCrudProvider>();
+    final years = provider.plants
+        .where((p) => p.category == 'sown')
+        .map((p) => p.year)
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return Stack(
+      alignment: Alignment.topLeft,
+      children: [
+        NavigationRail(
+          selectedIndex: _getSelectedIndex(),
+          onDestinationSelected: (index) {
+            if (index == 3) {
+              _navigateToSowingManagement();
+            } else if (index == 4) {
+              _navigateToCollectionManagement();
+            } else if (index == 5) {
+              context.push('/statistics');
+            } else if (index == 6) {
+              context.push('/qr');
+            } else if (index == 7) {
+              final provider = context.read<PlantCrudProvider>();
+              provider.clearSelections();
+              final plantsWithoutQR = provider.getPlantsWithoutQRCode();
+              for (var plant in plantsWithoutQR) {
+                provider.toggleSelection(plant.permanentId);
+              }
+              setState(() {
+                _currentFilter = 'all';
+                _isSownExpanded = false;
+              });
+            } else if (index == 8) {
+              setState(() {
+                _isSownExpanded = !_isSownExpanded;
+              });
+            } else {
+              final filters = ['all', 'growing', 'purchased'];
+              setState(() {
+                _currentFilter = filters[index];
+                _isSownExpanded = false;
+              });
+            }
+          },
+          labelType: NavigationRailLabelType.all,
+          backgroundColor: Colors.grey.shade50,
+          selectedIconTheme: const IconThemeData(color: Colors.green),
+          unselectedIconTheme: const IconThemeData(color: Colors.black54),
+          selectedLabelTextStyle:
+              const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+          unselectedLabelTextStyle: const TextStyle(color: Colors.black87),
+          destinations: [
+            const NavigationRailDestination(
+              icon: Icon(Icons.all_inclusive),
+              label: Text('Все'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.grass),
+              label: Text('Растут'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.shopping_cart),
+              label: Text('Купленные'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.agriculture),
+              label: Text('Управление посевами'),
+            ),
+            NavigationRailDestination(
+              icon: Stack(
+                children: [
+                  const Icon(Icons.event),
+                  if (provider.hasUnreadNotifications)
+                    Positioned(
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: const Text(
+                          '!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              label: const Text('Управление коллекцией'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.analytics),
+              label: Text('Статистика'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.qr_code_2),
+              label: Text('Управление QR'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.qr_code_outlined),
+              label: Text('Без QR'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.grass),
+              label: Text('Посевы'),
+            ),
+          ],
+        ),
+        if (_isSownExpanded)
+          Positioned(
+            left: 32,
+            top: (6 * 72) +
+                32, // Индекс "Посевы" = 6, высота кнопки ≈ 72, отступ = 25
+            child: Material(
+              elevation: 4,
+              child: Container(
+                width: 100, // Увеличена ширина для читаемости
+                height: 200,
+                color: Colors.white,
+                child: years.isEmpty
+                    ? const Center(child: Text('Нет посевов'))
+                    : SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            ListTile(
+                              title: const Text('Все посевы',
+                                  style: TextStyle(fontSize: 12)),
+                              dense: true,
+                              onTap: () {
+                                setState(() {
+                                  _currentFilter = 'sown_all';
+                                  _isSownExpanded = false;
+                                });
+                              },
+                            ),
+                            ListTile(
+                              title: const Text('Активные',
+                                  style: TextStyle(fontSize: 12)),
+                              dense: true,
+                              onTap: () {
+                                setState(() {
+                                  _currentFilter = 'sown_filtered';
+                                  _isSownExpanded = false;
+                                });
+                              },
+                            ),
+                            ...years.map((year) => ListTile(
+                                  title: Text(
+                                    year.toString(),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  dense: true,
+                                  onTap: () {
+                                    setState(() {
+                                      _currentFilter = 'year_$year';
+                                      _isSownExpanded = false;
+                                    });
+                                  },
+                                )),
+                          ],
+                        ),
+                      ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  int? _getSelectedIndex() {
+    if (_currentFilter == 'all') {
+      return 0;
+    }
+    if (_currentFilter == PlantStatus.growing) {
+      return 1;
+    }
+    if (_currentFilter == PlantCategory.purchased) {
+      return 2;
+    }
+    if (_currentFilter == 'sown_all' ||
+        _currentFilter == 'sown_filtered' ||
+        _currentFilter.startsWith('year_') ||
+        _isSownExpanded) {
+      return 6; // Обновлено на 6, так как "Посевы" теперь на позиции 6
+    }
+    return null;
+  }
+
+  void _openAddForm() async {
+    final result = await Navigator.push<Plant>(
+      context,
+      MaterialPageRoute(
+          builder: (ctx) => AddPlantForm(
+              getNextCustomNumber: _getNextCustomNumber, isCustomNumberUnique: _isCustomNumberUnique)),
+    );
+    if (result != null && mounted) {
+      Provider.of<PlantCrudProvider>(context, listen: false).addPlant(result);
+    }
+  }
+
   void _openEditForm(Plant plant) async {
     final result = await context.push<Plant>(
       '/plant/${plant.permanentId}/edit',
@@ -573,8 +671,7 @@ class HomeScreenState extends State<HomeScreen>
     }
   }
 
-/*
-  int _getNextNumber(int year, String category) {
+  int _getNextCustomNumber(int year, String category) {
     final plants = context.read<PlantCrudProvider>().plants;
     final numbers = plants
         .where((p) => p.category == category && p.year == year)
@@ -582,9 +679,8 @@ class HomeScreenState extends State<HomeScreen>
         .toList();
     return numbers.isEmpty ? 1 : numbers.reduce((a, b) => a > b ? a : b) + 1;
   }
-  */
-/*
-  bool _isNumberUnique(int year, int number, String category,
+
+  bool _isCustomNumberUnique(int year, int number, String category,
       {String? excludeId}) {
     final plants = context.read<PlantCrudProvider>().plants;
     return !plants.any((p) =>
@@ -593,276 +689,481 @@ class HomeScreenState extends State<HomeScreen>
         p.customNumber == number &&
         p.permanentId != excludeId);
   }
-  */
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<PlantCrudProvider>();
-    final isMobile = Responsive.isMobile(context);
-
-    // Сначала фильтруем: не показываем сеянцы (parentId != null)
-    // и применяем текущий фильтр
-    var filteredPlants = provider.plants.where((p) {
+    // Фильтруем: не показываем сеянцы (parentId != null) на главном экране
+    // Сеянцы показываются только внутри своих витрин
+    List<Plant> filteredPlants = provider.plants.where((plant) {
       // Исключаем всех детей (сеянцев с parentId)
-      if (p.parentId != null) return false;
+      if (plant.parentId != null) return false;
 
-      if (_currentFilter == 'all') return true;
-      if (_currentFilter == 'growing') return p.status == 'growing';
-      if (_currentFilter == 'purchased') return p.category == 'purchased';
-      if (_currentFilter == 'in_collection') return p.status == 'in_collection';
-      if (_currentFilter == 'sown_in_collection') {
-        return p.category == 'sown' && p.status == 'in_collection';
+      if (_currentFilter == 'custom_filter' && widget.initialFilter != null) {
+        return widget.initialFilter!.contains(plant);
       }
-      if (_currentFilter == 'purchased_in_collection') {
-        return p.category == 'purchased' && p.status == 'in_collection';
+      switch (_currentFilter) {
+        case 'all':
+          return true;
+        case 'growing':
+          return ['in_collection', 'growing', 'sown'].contains(plant.status);
+        case 'purchased':
+          return plant.category == PlantCategory.purchased;
+        case 'collection_filter':
+          return plant.status == PlantStatus.inCollection;
+        case 'sown_in_collection':
+          return plant.category == PlantCategory.sown && plant.status == PlantStatus.inCollection;
+        case 'purchased_in_collection':
+          return plant.category == PlantCategory.purchased &&
+              plant.status == PlantStatus.inCollection;
+        case 'sown_filtered':
+          return plant.category == 'sown' &&
+              !['dead', 'failed'].contains(plant.status);
+        case 'sown_all':
+          return plant.category == PlantCategory.sown;
+        default:
+          if (_currentFilter.startsWith('year_')) {
+            final year = int.tryParse(_currentFilter.split('_')[1]) ?? 0;
+            return plant.year == year && plant.category == PlantCategory.sown;
+          }
+          return true;
       }
-      if (_currentFilter == 'sown_by_year' && _selectedSowingYear != null) {
-        return p.category == 'sown' && p.year.toString() == _selectedSowingYear;
-      }
-      return true;
     }).toList();
 
-    // Применяем поиск (live search)
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
-      filteredPlants = filteredPlants.where((p) {
-        return p.latinName.toLowerCase().contains(query) ||
-            p.displayId.toLowerCase().contains(query) ||
-            p.year.toString().contains(query);
-      }).toList();
-    }
-
-    // Затем сортируем
     filteredPlants.sort((a, b) {
-      int compare;
-      switch (_sortColumn) {
-        case 'latinName':
-          compare =
-              a.latinName.toLowerCase().compareTo(b.latinName.toLowerCase());
-          break;
-        case 'status':
-          compare = a.status.compareTo(b.status);
-          break;
-        case 'year':
-          compare = a.year.compareTo(b.year);
-          break;
-        case 'category':
-          compare = a.category.compareTo(b.category);
-          break;
-        default:
-          compare = 0;
-      }
-      return _isAscending ? compare : -compare;
+      final compareResult = switch (_sortColumn) {
+        'latinName' => a.latinName.compareTo(b.latinName),
+        'status' => a.statusPriority.compareTo(b.statusPriority),
+        'year' => a.year.compareTo(b.year),
+        'category' => a.category.compareTo(b.category),
+        _ => 0,
+      };
+      return _isAscending ? compareResult : -compareResult;
     });
 
-    // Применяем поиск
-    filteredPlants = filteredPlants
-        .where((p) =>
-            p.latinName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            p.displayId.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: const TextStyle(
-                  color: Colors.black87, // ← Главное исправление (было белым)
-                  fontSize: 16,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Поиск по названию, ID или году...',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {
-                        _searchQuery = '';
-                      });
-                    },
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Colors.green, width: 1.5),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Colors.green, width: 1.5),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Colors.green, width: 2.0),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white, // чёткий белый фон
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
-                onSubmitted: (value) {
-                  _addToSearchHistory(value);
-                },
-              )
-            : const Text('Моя коллекция кактусов'),
-        actions: [
-          // Кнопка поиска
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _searchQuery = '';
-                  _searchController.clear();
-                } else {
-                  _searchController.clear();
-                  _searchQuery = '';
-                }
-              });
-            },
-          ),
-
-          // Кнопка подключения Яндекс.Диска (новая)
-          IconButton(
-            icon: const Icon(Icons.cloud_upload),
-            tooltip: 'Подключить Яндекс.Диск',
-            onPressed: () async {
-              final cloudProvider = context.read<CloudStorageProvider>();
-              if (cloudProvider.isConnected) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Яндекс.Диск уже подключён')),
-                );
-                return;
-              }
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Открываем страницу авторизации...')),
-              );
-
-              await cloudProvider.connectToYandexDisk(context);
-            },
-          ),
-
-          // Кнопка погоды (остаётся)
-          if (!_isSearching)
-            IconButton(
-              icon: const Icon(Icons.cloud),
-              onPressed: () => _connectWeather(context),
-            ),
-          // === МЕНЮ ДЛЯ ВЫБРАННЫХ РАСТЕНИЙ (три точки) ===
-          Consumer<PlantCrudProvider>(
-            builder: (context, provider, child) {
-              if (provider.selectedIds.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              return PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                tooltip: 'Действия с выбранными растениями',
-                onSelected: (value) async {
-                  final selectedIds = Set<String>.from(provider.selectedIds);
-                  if (selectedIds.isEmpty) return;
-
-                  if (value == 'create_qr_codes') {
-                    context.push('/batch-qr');
-                  } else if (value == 'cleanup_old') {
-                    await provider.cleanupUnusedPhotosForSelected(
-                        selectedIds, context);
-                  } else if (value == 'delete_all_photos') {
-                    await provider.deleteAllPhotosForSelected(
-                        selectedIds, context);
-                  }
-                },
-                itemBuilder: (BuildContext context) => [
-                  const PopupMenuItem<String>(
-                    value: 'create_qr_codes',
-                    child: Text('📱 Создать QR-коды для выбранных'),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'cleanup_old',
-                    child: Text('🗑 Удалить старые (неиспользуемые) фото'),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'delete_all_photos',
-                    child: Text('🗑 Удалить ВСЕ фото у выбранных'),
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-      drawer: isMobile ? _buildDrawer() : null, // Drawer на мобильных
-      body: SafeArea(
-        child: Column(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) await _handleExit(context);
+      },
+      child: Scaffold(
+        body: Row(
           children: [
-            // Компактный сезонный совет
-            Card(
-              elevation: 1,
-              margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: Padding(
-                padding: EdgeInsets.all(Responsive.defaultPadding(context)),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.lightbulb, color: Colors.green, size: 22),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _getSeasonalTip(),
-                        style: TextStyle(
-                          fontSize: isMobile ? 13 : 14,
-                          height: 1.3,
+            _buildNavigationRail(),
+            Expanded(
+              child: Column(
+                children: [
+                  AppBar(
+                    foregroundColor: Colors
+                        .green,
+                    title: _isSearching
+                        ? TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              hintText: 'Поиск по названию или ID...',
+                              border: InputBorder.none,
+                              prefixIcon:
+                                  Icon(Icons.search, color: Colors.green),
+                            ),
+                            onChanged: (value) =>
+                                setState(() => _searchQuery = value),
+                          )
+                        : provider.selectedIds.isEmpty
+                            ? const Text('Мои кактусы')
+                            : Text('Выбрано: ${provider.selectedIds.length}'),
+                    actions: [
+                      ElevatedButton.icon(
+                        onPressed: () => _connectWeather(context),
+                        icon: const Icon(Icons.location_on),
+                        label: const Text('Подключить погоду'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
+                      const SizedBox(
+                          height:
+                              16), // Отступ перед 'Импорт из Excel' — баланс.
+                      IconButton(
+                        icon: const Icon(Icons.import_export),
+                        tooltip: 'Импорт из Excel',
+                        onPressed: () => _importPlants(context),
+                      ),
+                      if (provider.selectedIds.isNotEmpty) ...[
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          tooltip: 'Очистить выбор',
+                          onPressed: () => provider.clearSelections(),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.download),
+                          tooltip: 'Экспорт в CSV',
+                          onPressed: () =>
+                              provider.exportSelectedToCSV(context),
+                        ),
+                      ],
+                      IconButton(
+                        icon: const Icon(Icons.save),
+                        tooltip: 'Сохранить изменения',
+                        onPressed: () => provider.savePlants(),
+                      ),
+                      IconButton(
+                        icon: Icon(_isSearching ? Icons.close : Icons.search),
+                        tooltip: _isSearching ? 'Закрыть поиск' : 'Поиск',
+                        onPressed: () => setState(() {
+                          _isSearching = !_isSearching;
+                          if (!_isSearching) {
+                            _searchQuery = '';
+                            _searchController.clear();
+                          }
+                        }),
+                      ),
+                      if (!context.watch<CloudStorageProvider>().isConnected)
+                        IconButton(
+                          icon: const Icon(Icons.cloud),
+                          tooltip: 'Подключить Яндекс.Диск',
+                          onPressed: () async {
+                            await context
+                                .read<CloudStorageProvider>()
+                                .connectToYandexDisk(context);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Попытка подключения завершена')),
+                              );
+                            }
+                          },
+                        ),
+                      if (context.watch<CloudStorageProvider>().isConnected)
+                        IconButton(
+                          icon: const Icon(Icons.cloud_off),
+                          tooltip: 'Отключить облачное хранилище',
+                          onPressed: () async {
+                            await context
+                                .read<CloudStorageProvider>()
+                                .disconnect();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Облачное хранилище отключено')),
+                              );
+                            }
+                          },
+                        ),
+                      if (context.watch<CloudStorageProvider>().isConnected)
+                        IconButton(
+                          icon: const Icon(Icons.sync),
+                          tooltip: 'Синхронизировать с облаком',
+                          onPressed: () async {
+                            final plantCrudProvider = context.read<PlantCrudProvider>();
+                            final cloudProvider =
+                                context.read<CloudStorageProvider>();
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                  content: Text('🔄 Синхронизация началась...')),
+                            );
+                            try {
+                              await cloudProvider.syncData(plantCrudProvider);
+                              if (!mounted) return;
+                              scaffoldMessenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('✅ Синхронизация успешно завершена'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } catch (e) {
+                              if (!mounted) return;
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('❌ Ошибка: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.logout, color: Colors.red),
+                        tooltip: 'Выйти из аккаунта',
+                        onPressed: () async {
+                          final cloudProvider =
+                              context.read<CloudStorageProvider>();
+                          if (cloudProvider.isConnected) {
+                            await cloudProvider.disconnect();
+                          }
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool(
+                              'has_seen_welcome', false); // Сбрасываем флаг
+                          if (context.mounted) {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                  builder: (context) => const WelcomeScreen()),
+                            );
+                          }
+                        },
+                      ),
+                      if (provider.selectedIds.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: AnimatedBuilder(
+                            animation: _addController,
+                            builder: (context, _) =>
+                                FloatingActionButton.extended(
+                              onPressed: _openAddForm,
+                              label: const Text('Добавить'),
+                              icon: const Icon(Icons.add),
+                              backgroundColor: Colors.green,
+                            ),
+                          ),
+                        ),
+                      if (provider.selectedIds.isNotEmpty)
+                        PopupMenuButton<String>(
+                          tooltip: 'Действия с выбранными',
+                          itemBuilder: (ctx) => [
+                            const PopupMenuItem(
+                              value: 'changeStatus',
+                              child: Row(children: [
+                                Icon(Icons.update, color: Colors.blue),
+                                SizedBox(width: 8),
+                                Text('Изменить статус'),
+                              ]),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(children: [
+                                Icon(Icons.delete, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('Удалить'),
+                              ]),
+                            ),
+                            const PopupMenuItem(
+                              value: 'cleanupPhotos',
+                              child: Row(children: [
+                                Icon(Icons.delete_forever,
+                                    color: Colors.orange),
+                                SizedBox(width: 8),
+                                Text('Очистить старые фото'),
+                              ]),
+                            ),
+                            const PopupMenuItem(
+                              value: 'deleteAllPhotos',
+                              child: Row(children: [
+                                Icon(Icons.delete_sweep, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('Удалить все фото'),
+                              ]),
+                            ),
+                          ],
+                          onSelected: (value) async {
+                            final provider = context.read<PlantCrudProvider>();
+
+                            if (value == 'changeStatus') {
+                              _showStatusDialog(context);
+                            } else if (value == 'delete') {
+                              _confirmMassDelete(context);
+                            } else if (value == 'cleanupPhotos') {
+                              await provider.cleanupUnusedPhotosForSelected(
+                                provider.selectedIds,
+                                context,
+                              );
+                            } else if (value == 'deleteAllPhotos') {
+                              await provider.deleteAllPhotosForSelected(
+                                provider.selectedIds,
+                                context,
+                              );
+                            }
+                          },
+                        ),
+                    ],
+                    elevation: 0,
+                    backgroundColor: Colors
+                        .green.shade50, // Сохранено: Светлый фон — не меняется.
+                  ),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    color: Colors.green.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(Icons.lightbulb, color: Colors.green, size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _getSeasonalTip(),
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-
-            _buildStatsRow(),
-
-            Expanded(
-              child: PlantCards(
-                plants: filteredPlants
-                    .where((p) =>
-                        p.latinName
-                            .toLowerCase()
-                            .contains(_searchQuery.toLowerCase()) ||
-                        p.displayId
-                            .toLowerCase()
-                            .contains(_searchQuery.toLowerCase()))
-                    .toList(),
-                sortColumn: _sortColumn,
-                isAscending: _isAscending,
-                onSort: (column) => setState(() {
-                  if (_sortColumn == column) {
-                    _isAscending = !_isAscending;
-                  } else {
-                    _sortColumn = column;
-                    _isAscending = true;
-                  }
-                }),
-                onEdit: _openEditForm,
-                onUpdate: (id, plant) => provider.updatePlant(id, plant),
-                onDelete: (id) => provider.deletePlant(id),
+                  ),
+                  const SizedBox(
+                      height:
+                          16), // Отступ перед статистикой, чтобы карточки не сливались.
+                  _buildStatsRow(),
+                  Expanded(
+                    child: PlantCards(
+                      plants: filteredPlants
+                          .where((p) =>
+                              p.latinName
+                                  .toLowerCase()
+                                  .contains(_searchQuery.toLowerCase()) ||
+                              p.displayId
+                                  .toLowerCase()
+                                  .contains(_searchQuery.toLowerCase()))
+                          .toList(),
+                      sortColumn: _sortColumn,
+                      isAscending: _isAscending,
+                      onSort: (column) => setState(() {
+                        if (_sortColumn == column) {
+                          _isAscending = !_isAscending;
+                        } else {
+                          _sortColumn = column;
+                          _isAscending = true;
+                        }
+                      }),
+                      onEdit: _openEditForm,
+                      onUpdate: (id, plant) => provider.updatePlant(id, plant),
+                      onDelete: (id) => provider.deletePlant(id),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: isMobile ? _buildBottomNavigationBar() : null,
+    );
+  }
+
+  Future<void> _importPlants(BuildContext context) async {
+    try {
+      FilePickerResult? result = await FilePicker.platform
+          .pickFiles(type: FileType.custom, allowedExtensions: ['xlsx']);
+      if (result == null || !context.mounted) {
+        return;
+      }
+
+      final file = File(result.files.single.path!);
+      final bytes = file.readAsBytesSync();
+      final excelInstance = excel.Excel.decodeBytes(bytes);
+      final sheet = excelInstance.tables.keys.first;
+      final table = excelInstance.tables[sheet]!;
+      final provider = Provider.of<PlantCrudProvider>(context, listen: false);
+      int added = 0;
+      int skipped = 0;
+
+      for (var row in table.rows.skip(1)) {
+        final name = row[0]?.value?.toString() ?? '';
+        final origin = row[1]?.value?.toString() ?? '';
+        final seedsStr = row[2]?.value?.toString() ?? '0';
+        final germinatedStr = row[3]?.value?.toString() ?? '0';
+        final seedNumberStr = row[4]?.value?.toString() ?? '';
+        if (name.isEmpty) {
+          continue;
+        }
+
+        String category;
+        int? year;
+        if (origin.toLowerCase().contains('куплен')) {
+          category = 'purchased';
+          year = int.tryParse(origin.split(' ').last) ?? DateTime.now().year;
+        } else if (origin.toLowerCase().contains('посев')) {
+          category = 'sown';
+          year = int.tryParse(origin.split(' ').last);
+        } else {
+          skipped++;
+          continue;
+        }
+        if (year == null) {
+          skipped++;
+          continue;
+        }
+
+        final seeds = int.tryParse(seedsStr) ?? 0;
+        final germinated = int.tryParse(germinatedStr) ?? 0;
+        final seedNumber = int.tryParse(seedNumberStr);
+        int customNumber = seedNumber != null &&
+                provider.isCustomNumberUnique(year, seedNumber, category)
+            ? seedNumber
+            : provider.getNextCustomNumber(year, category);
+
+        // Проверка на дубликат по имени и году
+        if (provider.plants.any((p) => p.latinName == name && p.year == year)) {
+          skipped++;
+          continue;
+        }
+
+        final newPlant = Plant(
+          latinName: name,
+          status: 'in_collection',
+          year: year,
+          customNumber: customNumber,
+          category: category,
+          seedsCount: seeds,
+          germinatedCount: germinated,
+        );
+        provider.addPlant(newPlant);
+        added++;
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Импорт: Добавлено $added, пропущено $skipped')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка импорта: $e')));
+      }
+    }
+  }
+
+  Future<void> _handleExit(BuildContext parentContext) async {
+    final provider = parentContext.read<PlantCrudProvider>();
+    if (!provider.hasUnsavedChanges) {
+      if (parentContext.mounted) {
+        Navigator.of(parentContext).pop();
+      }
+      return;
+    }
+
+    await showDialog<void>(
+      context: parentContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Несохраненные изменения'),
+        content: const Text('Сохранить изменения перед выходом?'),
+        actions: [
+          TextButton(
+            child: const Text('Нет'),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              if (dialogContext.mounted) {
+                Navigator.of(parentContext).pop();
+              }
+            },
+          ),
+          TextButton(
+            child: const Text('Да'),
+            onPressed: () {
+              provider.savePlants();
+              Navigator.pop(dialogContext);
+              if (dialogContext.mounted) {
+                Navigator.of(parentContext).pop();
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -872,6 +1173,78 @@ class HomeScreenState extends State<HomeScreen>
 
   void _navigateToCollectionManagement() {
     context.push('/collection');
+  }
+
+  void _confirmMassDelete(BuildContext context) {
+    final provider = context.read<PlantCrudProvider>();
+    final count = provider.selectedIds.length;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить выбранное'),
+        content: Text('Удалить $count растений?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              provider.deleteMultiplePlants();
+              Navigator.pop(ctx); // используем ctx из диалога
+            },
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStatusDialog(BuildContext context) {
+    const validStatuses = [
+      'sown',
+      'growing',
+      'in_collection',
+      'dead',
+      'failed'
+    ];
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Изменить статус'),
+        content: DropdownButtonFormField<String>(
+          initialValue: PlantStatus.inCollection.toString(),
+          items: validStatuses
+              .map((status) => DropdownMenuItem<String>(
+                    value: status.toString(),
+                    child: Text(
+                      status == PlantStatus.sown
+                          ? 'Посев'
+                          : status == PlantStatus.growing
+                              ? 'Растение'
+                              : status == PlantStatus.inCollection
+                                  ? 'В коллекции'
+                                  : status == PlantStatus.dead
+                                      ? 'Погиб'
+                                      : 'Не взошел',
+                    ),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            if (value != null) {
+              context.read<PlantCrudProvider>().updateMultipleStatus(value);
+              Navigator.pop(context);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'))
+        ],
+      ),
+    );
   }
 
   Future<void> _connectWeather(BuildContext context) async {
@@ -886,36 +1259,26 @@ class HomeScreenState extends State<HomeScreen>
       }
 
       final prefs = await SharedPreferences.getInstance();
-      if (!currentContext.mounted) {
-        return;
-      }
+      if (!currentContext.mounted) return;
 
       if (prefs.getDouble('lat') == null) {
         final city = await _showCityDialog(currentContext);
-        if (!currentContext.mounted) {
-          return;
-        }
+        if (!currentContext.mounted) return;
 
         if (city != null && city.isNotEmpty) {
           await provider.setCity(city);
-          if (!currentContext.mounted) {
-            return;
-          }
+          if (!currentContext.mounted) return;
 
           _showSnackBar(
               currentContext, 'Город "$city" сохранён! Погода обновится.');
         }
       } else {
-        if (!currentContext.mounted) {
-          return;
-        }
+        if (!currentContext.mounted) return;
         _showSnackBar(currentContext,
             'Геолокация подключена! Погода обновится в календаре.');
       }
     } catch (e) {
-      if (!currentContext.mounted) {
-        return;
-      }
+      if (!currentContext.mounted) return;
       _showSnackBar(currentContext, 'Ошибка подключения погоды: $e');
     }
   }
@@ -972,398 +1335,15 @@ class HomeScreenState extends State<HomeScreen>
       ),
     );
   }
-
-  // Нижняя навигация: "Растут" + "Синхронизировать" + "QR-скан" + "Выход"
-  Widget _buildBottomNavigationBar() {
-    final cloudProvider = context.watch<CloudStorageProvider>();
-
-    return BottomNavigationBar(
-      currentIndex: 0,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.green,
-      unselectedItemColor: Colors.grey,
-      onTap: (index) async {
-        if (index == 0) {
-          // Растут
-          setState(() {
-            _currentFilter = 'growing';
-            _selectedSowingYear = null;
-          });
-        } else if (index == 1) {
-          // Синхронизировать
-          if (cloudProvider.isSyncing) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Синхронизация уже выполняется...'),
-              ),
-            );
-          } else {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Синхронизация'),
-                content: const Text(
-                    'Загрузить данные с Яндекс.Диска?\n\nЭто перезапишет локальные изменения.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Отмена'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Загрузить'),
-                  ),
-                ],
-              ),
-            );
-            if (confirmed == true && mounted) {
-              cloudProvider.loadFromCloud(context);
-            }
-          }
-        } else if (index == 2) {
-          // Сканировать QR
-          context.push('/qr/scan');
-        } else if (index == 3) {
-          // Выход
-          _showExitDialog();
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.grass),
-          label: 'Растут',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.sync),
-          label: 'Синхр.',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.qr_code_scanner),
-          label: 'QR',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.exit_to_app),
-          label: 'Выход',
-        ),
-      ],
-    );
-  }
-
-  // Диалог выхода с сохранением
-  void _showExitDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Выход из приложения'),
-        content: const Text('Сохранить все изменения перед выходом?\n\n'
-            'Да — сохранить локально и в облако\n'
-            'Нет — выйти без сохранения'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx), // Отмена
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _exitWithoutSaving();
-            },
-            child: const Text('Нет'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await _saveAndExit();
-            },
-            child: const Text('Да, сохранить'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _saveAndExit() async {
-    final plantCrudProvider = context.read<PlantCrudProvider>();
-    final cloudProvider = context.read<CloudStorageProvider>();
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    scaffoldMessenger.showSnackBar(
-      const SnackBar(content: Text('Сохранение данных...')),
-    );
-
-    try {
-      await plantCrudProvider.savePlants();
-
-      if (cloudProvider.isConnected) {
-        await cloudProvider.syncData(plantCrudProvider);
-      }
-
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('✅ Данные сохранены. Выход...'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      // Небольшая задержка, чтобы пользователь увидел сообщение
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) {
-        SystemNavigator.pop(); // Выход из приложения
-      }
-    } catch (e) {
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Ошибка сохранения: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _exitWithoutSaving() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Выход без сохранения...')),
-    );
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        SystemNavigator.pop();
-      }
-    });
-  }
-
-  // Drawer для дополнительных пунктов на мобильных
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(color: Colors.green),
-            child: Text('Меню',
-                style: TextStyle(color: Colors.white, fontSize: 24)),
-          ),
-
-          // === НОВАЯ КНОПКА: Принудительно обновить из облака ===
-          ListTile(
-            leading: const Icon(Icons.cloud_download, color: Colors.blue),
-            title: const Text('Принудительно обновить из облака'),
-            subtitle: const Text('Скачать свежие данные с Яндекс.Диска'),
-            onTap: () async {
-              Navigator.pop(context); // закрываем меню
-
-              final cloudProvider = context.read<CloudStorageProvider>();
-              final plantCrudProvider = context.read<PlantCrudProvider>();
-              final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-              if (!cloudProvider.isConnected) {
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                      content: Text('Сначала подключите Яндекс.Диск')),
-                );
-                return;
-              }
-
-              try {
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                      content: Text('⏳ Загружаем данные из облака...')),
-                );
-
-                await cloudProvider.fetchLastCloudUpdate();
-                await cloudProvider.loadDataFromCloud(plantCrudProvider);
-                await plantCrudProvider.savePlants();
-
-                if (!mounted) return;
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content:
-                        Text('✅ Данные успешно загружены из Яндекс.Диска!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text('❌ Ошибка загрузки: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-          ),
-
-          ListTile(
-            leading: const Icon(Icons.qr_code_2, color: Colors.blue),
-            title: const Text('Управление QR-кодами'),
-            subtitle: const Text('Файлы и растения'),
-            onTap: () {
-              Navigator.pop(context);
-              context.push('/qr');
-            },
-          ),
-
-          ListTile(
-            leading: const Icon(Icons.qr_code_2, color: Colors.orange),
-            title: const Text('Только без QR кодов'),
-            subtitle: const Text('Показать растения без этикеток'),
-            onTap: () {
-              Navigator.pop(context);
-              // Устанавливаем фильтр на растения без QR кодов
-              final provider = context.read<PlantCrudProvider>();
-              provider.clearSelections();
-              final plantsWithoutQR = provider.getPlantsWithoutQRCode();
-              for (var plant in plantsWithoutQR) {
-                provider.toggleSelection(plant.permanentId);
-              }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Выбрано растений без QR: ${plantsWithoutQR.length}')),
-              );
-            },
-          ),
-
-          const Divider(),
-
-          ListTile(
-            leading: const Icon(Icons.agriculture),
-            title: const Text('Управление посевами'),
-            onTap: () {
-              Navigator.pop(context);
-              _navigateToSowingManagement();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.filter_list),
-            title: const Text('Фильтр по году посева'),
-            onTap: () {
-              Navigator.pop(context);
-              _showSowingYearFilter();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.event),
-            title: const Text('Управление коллекцией'),
-            onTap: () {
-              Navigator.pop(context);
-              _navigateToCollectionManagement();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.show_chart),
-            title: const Text('Статистика'),
-            onTap: () {
-              Navigator.pop(context);
-              context.push('/statistics');
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSowingYearFilter() {
-    final provider = context.read<PlantCrudProvider>();
-    final years = provider.plants
-        .where((p) => p.category == 'sown')
-        .map((p) => p.year.toString())
-        .toSet()
-        .toList()
-      ..sort((a, b) => b.compareTo(a)); // от новых к старым
-
-    if (years.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нет посевов для фильтрации')),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Выберите год посева'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: years.length,
-            itemBuilder: (ctx, index) {
-              final year = years[index];
-              final count = provider.plants
-                  .where(
-                      (p) => p.category == 'sown' && p.year.toString() == year)
-                  .length;
-              return ListTile(
-                title: Text(year),
-                trailing: Text('$count шт.',
-                    style: const TextStyle(color: Colors.grey)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() {
-                    _selectedSowingYear = year;
-                    _currentFilter = 'sown_by_year';
-                  });
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() => _selectedSowingYear = null);
-            },
-            child: const Text('Сбросить фильтр'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Загрузка истории поиска
-  Future<void> _loadSearchHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final history = prefs.getStringList(_searchHistoryKey) ?? [];
-    setState(() {
-      _searchHistory = history;
-    });
-  }
-
-  // Сохранение истории поиска (максимум 5 последних)
-  Future<void> _saveSearchHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_searchHistoryKey, _searchHistory);
-  }
-
-  // Добавление запроса в историю
-  void _addToSearchHistory(String query) {
-    if (query.trim().isEmpty) return;
-
-    setState(() {
-      _searchHistory.remove(query); // убираем дубликат, если был
-      _searchHistory.insert(0, query);
-
-      if (_searchHistory.length > 5) {
-        _searchHistory.removeLast();
-      }
-    });
-
-    _saveSearchHistory();
-  }
 }
 
 class AddPlantForm extends StatefulWidget {
-  final int Function(int year, String category) getNextNumber;
+  final int Function(int year, String category) getNextCustomNumber;
   final bool Function(int year, int number, String category,
-      {String? excludeId}) isNumberUnique;
+      {String? excludeId}) isCustomNumberUnique;
 
   const AddPlantForm(
-      {super.key, required this.getNextNumber, required this.isNumberUnique});
+      {super.key, required this.getNextCustomNumber, required this.isCustomNumberUnique});
 
   @override
   State<AddPlantForm> createState() => _AddPlantFormState();
@@ -1386,7 +1366,7 @@ class _AddPlantFormState extends State<AddPlantForm> {
   void _updateNumber() {
     final year = int.tryParse(_yearController.text);
     if (year != null) {
-      _numberController.text = widget.getNextNumber(year, _category).toString();
+      _numberController.text = widget.getNextCustomNumber(year, _category).toString();
     }
   }
 
@@ -1396,7 +1376,7 @@ class _AddPlantFormState extends State<AddPlantForm> {
     if (number == null) return 'Введите число';
     final year = int.tryParse(_yearController.text);
     if (year == null) return 'Сначала укажите год';
-    return widget.isNumberUnique(year, number, _category)
+    return widget.isCustomNumberUnique(year, number, _category)
         ? null
         : 'Номер должен быть уникальным';
   }

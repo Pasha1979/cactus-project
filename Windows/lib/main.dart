@@ -252,14 +252,17 @@ class HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    context.read<PlantCrudProvider>().loadPlants();
-    if (widget.initialFilter != null) {
-      _currentFilter = 'custom_filter';
-      context.read<PlantCrudProvider>().clearSelections();
-      context
-          .read<PlantCrudProvider>()
-          .selectAll(widget.initialFilter!.map((p) => p.permanentId).toList());
-    }
+    // Defer loadPlants to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PlantCrudProvider>().loadPlants();
+      if (widget.initialFilter != null) {
+        _currentFilter = 'custom_filter';
+        context.read<PlantCrudProvider>().clearSelections();
+        context
+            .read<PlantCrudProvider>()
+            .selectAll(widget.initialFilter!.map((p) => p.permanentId).toList());
+      }
+    });
   }
 
   @override
