@@ -453,6 +453,21 @@
 ### Технический долг / Напоминания
 - **dispose() в провайдерах:** удалены пустые `@override void dispose() { super.dispose(); }` из 8 провайдеров (2.0.2). Когда появятся реальные ресурсы (Timer, StreamSubscription, isolate, http client) — добавить `dispose()` с реальной очисткой. Проверить: watering, wintering, photo, batch, sync, qr_code, weather, plant_crud провайдеры.
 
+**🔄 Глубокий аудит 2.0 + 2.1 + 2.2 (2026-05-12):**
+- ✅ `flutter analyze` — чистый (Android + Windows)
+- ✅ Все TODO/FIXME — либо отсутствуют, либо platform-specific (printing/pdfium)
+- ✅ Platform differences — полностью сохранены (QRScanner, printing, Platform checks)
+- ✅ go_router redirect — защита deep links работает (`state.uri.path != '/'`)
+- ✅ `navigatorKey` + `context.mounted` — корректно в `cloud_storage_provider.dart`
+- ✅ `isLoading` backward compatibility — `bool get isLoading => _plantsState is UiLoading`
+- ⚠️ **Найдено и исправлено:** `DateTime.parse` без защиты в 5 файлах:
+  - `models/qr_code.dart` — `QRCode.fromJson`
+  - `models/qr_code_file.dart` — `QRCodeFile.fromJson`
+  - `presentation/providers/wintering_provider.dart` — `WinteringLogEntry.fromJson`
+  - `data/repositories/wintering_repository_impl.dart` — `saveWinteringSettings`
+  - `presentation/providers/plant_crud_provider.dart` — `loadFromCloudJson`
+- ✅ LESSONS_LEARNED.md обновлен — добавлена ошибка #10
+
 **2.2 UiState pattern — ✅ Завершён:**
 - 2.2.1 ✅ Создан `core/ui/ui_state.dart` — sealed class `UiState<T>` с `UiLoading`/`UiSuccess`/`UiError`
 - 2.2.2 ✅ Интегрирован в `WateringProvider` — `_uiState` с `onRetry: load`

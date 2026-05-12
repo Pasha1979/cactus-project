@@ -271,7 +271,8 @@ class PlantCrudProvider with ChangeNotifier {
     _plants = mergedPlants;
 
     _globalWateringDates = (data['globalWateringDates'] as List<dynamic>?)
-            ?.map((d) => DateTime.parse(d as String))
+            ?.map((d) => DateTime.tryParse(d as String))
+            .whereType<DateTime>()
             .toList() ??
         [];
 

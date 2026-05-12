@@ -28,7 +28,7 @@ class WinteringRepositoryImpl implements WinteringRepository {
     if (entries != null) {
       for (final entry in entries) {
         final dto = WinteringLogEntryDto(
-          date: DateTime.parse(entry['date'] as String),
+          date: DateTime.tryParse(entry['date'] as String) ?? DateTime(1970, 1, 1),
           description: entry['description'] as String,
         );
         await _localDataSource.saveEntry(dto);

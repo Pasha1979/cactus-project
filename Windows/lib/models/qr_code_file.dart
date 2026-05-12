@@ -43,7 +43,7 @@ class QRCodeFile {
       id: json['id'] as String,
       fileName: json['fileName'] as String,
       filePath: json['filePath'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.tryParse(json['createdAt'] as String) ?? DateTime(1970, 1, 1),
       plantIds: List<String>.from(json['plantIds'] as List),
       pageFormat: json['pageFormat'] as String,
       orientation: json['orientation'] as String,

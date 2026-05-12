@@ -75,7 +75,7 @@ class QRCode {
       plantId: json['plantId'] as String,
       plantName: json['plantName'] as String,
       permanentId: json['permanentId'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.tryParse(json['createdAt'] as String) ?? DateTime(1970, 1, 1),
       isActive: json['isActive'] as bool? ?? true,
     );
   }

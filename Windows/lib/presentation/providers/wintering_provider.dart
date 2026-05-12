@@ -19,7 +19,7 @@ class WinteringLogEntry {
 
   factory WinteringLogEntry.fromJson(Map<String, dynamic> json) {
     return WinteringLogEntry(
-      date: DateTime.parse(json['date']),
+      date: DateTime.tryParse(json['date']) ?? DateTime(1970, 1, 1),
       description: json['description'],
     );
   }
