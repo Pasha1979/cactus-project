@@ -1,0 +1,3 @@
+analyzer:
+  exclude:
+    - REFACTORING_ROADMAP/Стабильная/**
