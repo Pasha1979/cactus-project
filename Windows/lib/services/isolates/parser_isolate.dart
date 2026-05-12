@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
 
+import 'package:flutter/foundation.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
 
@@ -33,6 +34,7 @@ class ParserIsolate {
     void Function(List<dynamic>) entryPoint,
     String payload,
   ) async {
+    final sw = Stopwatch()..start();
     final receivePort = ReceivePort();
     Isolate? isolate;
 
@@ -53,6 +55,8 @@ class ParserIsolate {
 
       if (result is Map<String, dynamic>) {
         if (result['success'] == true) {
+          sw.stop();
+          debugPrint('[ParserIsolate] Parsing completed in ${sw.elapsedMilliseconds}ms');
           return result['data'] as Map<String, dynamic>;
         } else {
           throw ParserIsolateException(
@@ -62,6 +66,10 @@ class ParserIsolate {
       } else {
         throw ParserIsolateException('Invalid isolate response format');
       }
+    } catch (e) {
+      sw.stop();
+      debugPrint('[ParserIsolate] Parsing failed after ${sw.elapsedMilliseconds}ms: $e');
+      rethrow;
     } finally {
       receivePort.close();
       isolate?.kill(priority: Isolate.immediate);
