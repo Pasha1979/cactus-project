@@ -1,0 +1,15 @@
+targets:
+  $default:
+    builders:
+      msix|msix_builder:
+        options:
+          certificate_path: null
+          certificate_password: null
+          publisher: "CN=MyCactus"
+    build_args:
+      production:
+        dart-define:
+          APP_ENV=production
+      development:
+        dart-define:
+          APP_ENV=development
