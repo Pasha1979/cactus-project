@@ -1,13 +1,3 @@
 {
-    "cmake.sourceDirectory": "G:/cactus-project/Android/windows",
-    "dart.analyzerExcludedFolders": [
-        "Стабильная",
-        "Стабильная/**"
-    ],
-    "files.exclude": {
-        "Стабильная": true
-    },
-    "search.exclude": {
-        "Стабильная": true
-    }
+    "cmake.sourceDirectory": "G:/cactus-project/Android/windows"
 }
