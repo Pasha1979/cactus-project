@@ -43,16 +43,18 @@ class PlantLocalDataSource {
   }
 
   Future<List<PlantDto>> getPlantsByStatus(String status) async {
-    if (_indexManager != null) {
-      final ids = _indexManager!.getIdsByField('status', status);
+    final indexManager = _indexManager;
+    if (indexManager != null) {
+      final ids = indexManager.getIdsByField('status', status);
       return ids.map((id) => _plantBox.get(id)).whereType<PlantDto>().toList();
     }
     return _plantBox.values.where((plant) => plant.status == status).toList();
   }
 
   Future<List<PlantDto>> getPlantsByCategory(String category) async {
-    if (_indexManager != null) {
-      final ids = _indexManager!.getIdsByField('category', category);
+    final indexManager = _indexManager;
+    if (indexManager != null) {
+      final ids = indexManager.getIdsByField('category', category);
       return ids.map((id) => _plantBox.get(id)).whereType<PlantDto>().toList();
     }
     return _plantBox.values
