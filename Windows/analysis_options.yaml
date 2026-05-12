@@ -2,7 +2,7 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
-    - Стабильная/**
+    - ../REFACTORING_ROADMAP/Стабильная/**
   strong-mode:
     implicit-casts: false
     implicit-dynamic: false
