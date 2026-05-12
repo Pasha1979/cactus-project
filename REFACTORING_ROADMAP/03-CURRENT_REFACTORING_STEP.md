@@ -468,6 +468,13 @@
   - `presentation/providers/plant_crud_provider.dart` — `loadFromCloudJson`
 - ✅ LESSONS_LEARNED.md обновлен — добавлена ошибка #10
 
+**2.3 Кэширование изображений (Вариант А) — ✅ Завершён:**
+- 2.3.1 ✅ Заменён `Image.network` → `CachedNetworkImage` в 4 файлах (`geography_section`, `edit_plant_screen`, `plant_card_screen`, `plant_cards`)
+- 2.3.2 ✅ `flutter_image_compress` проверен на Windows — собирается (flutter build windows прошёл)
+- 2.3.4 ✅ Создан `services/image/photo_cache_manager.dart` — централизованный кэш для GBIF/llifle URL
+- ✅ `flutter_cache_manager` добавлен в `pubspec.yaml` (Android + Windows) — явная зависимость
+- ✅ Исправлен `main.cpp` warning C4267 (deep linking код) — `static_cast<DWORD>` для `RegSetValueExW`
+
 **2.2 UiState pattern — ✅ Завершён:**
 - 2.2.1 ✅ Создан `core/ui/ui_state.dart` — sealed class `UiState<T>` с `UiLoading`/`UiSuccess`/`UiError`
 - 2.2.2 ✅ Интегрирован в `WateringProvider` — `_uiState` с `onRetry: load`
@@ -475,7 +482,7 @@
 - 2.2.4 ✅ Создан `UiStateBuilder<T>` + `ErrorCard` с кнопкой «Повторить»
 
 ### Общий прогресс
-22/41 шагов завершено (2.0 ✅ + 2.1 ✅ + 2.2 ✅)
+23/41 шагов завершено (2.0 ✅ + 2.1 ✅ + 2.2 ✅ + 2.3 ✅)
 
 ### Оценка времени до завершения
 8-10 недель (обновлено после завершения 2.0 и части 2.1)

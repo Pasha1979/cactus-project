@@ -89,7 +89,12 @@ class PlantCards extends StatelessWidget {
                           Hero(
                             tag: 'flag_${plant.permanentId}',
                             child:
-                                Image.network(plant.countryFlag!, height: 32),
+                                CachedNetworkImage(
+                                  imageUrl: plant.countryFlag!,
+                                  height: 32,
+                                  placeholder: (_, __) => const SizedBox(height: 32),
+                                  errorWidget: (_, __, ___) => const SizedBox(height: 32),
+                                ),
                           ),
                           Text('Страна: ${plant.country ?? "Не указана"}'),
                         ],

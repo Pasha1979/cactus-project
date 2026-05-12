@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -350,8 +351,13 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
                       : (_flagUrl != null && _flagUrl!.isNotEmpty)
                           ? Padding(
                               padding: const EdgeInsets.all(4.0),
-                              child: Image.network(_flagUrl!,
-                                  width: 40, height: 30),
+                              child: CachedNetworkImage(
+                                imageUrl: _flagUrl!,
+                                width: 40,
+                                height: 30,
+                                placeholder: (_, __) => const SizedBox(width: 40, height: 30),
+                                errorWidget: (_, __, ___) => const SizedBox(width: 40, height: 30),
+                              ),
                             )
                           : null,
                   border: const OutlineInputBorder(),

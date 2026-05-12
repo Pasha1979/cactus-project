@@ -56,6 +56,8 @@ dependencies:
   hive: ^2.2.3  # Локальная база данных
   hive_flutter: ^1.1.0  # Hive для Flutter
   logger: ^2.0.0+1  # Структурированное логирование
+  flutter_image_compress: ^2.4.0
+  flutter_cache_manager: ^3.4.1
 
 dev_dependencies:
   flutter_test:

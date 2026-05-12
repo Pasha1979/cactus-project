@@ -291,12 +291,12 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                       if (plant.countryFlag != null)
                         Container(
                           margin: const EdgeInsets.only(right: 6),
-                          child: Image.network(
-                            plant.countryFlag!,
+                          child: CachedNetworkImage(
+                            imageUrl: plant.countryFlag!,
                             width: 20,
                             height: 14,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.flag, size: 16, color: Colors.white70),
+                            placeholder: (_, __) => const SizedBox(width: 20, height: 14),
+                            errorWidget: (_, __, ___) => const SizedBox(width: 20, height: 14),
                           ),
                         ),
                       Text(

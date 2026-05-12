@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../models/plant.dart';
 import 'package:provider/provider.dart';
@@ -71,12 +72,12 @@ class GeographySection extends StatelessWidget {
                                 if (countryFlag != null)
                                   Container(
                                     margin: const EdgeInsets.only(right: 8),
-                                    child: Image.network(
-                                      countryFlag,
+                                    child: CachedNetworkImage(
+                                      imageUrl: countryFlag,
                                       width: 24,
                                       height: 16,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          const Icon(Icons.flag, size: 20),
+                                      placeholder: (_, __) => const SizedBox(width: 24, height: 16),
+                                      errorWidget: (_, __, ___) => const SizedBox(width: 24, height: 16),
                                     ),
                                   ),
                                 Expanded(
