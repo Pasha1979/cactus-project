@@ -406,6 +406,17 @@ class PlantCards extends StatelessWidget {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Чекбокс для выбора растения
+                              Checkbox(
+                                value: isSelected,
+                                onChanged: (value) {
+                                  provider.toggleSelection(plant.permanentId);
+                                },
+                                activeColor: Colors.green,
+                              ),
+
+                              const SizedBox(width: 8),
+
                               // Фото слева
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),

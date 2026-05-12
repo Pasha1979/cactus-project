@@ -6,7 +6,6 @@ import 'dart:io'; // Сохранено: Для Image.file local userPhotos.
 import '../presentation/providers/providers.dart'; // Сохранено: Для context.watch/read<PlantProvider>() — selectedIds, getAdultImage, lastGlobalWateringText.
 import '../models/plant.dart'; // Сохранено: Для Plant тип, statusText, lastWateringText.
 import '../theme/cactus_theme.dart';
-import '../widgets/qr_code_widget.dart';
 
 class PlantCards extends StatelessWidget {
   final List<Plant> plants;
@@ -407,6 +406,17 @@ class PlantCards extends StatelessWidget {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Чекбокс для выбора растения
+                              Checkbox(
+                                value: isSelected,
+                                onChanged: (value) {
+                                  provider.toggleSelection(plant.permanentId);
+                                },
+                                activeColor: Colors.green,
+                              ),
+
+                              const SizedBox(width: 8),
+
                               // Фото слева
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
@@ -478,9 +488,7 @@ class PlantCards extends StatelessWidget {
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        QRCodeIndicator(
-                                          hasQRCode: plant.qrCode != null && plant.qrCode!.isActive,
-                                        ),
+                                        const SizedBox.shrink(),
                                       ],
                                     ),
                                     const SizedBox(height: 3),
@@ -530,4 +538,5 @@ class PlantCards extends StatelessWidget {
     );
   }
 }
+
 
