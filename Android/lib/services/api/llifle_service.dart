@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/logger/app_logger.dart';
+import '../isolates/parser_isolate.dart';
 import 'gbif_service.dart';
 
 /// Сервис для получения данных о растениях с Llifle.com.
@@ -259,111 +260,44 @@ class LlifleService {
       return null;
     }
 
-    final speciesDocument = html_parser.parse(speciesBody);
+    // Парсинг в isolate (CPU-bound: DOM tree + CSS queries)
+    final rawData = await ParserIsolate.parseHtml(speciesBody);
+    final rawPhotoUrls = rawData['photoUrls'] as List<dynamic>? ?? [];
 
-    // Извлечение всех фото
-    final mainPhoto =
-        speciesDocument.querySelector('#main_photo_container img');
-    final secondaryPhotos = speciesDocument
-        .querySelectorAll('.secondary_photo_container img.zoom_on_click');
-    final thumbnails = speciesDocument
-        .querySelectorAll('#thumbnail_container img.thumbnail_photo');
-
-    final Set<String> photoUrls = {};
-
-    // Обработка главного фото
-    if (mainPhoto != null && mainPhoto.attributes['src'] != null) {
-      var src = mainPhoto.attributes['src']!;
-      src = src.startsWith('http') ? src : 'https://llifle.com$src';
-      src = src.replaceAll('https://llifle.comphotos/', 'https://llifle.com/photos/');
-      src = src.replaceAll('+', '_');
-      src = src.replaceAll('_m.jpg', '_l.jpg');
-      if (src.contains('llifle.com') && src.endsWith('.jpg')) {
-        AppLogger.api('Добавлен главный URL: $src', tag: _tag);
-        photoUrls.add(Uri.encodeFull(src));
-      } else {
-        AppLogger.warning('Пропущен некорректный главный URL: $src', tag: _tag);
+    // URL processing — в main thread (лёгкая операция)
+    final photoUrls = <String>{};
+    for (final rawUrl in rawPhotoUrls) {
+      var photoUrl = rawUrl.toString();
+      if (!photoUrl.startsWith('http')) {
+        photoUrl = 'https://llifle.com$photoUrl';
       }
-    }
+      photoUrl = photoUrl.replaceAll(
+          'https://llifle.comphotos/', 'https://llifle.com/photos/');
+      photoUrl = photoUrl.replaceAll('+', '_');
+      photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
 
-    // Обработка второстепенных фото
-    for (var img in secondaryPhotos) {
-      final src = img.attributes['src'];
-      if (src != null) {
-        var photoUrl = src.startsWith('http') ? src : 'https://llifle.com$src';
-        photoUrl = photoUrl.replaceAll(
-            'https://llifle.comphotos/', 'https://llifle.com/photos/');
-        photoUrl = photoUrl.replaceAll('+', '_');
-        photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
-        if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
-          AppLogger.api('Добавлен второстепенный URL: $photoUrl', tag: _tag);
-          photoUrls.add(Uri.encodeFull(photoUrl));
-        } else {
-          AppLogger.warning(
-              'Пропущен некорректный второстепенный URL: $photoUrl',
-              tag: _tag);
-        }
-      }
-    }
-
-    // Обработка миниатюр
-    for (var img in thumbnails) {
-      final src = img.attributes['src'];
-      if (src != null) {
-        var photoUrl = src.startsWith('http') ? src : 'https://llifle.com$src';
+      // Thumbnails: дополнительная замена
+      if (rawUrl.toString().contains('/thumbnails/')) {
         photoUrl = photoUrl.replaceAll('/thumbnails/', '/photos/');
-        photoUrl = photoUrl.replaceAll(
-            'https://llifle.comphotos/', 'https://llifle.com/photos/');
-        photoUrl = photoUrl.replaceAll('+', '_');
-        photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
-        if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
-          AppLogger.api('Добавлен URL миниатюры: $photoUrl', tag: _tag);
-          photoUrls.add(photoUrl);
-        } else {
-          AppLogger.warning(
-              'Пропущен некорректный URL миниатюры: $photoUrl',
-              tag: _tag);
-        }
       }
-    }
 
-    // Проверяем альбомы
-    final albumLinks = speciesDocument
-        .querySelectorAll('#thumbnail_container a.screenshot');
-    for (var link in albumLinks) {
-      final rel = link.attributes['rel'];
-      if (rel != null && rel.startsWith('/screenshots/')) {
-        var photoUrl = 'https://llifle.com$rel';
-        photoUrl = photoUrl.replaceAll(
-            'https://llifle.comphotos/', 'https://llifle.com/photos/');
-        photoUrl = photoUrl.replaceAll('+', '_');
-        photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
-        if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
-          AppLogger.api('Добавлен URL альбома: $photoUrl', tag: _tag);
-          photoUrls.add(photoUrl);
-        } else {
-          AppLogger.warning(
-              'Пропущен некорректный URL альбома: $photoUrl',
-              tag: _tag);
-        }
+      if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
+        AppLogger.api('Добавлен URL: $photoUrl', tag: _tag);
+        photoUrls.add(Uri.encodeFull(photoUrl));
+      } else {
+        AppLogger.warning('Пропущен некорректный URL: $photoUrl', tag: _tag);
       }
     }
 
     final photoUrlList = photoUrls.toList();
     AppLogger.api('Найдено фото: $photoUrlList', tag: _tag);
 
-    // Парсинг данных вида
-    final parsedData = parseLlifleData(speciesDocument);
-
-    final habitat = parsedData['habitat'] ?? _parseHabitat(speciesDocument);
-    final description = parsedData['description'] ?? _parseDescription(speciesDocument);
-    String tempCareTips = _parseCareTips(speciesDocument);
-    final careTips = parsedData['careTips'] ??
-        (tempCareTips.isNotEmpty
-            ? tempCareTips
-            : _parseCareTipsFromDescription(description));
-    final synonyms = parsedData['synonyms'] ?? '';
-    final country = parsedData['country'] ?? '';
+    // Данные вида — уже извлечены в isolate
+    final habitat = rawData['habitat'] as String? ?? '';
+    final description = rawData['description'] as String? ?? '';
+    final careTips = rawData['careTips'] as String? ?? '';
+    final synonyms = rawData['synonyms'] as String? ?? '';
+    final country = rawData['country'] as String? ?? '';
 
     AppLogger.api(
         'Описание: ${description.length > 50 ? description.substring(0, 50) : description}...',
@@ -456,31 +390,6 @@ class LlifleService {
     }
   }
 
-  // ==================== ПРИВАТНЫЕ ПАРСЕРЫ ====================
-
-  String _parseHabitat(Document document) {
-    try {
-      final element =
-          document.querySelector('p.Description_Sheet_Origin_and_Habitat');
-      if (element != null) {
-        return element.text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
-      }
-      final originElements = document.querySelectorAll('p, div, b');
-      for (var el in originElements) {
-        if (el.text.contains('Origin and Habitat')) {
-          final text = el.text;
-          final startIndex =
-              text.indexOf('Origin and Habitat') + 'Origin and Habitat'.length;
-          return text.substring(startIndex).replaceAll(':', '').trim();
-        }
-      }
-      return '';
-    } catch (e) {
-      AppLogger.warning('Ошибка парсинга ареала: $e', tag: _tag);
-      return '';
-    }
-  }
-
   String _parseDescription(Document document) {
     try {
       final element =
@@ -491,38 +400,6 @@ class LlifleService {
       return '';
     } catch (e) {
       AppLogger.warning('Ошибка парсинга описания: $e', tag: _tag);
-      return '';
-    }
-  }
-
-  String _parseCareTips(Document document) {
-    try {
-      final element = document
-          .querySelector('p.Description_Sheet_Cultivation_and_Propagation');
-      if (element != null) {
-        return element.text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
-      }
-      return '';
-    } catch (e) {
-      AppLogger.warning('Ошибка парсинга особенностей ухода: $e', tag: _tag);
-      return '';
-    }
-  }
-
-  String _parseCareTipsFromDescription(String description) {
-    try {
-      final regex = RegExp(
-        r'(Cultivation and Propagation:.*?)(?=\n[A-Z]|$)',
-        caseSensitive: false,
-        dotAll: true,
-      );
-      final match = regex.firstMatch(description);
-      final careTips = match?.group(1)?.trim() ?? '';
-      return careTips.replaceAll(RegExp(r'\s+'), ' ').trim();
-    } catch (e) {
-      AppLogger.warning(
-          'Ошибка парсинга особенностей ухода (резервный способ): $e',
-          tag: _tag);
       return '';
     }
   }

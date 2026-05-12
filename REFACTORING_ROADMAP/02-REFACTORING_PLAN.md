@@ -740,14 +740,23 @@ dev_dependencies:
 
 > **⚠️ Риски:** Memory leaks, deadlocks, сложность отладки. Требует бэкапа.
 
-**Задачи:**
-2.4.1 Создать services/isolates/parser_isolate.dart
-2.4.2 Перенести парсинг Llifle в isolate
-2.4.3 Перенести парсинг GBIF в isolate
-2.4.4 Перенести сериализацию JSON в isolate
-2.4.5 Создать _IsolateMessage для коммуникации
-2.4.6 Тестирование UI без блокировок
-2.4.7 Проверка использования CPU
+**Выбранный подход (пользователь):**
+- **Фаза 1 (Вариант А):** Только парсинг в isolate. HTTP и кэширование (`SharedPreferences`) — в main thread.
+- **Фаза 2 (Вариант Б):** После успешного тестирования Фазы 1 — перенести HTTP + парсинг + сериализацию в isolate. Запланировано, но не начинать без подтверждения пользователя.
+
+**Задачи (Фаза 1 — Вариант А):**
+2.4.1 Создать `services/isolates/parser_isolate.dart` — 2 функции: `parseHtml(String)` → `Map`, `parseJson(String)` → `Map`
+2.4.2 Перенести парсинг Llifle HTML в isolate (`html_parser.parse` → `parseLlifleData`)
+2.4.3 Перенести парсинг GBIF JSON в isolate (`jsonDecode` + `GbifOccurrence.fromJson`)
+2.4.4 Создать `_IsolateMessage` для коммуникации (SendPort/ReceivePort)
+2.4.5 Добавить таймауты (5 сек) и `Isolate.kill()` при ошибках/timeout
+2.4.6 Тестирование UI без блокировок (FPS, прокрутка)
+2.4.7 Проверка использования CPU и памяти
+
+**Задачи (Фаза 2 — Вариант Б, запланировано):**
+2.4.8 Перенести HTTP-запросы в isolate (после тестирования Фазы 1)
+2.4.9 Перенести JSON-сериализацию для кэша в isolate
+2.4.10 Проверка полного pipeline в isolate
 
 **Риски и митигация:**
 | Риск | Вероятность | Митигация |

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/logger/app_logger.dart';
 import '../../models/gbif_occurrence.dart';
+import '../isolates/parser_isolate.dart';
 
 /// Сервис для работы с GBIF API (Global Biodiversity Information Facility).
 
@@ -148,8 +149,8 @@ class GbifService {
         final response = await http.get(url, headers: headers);
 
         if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          return _parseGbifResponse(data);
+          final rawData = await ParserIsolate.parseJson(response.body);
+          return _buildGbifResult(rawData);
         } else {
           AppLogger.warning('GBIF API вернул статус ${response.statusCode}',
               tag: _tag);
@@ -167,53 +168,27 @@ class GbifService {
     return null;
   }
 
-  Map<String, dynamic>? _parseGbifResponse(Map<String, dynamic> data) {
+  Map<String, dynamic>? _buildGbifResult(Map<String, dynamic> rawData) {
     try {
-      final results = data['results'] as List<dynamic>?;
-      if (results == null || results.isEmpty) {
-        AppLogger.warning('GBIF: нет результатов в ответе', tag: _tag);
-        return null;
-      }
-
-      final occurrences = <GbifOccurrence>[];
-      final photoUrls = <String>[];
-      final countries = <String>[];
-
-      for (final result in results) {
-        if (result is! Map<String, dynamic>) continue;
-
-        final occurrence = GbifOccurrence.fromJson(result);
-        if (occurrence.hasValidCoordinates) {
-          occurrences.add(occurrence);
-          if (occurrence.country.isNotEmpty) {
-            countries.add(occurrence.country);
-          }
-        }
-
-        // Извлекаем фото
-        final media = result['media'] as List<dynamic>?;
-        if (media != null) {
-          for (final mediaItem in media) {
-            if (mediaItem is Map<String, dynamic> &&
-                mediaItem['type'] == 'StillImage' &&
-                mediaItem['identifier'] != null) {
-              final photoUrl = mediaItem['identifier'] as String;
-              if (photoUrl.startsWith('http')) {
-                photoUrls.add(photoUrl);
-              }
-            }
-          }
-        }
-      }
-
-      if (occurrences.isEmpty) {
-        AppLogger.warning('GBIF: нет валидных occurrence с координатами',
+      final occurrenceMaps = rawData['occurrences'] as List<dynamic>? ?? [];
+      if (occurrenceMaps.isEmpty) {
+        AppLogger.warning('GBIF: нет валидных occurrence',
             tag: _tag);
         return null;
       }
 
+      final occurrences = occurrenceMaps
+          .map((m) => GbifOccurrence.fromJson(m as Map<String, dynamic>))
+          .toList();
+
+      final photoUrls = (rawData['photoUrls'] as List<dynamic>? ?? [])
+          .map((u) => u.toString())
+          .toList();
+      final countries = (rawData['countries'] as List<dynamic>? ?? [])
+          .map((c) => c.toString())
+          .toList();
       final mostFrequentCountry = _getMostFrequentCountry(countries);
-      final synonyms = _extractSynonyms(data);
+      final synonyms = rawData['synonyms'] as String? ?? '';
       final habitatDescription = _createHabitatDescription(occurrences);
 
       AppLogger.api(
@@ -232,7 +207,7 @@ class GbifService {
         'lastGbifUpdate': DateTime.now().toIso8601String(),
       };
     } catch (e, stack) {
-      AppLogger.error('Ошибка парсинга ответа GBIF',
+      AppLogger.error('Ошибка сборки результата GBIF',
           error: e, stackTrace: stack, tag: _tag);
       return null;
     }
@@ -267,26 +242,6 @@ class GbifService {
       }
     }
     return mostFrequent;
-  }
-
-  static String _extractSynonyms(Map<String, dynamic> data) {
-    try {
-      final synonyms = <String>[];
-      if (data.containsKey('synonyms')) {
-        final synList = data['synonyms'] as List<dynamic>?;
-        if (synList != null) {
-          for (final syn in synList) {
-            if (syn is String && syn.isNotEmpty) {
-              synonyms.add(syn.trim());
-            }
-          }
-        }
-      }
-      return synonyms.join(', ');
-    } catch (e) {
-      AppLogger.warning('Ошибка извлечения синонимов GBIF: $e', tag: _tag);
-      return '';
-    }
   }
 
   static String _createHabitatDescription(List<GbifOccurrence> occurrences) {
