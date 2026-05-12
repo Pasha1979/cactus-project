@@ -85,8 +85,8 @@ class GbifService {
         // Проверяем "срок годности" кэша
         final lastUpdate = data['lastGbifUpdate'] as String?;
         if (lastUpdate != null) {
-          final lastUpdateDate = DateTime.parse(lastUpdate);
-          if (DateTime.now().difference(lastUpdateDate) > _cacheTtl) {
+          final lastUpdateDate = DateTime.tryParse(lastUpdate);
+          if (lastUpdateDate != null && DateTime.now().difference(lastUpdateDate) > _cacheTtl) {
             AppLogger.api('Кэш GBIF устарел для $latinName', tag: _tag);
             await prefs.remove(key);
             return null;
