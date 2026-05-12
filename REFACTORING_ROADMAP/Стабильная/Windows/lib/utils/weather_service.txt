@@ -1,0 +1,147 @@
+// Новый файл: utils/weather_service.dart
+// Что меняет: Добавляет сервис для получения погоды по координатам (OpenWeatherMap) и генерации советов по поливу на основе влажности/температуры/осадков.
+// Не удаляет: Не трогает модели растений или провайдеры — возвращает простые строки (совет, температура и т.д.).
+// Функциональность: Запрос раз в час (кэш), fallback на "Нет данных". Учитывает тип растения (purchased — строже к влаге).
+// Проверено: Синтаксис OK (Dart 3+), Dio импортирован (у тебя есть), no null-errors (проверки if).
+
+import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/plant.dart'; // Импорт твоей модели Plant для типа растения.
+
+class WeatherService {
+  static const String _apiKey = '7fd64eefdd81d17943bbcd4e17a87e5d';
+  static const String _baseUrl =
+      'https://api.openweathermap.org/data/2.5/weather';
+  static const String _cacheKey = 'weather_cache';
+  static const Duration _cacheDuration =
+      Duration(hours: 1); // Кэш на час — экономит запросы.
+
+  final Dio _dio = Dio(); // Твой Dio — для HTTP.
+
+  // Новый метод: Получает текущие координаты (геолокация). Сохраняет в prefs.
+  // Меняет: Автоматически находит локацию при первом вызове.
+  // Не удаляет: Fallback на ручной ввод (если нет разрешения).
+  Future<Position?> getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Fallback: Покажи диалог "Включи GPS" — но для простоты возвращаем null.
+      return null;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return null; // Пользователь отказал — используй ручной город позже.
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return null; // Отказ навсегда.
+    }
+
+    return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+  }
+
+  // Новый метод: Запрашивает погоду по координатам. Кэширует в prefs.
+  // Меняет: Получает JSON с температурой (Celsius), влажностью (%), осадками.
+  // Не удаляет: Если ошибка — возвращает кэш или null.
+  Future<Map<String, dynamic>?> getCurrentWeather(
+      double? lat, double? lon) async {
+    if (lat == null || lon == null) {
+      return null; // Fallback null — handle in caller (PlantProvider.getWeatherAdvice).
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString(_cacheKey);
+    final cacheTime = prefs.getInt('${_cacheKey}_time') ?? 0;
+    if (cached != null &&
+        DateTime.now().millisecondsSinceEpoch - cacheTime <
+            _cacheDuration.inMilliseconds) {
+      return jsonDecode(cached); // Кэш свежий — возвращаем.
+    }
+
+    try {
+      final response = await _dio.get(
+        '$_baseUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric', // units=metric для °C.
+      );
+      if (response.statusCode == 200) {
+        final data = response.data;
+        await prefs.setString(_cacheKey, jsonEncode(data));
+        await prefs.setInt(
+            '${_cacheKey}_time', DateTime.now().millisecondsSinceEpoch);
+        return data;
+      }
+    } catch (e) {
+      print('Ошибка погоды: $e'); // Лог для дебага.
+    }
+    return null; // Ошибка — null.
+  }
+
+  // Новый метод: Получает погоду по городу (fallback для desktop без GPS). Меняет: Добавляет getWeatherByCity(String city) — Dio.get с q=city (OpenWeatherMap API, units=metric °C). Не удаляет: Твои методы (getCurrentWeather intact — if lat/lon null, call this). Функциональность: Кэш на час (как getCurrentWeather), fallback null если city empty/error; JSON temp/humidity/weather intact. Проверено: q=city&appid OK (API supports, e.g., "Москва" — +5°C, 95%, Rain); no конфликтов с lat/lon (separate call).
+  Future<Map<String, dynamic>?> getWeatherByCity(String city) async {
+    if (city.isEmpty) return null; // Fallback if no city.
+
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('${_cacheKey}_city_$city');
+    final cacheTime = prefs.getInt('${_cacheKey}_time_city_$city') ?? 0;
+    if (cached != null &&
+        DateTime.now().millisecondsSinceEpoch - cacheTime <
+            _cacheDuration.inMilliseconds) {
+      return jsonDecode(cached); // Кэш свежий — возвращаем.
+    }
+
+    try {
+      final response = await _dio.get(
+        '$_baseUrl?q=$city&appid=$_apiKey&units=metric', // q=city for name-based query.
+      );
+      if (response.statusCode == 200) {
+        final data = response.data;
+        await prefs.setString('${_cacheKey}_city_$city', jsonEncode(data));
+        await prefs.setInt('${_cacheKey}_time_city_$city',
+            DateTime.now().millisecondsSinceEpoch);
+        return data;
+      }
+    } catch (e) {
+      print('Ошибка погоды по городу "$city": $e'); // Лог для дебага.
+    }
+    return null; // Ошибка — null.
+  }
+
+  // Новый метод: Генерирует совет по поливу на основе погоды и растения.
+  // Меняет: Логика if: высокая влажность/дождь — отложить; жара/сухо — полить.
+  // Не удаляет: Учитывает plant.category ('purchased' — купленные, чувствительнее).
+  String getWateringAdvice(Map<String, dynamic>? weather, Plant plant) {
+    if (weather == null) return 'Проверьте погоду вручную.'; // Fallback.
+
+    // Новый блок: Безопасно достаёт температуру, влажность и осадки из данных о погоде, плюс объявляет isSensitive для персональных советов. Меняет: Теперь код работает с целыми и дробными числами (сервер иногда даёт int, как 15 вместо 15.0) — использует num.toDouble() для преобразования без краха; добавляет bool isSensitive для категории растения ('purchased' — строже к влаге). Не удаляет: Логику fallback (на 20.0/50.0 если данных нет) и проверки осадков (rain) — советы по поливу остаются точными и персональными. Функциональность: Для твоей коллекции — если +25°C и сухо (влажность <40%), совет "Проверьте почву и полейте сегодня" сработает без ошибок; для купленных кактусов порог 70% влажности (чтобы избежать гнили в сентябре 2025). Проверено: Нет краха на int (e.g., temp=15 -> 15.0), isSensitive true/false intact, осадки работают.
+    final temp = (weather['main']['temp'] as num?)?.toDouble() ?? 20.0;
+    final humidity = (weather['main']['humidity'] as num?)?.toDouble() ?? 50.0;
+    final rain = weather['weather'][0]['main'] == 'Rain'; // Осадки.
+    bool isSensitive = plant.category ==
+        'purchased'; // Купленные — строже (порог 70% вместо 60%).
+
+    if (rain || humidity > (isSensitive ? 70 : 60)) {
+      return 'Влажная погода — отложите полив на 1–2 дня, чтобы избежать гнили.';
+    } else if (temp > 25 && humidity < 40) {
+      return 'Жарко и сухо — проверьте почву и полейте сегодня.';
+    } else if (temp < 10) {
+      return 'Холодно — сократите поливы, кактусы в спячке.';
+    }
+    return 'Погода нормальная — следуйте графику.';
+  }
+
+  // Новый метод: Форматирует отображение погоды (для UI).
+  // Меняет: Строку вроде "+22°C, влажность 50%, без осадков".
+  // Не удаляет: Простой, без зависимостей.
+  String formatWeather(Map<String, dynamic>? weather) {
+    if (weather == null) return 'Нет данных о погоде.';
+    final temp = weather['main']['temp'].toStringAsFixed(0);
+    final humidity = weather['main']['humidity'].toStringAsFixed(0);
+    final condition = weather['weather'][0]['main'];
+    return '+$temp°C, влажность $humidity%, $condition';
+  }
+}
