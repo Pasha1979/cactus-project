@@ -327,18 +327,18 @@ class DataMigrationManager {
 
   /// Миграция глобальных дат полива
   static Future<void> _migrateGlobalWateringDates(SharedPreferences prefs) async {
-    final json = prefs.getString(PrefsKeys.globalWateringDates);
-    if (json == null || json.isEmpty) return;
+    List<dynamic> rawData;
 
     try {
-      List<dynamic> rawData;
-      // Handle case where data might already be a List (not JSON string)
-      try {
+      // Try to get as string list first (old format)
+      final stringList = prefs.getStringList(PrefsKeys.globalWateringDates);
+      if (stringList != null) {
+        rawData = stringList;
+      } else {
+        // Try as JSON string (newer format)
+        final json = prefs.getString(PrefsKeys.globalWateringDates);
+        if (json == null || json.isEmpty) return;
         rawData = jsonDecode(json) as List<dynamic>;
-      } catch (e) {
-        // If JSON decode fails, data might be corrupted, skip migration
-        print('⚠️ Ошибка декодирования JSON дат полива: $e');
-        return;
       }
 
       final dates = rawData
