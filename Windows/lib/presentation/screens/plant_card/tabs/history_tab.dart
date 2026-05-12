@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../models/plant.dart';
-import '../../../../screens/plant_statistics_screen.dart';
 import '../../../../widgets/notes_bottom_sheet.dart';
 
 class HistoryTab extends StatelessWidget {
@@ -35,11 +35,9 @@ class HistoryTab extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.bar_chart, color: Colors.purple),
             title: const Text('Подробная статистика'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => PlantStatisticsScreen(plant: plant),
-              ),
+            onTap: () => context.push(
+              '/plant-statistics',
+              extra: plant,
             ),
           ),
         ],

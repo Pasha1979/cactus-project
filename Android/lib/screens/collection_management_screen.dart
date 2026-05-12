@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'wintering_screen.dart';
-import 'care_calendar_screen.dart'; // ←←← ДОБАВИТЬ ЭТУ СТРОКУ
 import '../presentation/providers/providers.dart';
 import '../utils/responsive_helper.dart';
 
@@ -116,12 +115,7 @@ class CollectionManagementScreen extends StatelessWidget {
                             hasNotification:
                                 plantCrud.hasUnreadNotifications ||
                                     overdueCount > 0,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => const CareCalendarScreen(),
-                              ),
-                            ),
+                            onTap: () => context.push('/calendar'),
                           ),
 
                           // Зимовка
@@ -133,12 +127,7 @@ class CollectionManagementScreen extends StatelessWidget {
                             color: Colors.cyan,
                             cardWidth: cardWidth,
                             hasNotification: false,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => const WinteringScreen(),
-                              ),
-                            ),
+                            onTap: () => context.push('/wintering'),
                           ),
                         ],
                       ),

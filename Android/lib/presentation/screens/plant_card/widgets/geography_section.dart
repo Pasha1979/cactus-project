@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../models/plant.dart';
-import '../../../../screens/edit_plant_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../presentation/providers/providers.dart';
 
@@ -31,11 +31,9 @@ class GeographySection extends StatelessWidget {
         trailing: IconButton(
           icon: const Icon(Icons.edit, color: Colors.grey),
           onPressed: () async {
-            final result = await Navigator.push<Plant>(
-              context,
-              MaterialPageRoute(
-                builder: (ctx) => EditPlantScreen(plant: plant),
-              ),
+            final result = await context.push<Plant>(
+              '/plant/${plant.permanentId}/edit',
+              extra: plant,
             );
             if (result != null && context.mounted) {
               context.read<PlantCrudProvider>()

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/plant.dart';
 import '../presentation/providers/providers.dart';
-import 'print_settings_screen.dart';
 
 /// Экран выбора растений для печати QR-этикеток
 class SelectPlantsForPrintScreen extends StatefulWidget {
@@ -75,11 +75,9 @@ class _SelectPlantsForPrintScreenState extends State<SelectPlantsForPrintScreen>
         .where((p) => _selectedPlantIds.contains(p.permanentId))
         .toList();
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (ctx) => PrintSettingsScreen(plantsToPrint: selectedPlants),
-      ),
+    context.push(
+      '/print/settings',
+      extra: selectedPlants,
     );
   }
 

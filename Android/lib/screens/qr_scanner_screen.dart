@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../presentation/providers/providers.dart';
-import '../presentation/screens/plant_card/plant_card_screen.dart';
 
 /// Экран сканирования QR-кодов с камеры
 class QRScannerScreen extends StatefulWidget {
@@ -145,11 +145,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         // Растение найдено - добавляем в историю и открываем карточку
         await qrCodeProvider.addToScanHistory(plant.permanentId);
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (ctx) => PlantCardScreen(plant: plant),
-          ),
+        context.replace(
+          '/plant/${plant.permanentId}',
+          extra: plant,
         );
       } else {
         // Растение не найдено

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../presentation/providers/providers.dart';
 import '../models/plant.dart';
-import 'print_settings_screen.dart';
 
 /// Экран массового создания QR-кодов для выбранных растений
 class BatchQRCreationScreen extends StatefulWidget {
@@ -158,13 +158,9 @@ class _BatchQRCreationScreenState extends State<BatchQRCreationScreen> {
       ),
     );
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (ctx) => PrintSettingsScreen(
-          plantsToPrint: plants.toList(),
-        ),
-      ),
+    context.replace(
+      '/print/settings',
+      extra: plants.toList(),
     );
   }
 }
