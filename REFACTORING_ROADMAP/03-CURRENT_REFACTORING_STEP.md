@@ -440,6 +440,16 @@
 - 2.1.5 ✅ Deep linking (MaterialApp.router, redirect, AndroidManifest, Windows registry)
 - 2.1.6 ✅ Тестирование навигации (flutter analyze 0 errors, все маршруты проверены)
 
+**🔄 Дополнительный аудит 2.0 + 2.1 (2026-05-12):**
+- ✅ Исправлен deep link redirect — добавлена защита от перенаправления внешних deep links на `/welcome`
+- ✅ Исправлен route mismatch — `/add-sowing-year` → `/sowing/add` в app_router.dart
+- ✅ Исправлены пропущенные `Navigator.push` в widgets (care_tips, description, geography, history_tab)
+- ✅ Исправлен `DateTime.parse` → `_parseDateTimeSafe` в `GerminationRecord`, `FloweringRecord`, `Note`
+- ✅ Добавлены fallback `?? ''` для `id`, `title`, `text` в `Note.fromJson`
+- ✅ Обновлен CHECKLIST.md — добавлен чек-лист go_router навигации
+- ✅ Обновлен LESSONS_LEARNED.md — добавлены ошибки #5–#9
+- ✅ Обновлен 02-REFACTORING_PLAN.md — добавлены предупреждения для будущих изменений навигации
+
 ### Технический долг / Напоминания
 - **dispose() в провайдерах:** удалены пустые `@override void dispose() { super.dispose(); }` из 8 провайдеров (2.0.2). Когда появятся реальные ресурсы (Timer, StreamSubscription, isolate, http client) — добавить `dispose()` с реальной очисткой. Проверить: watering, wintering, photo, batch, sync, qr_code, weather, plant_crud провайдеры.
 

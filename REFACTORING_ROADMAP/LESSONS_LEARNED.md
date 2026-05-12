@@ -102,7 +102,7 @@
 
 ## Статистика ошибок
 
-**Всего ошибок:** 21
+**Всего ошибок:** 22
 **По категориям:**
 - Архитектурные: 2 (ошибка 5, ошибка 7)
 - Миграционные: 1 (ошибка 4)
@@ -1718,6 +1718,35 @@ if (isRelease) {
 - **Если сомнение** — перечитать документацию инструмента, а не гадать
 - **Если ошибка повторяется** — ОСТАНОВИТЬСЯ, записать в LESSONS_LEARNED, проверить себя
 - **Самопроверка перед КАЖДЫМ вызовом** — мантра: "Все параметры? Все валидны? Не пустые?"
+
+---
+
+### Ошибка 9: DateTime.parse без _parseDateTimeSafe в GerminationRecord, FloweringRecord, Note
+**Дата:** 2026-05-12
+**Категория:** Рефакторинг / Безопасность данных
+**Контекст:** Глубокий аудит завершенных шагов 2.0 + 2.1
+
+**Описание:**
+- `GerminationRecord.fromJson`, `FloweringRecord.fromJson`, `Note.fromJson` использовали `DateTime.parse()` напрямую
+- При невалидных датах из облака или поврежденных JSON — `FormatException` и краш приложения
+- `_parseDateTimeSafe()` был добавлен в шаге 2.0.5, но только для `Plant.fromJson`
+- Вложенные модели (`GerminationRecord`, `FloweringRecord`, `Note`) остались без защиты
+
+**Причина:**
+- При реализации 2.0.5 не была проведена полная проверка ВСЕХ `fromJson` методов в проекте
+- Фокус был только на `Plant.fromJson`, хотя `_parseDateTimeSafe()` определен в том же файле
+- Не был проведен grep `DateTime.parse` по проекту
+
+**Исправление:**
+- Заменен `DateTime.parse(json['date'])` на `_parseDateTimeSafe(json['date']) ?? DateTime(1970, 1, 1)` в `GerminationRecord` и `FloweringRecord`
+- Заменен `DateTime.parse(json['createdAt'])` на `_parseDateTimeSafe(json['createdAt']) ?? DateTime.now()` в `Note`
+- Добавлены fallback `?? ''` для `id`, `title`, `text` в `Note.fromJson`
+- Исправлено в обоих проектах (Android + Windows)
+
+**Урок:**
+- После добавления `_parseDateTimeSafe()` — проверить ВСЕ `fromJson` в проекте через grep `DateTime.parse`
+- Безопасный парсинг должен применяться ко ВСЕМ моделям, не только к основной
+- Не забывать про вложенные/дочерние модели
 
 ---
 

@@ -447,7 +447,7 @@ class GerminationRecord {
 
   factory GerminationRecord.fromJson(Map<String, dynamic> json) {
     return GerminationRecord(
-      date: DateTime.parse(json['date']),
+      date: _parseDateTimeSafe(json['date']) ?? DateTime(1970, 1, 1),
       germinatedCount: json['germinatedCount'],
       deadCount: json['deadCount'] ?? 0, // поддержка старых записей
     );
@@ -467,7 +467,7 @@ class FloweringRecord {
 
   factory FloweringRecord.fromJson(Map<String, dynamic> json) {
     return FloweringRecord(
-      date: DateTime.parse(json['date']),
+      date: _parseDateTimeSafe(json['date']) ?? DateTime(1970, 1, 1),
       event: json['event'],
     );
   }
@@ -495,10 +495,10 @@ class Note {
 
   factory Note.fromJson(Map<String, dynamic> json) {
     return Note(
-      id: json['id'],
-      title: json['title'],
-      text: json['text'],
-      createdAt: DateTime.parse(json['createdAt']),
+      id: json['id'] ?? '',
+      title: json['title'] ?? '',
+      text: json['text'] ?? '',
+      createdAt: _parseDateTimeSafe(json['createdAt']) ?? DateTime.now(),
     );
   }
 }
