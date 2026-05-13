@@ -82,8 +82,9 @@ class CloudStorageProvider with ChangeNotifier {
   // ==================== СИНХРОНИЗАЦИЯ ====================
 
   Future<void> syncData(PlantCrudProvider plantCrudProvider) async {
+    notifyListeners(); // isSyncing = true — обновляем UI немедленно
     await _syncManager.syncData(plantCrudProvider);
-    notifyListeners();
+    notifyListeners(); // isSyncing = false
   }
 
   Future<void> loadFromCloud(BuildContext context) async {

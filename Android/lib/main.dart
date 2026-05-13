@@ -855,38 +855,56 @@ class HomeScreenState extends State<HomeScreen>
                           },
                         ),
                       if (context.watch<CloudStorageProvider>().isConnected)
-                        IconButton(
-                          icon: const Icon(Icons.sync),
-                          tooltip: 'Синхронизировать с облаком',
-                          onPressed: () async {
-                            final plantCrudProvider = context.read<PlantCrudProvider>();
-                            final cloudProvider =
-                                context.read<CloudStorageProvider>();
-                            final scaffoldMessenger = ScaffoldMessenger.of(context);
-                            scaffoldMessenger.showSnackBar(
-                              const SnackBar(
-                                  content: Text('🔄 Синхронизация началась...'),),
-                            );
-                            try {
-                              await cloudProvider.syncData(plantCrudProvider);
-                              if (!mounted) return;
-                              scaffoldMessenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('✅ Синхронизация успешно завершена'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } catch (e) {
-                              if (!mounted) return;
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('❌ Ошибка: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                        ),
+                        Builder(builder: (context) {
+                          final cloudProvider = context.watch<CloudStorageProvider>();
+                          final syncing = cloudProvider.isSyncing;
+                          return IconButton(
+                            icon: syncing
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,),)
+                                : const Icon(Icons.sync),
+                            tooltip: syncing
+                                ? 'Синхронизация...'
+                                : 'Синхронизировать с облаком',
+                            onPressed: syncing
+                                ? null
+                                : () async {
+                                    final plantCrudProvider =
+                                        context.read<PlantCrudProvider>();
+                                    final scaffoldMessenger =
+                                        ScaffoldMessenger.of(context);
+                                    scaffoldMessenger.showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              '🔄 Синхронизация началась...',),),
+                                    );
+                                    try {
+                                      await cloudProvider
+                                          .syncData(plantCrudProvider);
+                                      if (!mounted) return;
+                                      scaffoldMessenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              '✅ Синхронизация успешно завершена',),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      if (!mounted) return;
+                                      scaffoldMessenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text('❌ Ошибка: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  },
+                          );
+                        },)
+                      ,
                       IconButton(
                         icon: const Icon(Icons.logout, color: Colors.red),
                         tooltip: 'Выйти из аккаунта',

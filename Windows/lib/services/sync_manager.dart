@@ -19,6 +19,8 @@ class SyncManager {
   final YandexDiskService _diskService;
   final PhotoSyncService _photoSyncService;
 
+  static const int _maxSyncRetries = 3;
+
   bool _isSyncing = false;
   DateTime? _lastCloudUpdate;
 
@@ -82,10 +84,20 @@ class SyncManager {
       return;
     }
 
+    // 2.9.1: Lock — предотвращаем параллельные вызовы syncData
+    if (_isSyncing) {
+      debugPrint('⏸️ Синхронизация уже выполняется, пропускаем');
+      return;
+    }
     _isSyncing = true;
 
     try {
-      await fetchLastCloudUpdate();
+      // 2.9.2: Exponential backoff retry для fetchLastCloudUpdate
+      await _retryWithBackoff(
+        () => fetchLastCloudUpdate(),
+        operationName: 'fetchLastCloudUpdate',
+      );
+
       final localUpdate = plantCrudProvider.lastLocalUpdate;
       final cloudUpdate = _lastCloudUpdate;
 
@@ -103,7 +115,10 @@ class SyncManager {
 
       if (plantCrudProvider.plants.isNotEmpty) {
         debugPrint('📤 Локальные данные новее → отправляем в облако');
-        await _uploadToCloud(plantCrudProvider);
+        await _retryWithBackoff(
+          () => _uploadToCloud(plantCrudProvider),
+          operationName: 'uploadToCloud',
+        );
         await fetchLastCloudUpdate();
       } else if (cloudUpdate != null) {
         debugPrint('📥 Локально пусто → загружаем из облака');
@@ -117,6 +132,29 @@ class SyncManager {
       debugPrint('❌ Ошибка синхронизации: $e');
     } finally {
       _isSyncing = false;
+    }
+  }
+
+  /// 2.9.2: Повторные попытки с экспоненциальной задержкой.
+  /// При сетевых ошибках: 1с → 2с → 4с (до 3 попыток).
+  Future<void> _retryWithBackoff(
+    Future<void> Function() operation, {
+    required String operationName,
+  }) async {
+    for (int attempt = 0; attempt < _maxSyncRetries; attempt++) {
+      try {
+        await operation();
+        return;
+      } catch (e) {
+        final isLastAttempt = attempt == _maxSyncRetries - 1;
+        if (isLastAttempt) {
+          debugPrint('❌ $operationName: исчерпаны все попытки ($_maxSyncRetries): $e');
+          rethrow;
+        }
+        final delay = Duration(seconds: 1 << attempt); // 1с, 2с, 4с
+        debugPrint('⚠️ $operationName: попытка ${attempt + 1}/$_maxSyncRetries не удалась, повтор через ${delay.inSeconds}с: $e');
+        await Future.delayed(delay);
+      }
     }
   }
 
@@ -151,6 +189,12 @@ class SyncManager {
     try {
       final data = await _diskService.downloadJsonFile();
 
+      // 2.9.3: Валидация структуры входящих данных
+      if (!_validateCloudData(data, plantCrudProvider)) {
+        debugPrint('⛔ Данные из облака не прошли валидацию — локальные данные сохранены');
+        return;
+      }
+
       debugPrint('📥 Загружено из облака: ${data['plants']?.length ?? 0} растений');
 
       await plantCrudProvider.loadFromCloudJson(data);
@@ -172,5 +216,43 @@ class SyncManager {
         debugPrint('❌ Ошибка загрузки из облака: $e');
       }
     }
+  }
+
+  /// 2.9.3 + 2.9.4: Валидация данных из облака.
+  ///
+  /// Проверяет:
+  /// - Наличие ключа 'plants'
+  /// - Лимит количества растений (макс 10000)
+  /// - 2.9.4: Защита от пустого списка — не перезаписывать если локально есть данные
+  bool _validateCloudData(
+    Map<String, dynamic> data,
+    PlantCrudProvider plantCrudProvider,
+  ) {
+    if (!data.containsKey('plants')) {
+      debugPrint('⛔ Валидация: отсутствует ключ plants');
+      return false;
+    }
+
+    final plantsList = data['plants'];
+    if (plantsList is! List) {
+      debugPrint('⛔ Валидация: plants не является списком');
+      return false;
+    }
+
+    if (plantsList.length > 10000) {
+      debugPrint('⛔ Валидация: слишком много растений (${plantsList.length} > 10000)');
+      return false;
+    }
+
+    // 2.9.4: Не перезаписывать локальные данные пустым списком
+    if (plantsList.isEmpty && plantCrudProvider.plants.isNotEmpty) {
+      debugPrint(
+          '⛔ Валидация: облако вернуло пустой список, '
+          'но локально есть ${plantCrudProvider.plants.length} растений — пропускаем',);
+      return false;
+    }
+
+    debugPrint('✅ Валидация облачных данных прошла (${plantsList.length} растений)');
+    return true;
   }
 }
