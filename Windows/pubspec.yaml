@@ -60,6 +60,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
+  # Тестирование (фаза 3.1)
+  mockito: ^5.4.4
+  mocktail: ^1.0.4
   # Рефакторинг: Добавляем для кодогенерации
   injectable_generator: ^2.4.1  # Генерация для injectable
   build_runner: ^2.4.8  # Кодогенерация

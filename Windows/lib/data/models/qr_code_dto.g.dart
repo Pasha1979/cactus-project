@@ -22,13 +22,14 @@ class QRCodeDtoAdapter extends TypeAdapter<QRCodeDto> {
       permanentId: fields[2] as String,
       createdAt: fields[3] as DateTime,
       isActive: fields[4] as bool,
+      filePath: fields[5] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, QRCodeDto obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.plantId)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class QRCodeDtoAdapter extends TypeAdapter<QRCodeDto> {
       ..writeByte(3)
       ..write(obj.createdAt)
       ..writeByte(4)
-      ..write(obj.isActive);
+      ..write(obj.isActive)
+      ..writeByte(5)
+      ..write(obj.filePath);
   }
 
   @override
