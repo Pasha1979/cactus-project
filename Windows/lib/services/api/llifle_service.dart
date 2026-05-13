@@ -50,6 +50,13 @@ class LlifleService {
         AppLogger.api('Кэшированные photoUrls: ${data['photoUrls']}', tag: _tag);
         return data;
       }
+      // Если уже проверяли Llifle и фото там нет — не перезапрашиваем
+      if (data['lliflePhotosChecked'] == true) {
+        AppLogger.api(
+            'Llifle не имеет фото для $searchName (проверено ранее), используем кэш',
+            tag: _tag,);
+        return data;
+      }
       AppLogger.api(
           'Кэшированные данные не содержат валидных photoUrls, запрашиваем заново',
           tag: _tag,);
@@ -272,6 +279,7 @@ class LlifleService {
     final plantData = {
       'speciesId': speciesId,
       'photoUrls': photoUrlList,
+      'lliflePhotosChecked': true,
       'habitat': habitat,
       'description': description,
       'synonyms': synonyms,

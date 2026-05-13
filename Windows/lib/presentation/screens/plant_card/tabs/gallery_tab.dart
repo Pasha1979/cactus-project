@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/plant.dart';
 import '../../../../presentation/providers/providers.dart';
+import '../../../../services/image/photo_cache_manager.dart';
 import '../../../../theme/cactus_theme.dart';
 
 typedef ShowFullPhotoCallback = void Function(BuildContext, Plant, String, bool);
@@ -32,6 +33,23 @@ class GalleryTab extends StatefulWidget {
 
 class _GalleryTabState extends State<GalleryTab> {
   String _currentFilter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _prefetchNetworkPhotos();
+  }
+
+  void _prefetchNetworkPhotos() {
+    final plant = widget.plant;
+    final networkUrls = [
+      ...plant.lliflePhotoUrls,
+      ...plant.gbifPhotoUrls,
+    ].where((url) => url.startsWith('http')).toList();
+    if (networkUrls.isNotEmpty) {
+      PhotoCacheManager.prefetch(networkUrls);
+    }
+  }
 
   List<String> _getDisplayedPhotos() {
     final plant = widget.plant;
