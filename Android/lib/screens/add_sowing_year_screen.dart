@@ -70,7 +70,7 @@ class AddSowingYearScreenState extends State<AddSowingYearScreen> {
             .map((year) => DropdownMenuItem(
                   value: year,
                   child: Text(year.toString()),
-                ))
+                ),)
             .toList(),
         onChanged: (value) => setState(() => _selectedYear = value),
       ),
@@ -143,7 +143,7 @@ class AddSowingYearScreenState extends State<AddSowingYearScreen> {
                         germinationHistory: [
                           ...plant.germinationHistory,
                           GerminationRecord(
-                              date: DateTime.now(), germinatedCount: cnt),
+                              date: DateTime.now(), germinatedCount: cnt,),
                         ],
                       );
                       final idx = _plants.indexOf(plant);
@@ -164,7 +164,7 @@ class AddSowingYearScreenState extends State<AddSowingYearScreen> {
                     onChanged: (value) {
                       final updatedPlant = plant.copyWith(
                           fieldNumber:
-                              value.trim().isEmpty ? null : value.trim());
+                              value.trim().isEmpty ? null : value.trim(),);
                       final idx = _plants.indexOf(plant);
                       if (idx != -1) _plants[idx] = updatedPlant;
                     },
@@ -178,7 +178,7 @@ class AddSowingYearScreenState extends State<AddSowingYearScreen> {
                         const InputDecoration(labelText: 'Продавец / источник'),
                     onChanged: (value) {
                       final updatedPlant = plant.copyWith(
-                          seller: value.trim().isEmpty ? null : value.trim());
+                          seller: value.trim().isEmpty ? null : value.trim(),);
                       final idx = _plants.indexOf(plant);
                       if (idx != -1) _plants[idx] = updatedPlant;
                     },
@@ -235,7 +235,7 @@ class AddSowingYearScreenState extends State<AddSowingYearScreen> {
             category: 'sown',
             seedsCount: 0,
             germinatedCount: 0,
-          ));
+          ),);
         });
       },
       child: const Text('Добавить строку'),

@@ -83,7 +83,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     _loadCountryMapping().then((_) {
       _buildEnglishToRussianMapping();
       if (_editedPlant.country != null && _editedPlant.country!.isNotEmpty) {
-        print('Инициализация флага для: ${_editedPlant.country}');
+        debugPrint('Инициализация флага для: ${_editedPlant.country}');
         _fetchFlag(_editedPlant.country!);
       }
     });
@@ -112,16 +112,16 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
           if (key is String && value is String) {
             _countryMapping[key] = value;
           } else {
-            print('Некорректная пара в JSON: $key: $value');
+            debugPrint('Некорректная пара в JSON: $key: $value');
           }
         });
-        print('Country mapping загружен: ${_countryMapping.length} стран');
-        print('Доступные страны: ${_countryMapping.keys.toList()}');
+        debugPrint('Country mapping загружен: ${_countryMapping.length} стран');
+        debugPrint('Доступные страны: ${_countryMapping.keys.toList()}');
       } else {
         throw Exception('JSON не является объектом Map');
       }
     } catch (e) {
-      print('Ошибка загрузки country_mapping.json: $e');
+      debugPrint('Ошибка загрузки country_mapping.json: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка загрузки списка стран: $e')),
@@ -182,16 +182,16 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
   void _fetchFlag(String countryName) async {
     if (countryName.isEmpty) return;
 
-    print('Запрос флага для страны: "$countryName"');
+    debugPrint('Запрос флага для страны: "$countryName"');
     setState(() => _isLoadingFlag = true);
 
     final englishName = _translateRussianToEnglish(countryName);
-    print('Отправка запроса с английским названием: "$englishName"');
+    debugPrint('Отправка запроса с английским названием: "$englishName"');
 
     try {
       final response = await http.get(
         Uri.parse(
-            'https://restcountries.com/v3.1/name/$englishName?fields=flags'),
+            'https://restcountries.com/v3.1/name/$englishName?fields=flags',),
         headers: {
           'User-Agent': 'MyCactusApp/1.0 (contact@example.com)',
           'Accept': 'application/json',
@@ -202,7 +202,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final flagUrl = data[0]['flags']['png'];
-        print('Флаг найден: $flagUrl');
+        debugPrint('Флаг найден: $flagUrl');
         setState(() {
           _flagUrl = flagUrl;
           _editedPlant = _editedPlant.copyWith(
@@ -212,7 +212,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
           _countryController.text = countryName;
         });
       } else {
-        print('Ошибка API: ${response.statusCode}, тело: ${response.body}');
+        debugPrint('Ошибка API: ${response.statusCode}, тело: ${response.body}');
         setState(() {
           _flagUrl = null;
           _editedPlant =
@@ -223,7 +223,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
         );
       }
     } catch (e) {
-      print('Исключение при загрузке флага: $e');
+      debugPrint('Исключение при загрузке флага: $e');
       if (mounted) {
         setState(() {
           _flagUrl = null;
@@ -232,7 +232,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Ошибка загрузки флага для "$countryName": $e')),
+              content: Text('Ошибка загрузки флага для "$countryName": $e'),),
         );
       }
     } finally {
@@ -258,7 +258,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                       content:
-                          Text('Флаг не найден! Проверьте название страны')),
+                          Text('Флаг не найден! Проверьте название страны'),),
                 );
                 return;
               }
@@ -269,7 +269,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
               context.read<PlantCrudProvider>()
                   .updatePlant(_editedPlant.permanentId, _editedPlant);
               Navigator.pop(
-                  context, _editedPlant); // Возвращаем обновленное растение
+                  context, _editedPlant,); // Возвращаем обновленное растение
             },
           ),
         ],
@@ -282,7 +282,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),),
               margin: const EdgeInsets.only(bottom: 16),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -643,7 +643,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     if (!forceRefresh && _descriptionCache.containsKey(latinNameLower)) {
       setState(() {
         _editedPlant = _editedPlant.copyWith(
-            description: _descriptionCache[latinNameLower]);
+            description: _descriptionCache[latinNameLower],);
         _descriptionController.text = _descriptionCache[latinNameLower]!;
       });
       return;
@@ -663,7 +663,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
                 label: 'Поиск',
                 onPressed: () async {
                   final uri = Uri.parse(
-                      'http://www.llifle.info/custom_search_engine?q=${_editedPlant.latinName}');
+                      'http://www.llifle.info/custom_search_engine?q=${_editedPlant.latinName}',);
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri);
                   }
@@ -744,7 +744,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
                 label: 'Поиск',
                 onPressed: () async {
                   final uri = Uri.parse(
-                      'http://www.llifle.info/custom_search_engine?q=${_editedPlant.latinName}');
+                      'http://www.llifle.info/custom_search_engine?q=${_editedPlant.latinName}',);
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri);
                   }
@@ -897,7 +897,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
                 label: 'Поиск',
                 onPressed: () async {
                   final uri = Uri.parse(
-                      'http://www.llifle.info/custom_search_engine?q=${_editedPlant.latinName}');
+                      'http://www.llifle.info/custom_search_engine?q=${_editedPlant.latinName}',);
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri);
                   }
@@ -979,7 +979,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
                 label: 'Поиск',
                 onPressed: () async {
                   final uri = Uri.parse(
-                      'http://www.llifle.info/custom_search_engine?q=${_editedPlant.latinName}');
+                      'http://www.llifle.info/custom_search_engine?q=${_editedPlant.latinName}',);
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri);
                   }
@@ -1140,12 +1140,12 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     final lowerCaseName = russianCountryName.trim().toLowerCase();
     for (var entry in _countryMapping.entries) {
       if (entry.key.toLowerCase() == lowerCaseName) {
-        print('Перевод: "$russianCountryName" -> "${entry.value}"');
+        debugPrint('Перевод: "$russianCountryName" -> "${entry.value}"');
         return entry.value;
       }
     }
-    print(
-        'Перевод не найден для: "$russianCountryName". Доступные страны: ${_countryMapping.keys.toList()}');
+    debugPrint(
+        'Перевод не найден для: "$russianCountryName". Доступные страны: ${_countryMapping.keys.toList()}',);
     return russianCountryName;
   }
 

@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/logger/app_logger.dart';
-import '../isolates/parser_isolate.dart';
+import '../isolates/http_isolate.dart';
 import 'gbif_service.dart';
 
 /// Сервис для получения данных о растениях с Llifle.com.
@@ -52,7 +52,7 @@ class LlifleService {
       }
       AppLogger.api(
           'Кэшированные данные не содержат валидных photoUrls, запрашиваем заново',
-          tag: _tag);
+          tag: _tag,);
     }
 
     // Заголовки для HTTP-запросов
@@ -83,24 +83,24 @@ class LlifleService {
           AppLogger.warning(
               'Страница не загружена: статус ${response.statusCode}, '
               'причина: ${response.reasonPhrase}',
-              tag: _tag);
+              tag: _tag,);
           throw Exception('Не удалось загрузить страницу');
         }
         responseBody = response.body;
         fetched = true;
         AppLogger.api(
             'Страница успешно загружена, длина ответа: ${responseBody.length}',
-            tag: _tag);
+            tag: _tag,);
       } catch (e) {
         retries++;
         AppLogger.warning(
             'Ошибка загрузки страницы с фильтром, '
             'попытка $retries/$_maxRetries: $e',
-            tag: _tag);
+            tag: _tag,);
         if (retries == _maxRetries) {
           AppLogger.error(
               'Достигнуто максимальное количество попыток для страницы',
-              tag: _tag);
+              tag: _tag,);
           return null;
         }
         await Future.delayed(_retryDelay);
@@ -132,7 +132,6 @@ class LlifleService {
             speciesId: speciesId,
             latinName: latinName,
             searchName: searchName,
-            headers: headers,
             filterUrl: filterUrl,
             prefs: prefs,
           );
@@ -172,7 +171,7 @@ class LlifleService {
 
     // CareTips из "Cultivation and Propagation"
     final careElement = document.querySelector(
-        'p.expandable.Description_Sheet_Cultivation_and_Propagation');
+        'p.expandable.Description_Sheet_Cultivation_and_Propagation',);
     final careTips = careElement?.text.trim() ?? '';
 
     // Description
@@ -204,64 +203,25 @@ class LlifleService {
     required String speciesId,
     required String latinName,
     required String searchName,
-    required Map<String, String> headers,
     required String filterUrl,
     required SharedPreferences prefs,
   }) async {
     final speciesUrl =
         'https://llifle.com/Encyclopedia/CACTI/Family/Cactaceae/$speciesId/';
-    AppLogger.api('Загрузка страницы вида: $speciesUrl', tag: _tag);
+    AppLogger.api('Загрузка страницы вида через HttpIsolate (Вариант Б): $speciesUrl', tag: _tag);
 
-    int retries = 0;
-    bool fetched = false;
-    String? speciesBody;
+    // Вариант Б: HTTP + парсинг + jsonEncode — всё в isolate
+    final serialized = await HttpIsolate.fetchAndParseLlifle(
+      speciesUrl,
+      filterUrl,
+    );
 
-    while (retries < _maxRetries && !fetched) {
-      try {
-        final speciesResponse = await http.get(Uri.parse(speciesUrl), headers: {
-          ...headers,
-          'Referer': filterUrl,
-        });
-        AppLogger.api(
-            'HTTP статус для страницы вида: ${speciesResponse.statusCode}',
-            tag: _tag);
-        if (speciesResponse.statusCode == 200 &&
-            speciesResponse.body.isNotEmpty) {
-          speciesBody = speciesResponse.body;
-          fetched = true;
-          AppLogger.api(
-              'Страница вида загружена, длина ответа: ${speciesBody.length}',
-              tag: _tag);
-        } else {
-          AppLogger.warning(
-              'Ошибка загрузки страницы вида: статус '
-              '${speciesResponse.statusCode}, причина: ${speciesResponse.reasonPhrase}',
-              tag: _tag);
-          throw Exception('Не удалось загрузить страницу вида');
-        }
-      } catch (e) {
-        retries++;
-        AppLogger.warning(
-            'Ошибка загрузки страницы вида, '
-            'попытка $retries/$_maxRetries: $e',
-            tag: _tag);
-        if (retries == _maxRetries) {
-          AppLogger.error(
-              'Достигнуто максимальное количество попыток для страницы вида',
-              tag: _tag);
-          return null;
-        }
-        await Future.delayed(_retryDelay);
-      }
-    }
-
-    if (!fetched || speciesBody == null) {
-      AppLogger.error('Не удалось загрузить страницу вида', tag: _tag);
+    if (serialized == null) {
+      AppLogger.error('Не удалось парсить страницу вида через HttpIsolate', tag: _tag);
       return null;
     }
 
-    // Парсинг в isolate (CPU-bound: DOM tree + CSS queries)
-    final rawData = await ParserIsolate.parseHtml(speciesBody);
+    final rawData = jsonDecode(serialized) as Map<String, dynamic>;
     final rawPhotoUrls = rawData['photoUrls'] as List<dynamic>? ?? [];
 
     // URL processing — в main thread (лёгкая операция)
@@ -272,7 +232,7 @@ class LlifleService {
         photoUrl = 'https://llifle.com$photoUrl';
       }
       photoUrl = photoUrl.replaceAll(
-          'https://llifle.comphotos/', 'https://llifle.com/photos/');
+          'https://llifle.comphotos/', 'https://llifle.com/photos/',);
       photoUrl = photoUrl.replaceAll('+', '_');
       photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
 
@@ -301,12 +261,12 @@ class LlifleService {
 
     AppLogger.api(
         'Описание: ${description.length > 50 ? description.substring(0, 50) : description}...',
-        tag: _tag);
+        tag: _tag,);
     AppLogger.api('Естественный ареал: $habitat', tag: _tag);
     AppLogger.api('Страна: $country', tag: _tag);
     AppLogger.api(
         'Особенности ухода: ${careTips.length > 50 ? careTips.substring(0, 50) : careTips}...',
-        tag: _tag);
+        tag: _tag,);
     AppLogger.api('Синонимы: $synonyms', tag: _tag);
 
     final plantData = {
@@ -321,12 +281,12 @@ class LlifleService {
 
     // === ИНТЕГРАЦИЯ GBIF ===
     AppLogger.api('Запрос обогащения данных из GBIF для $latinName',
-        tag: _tag);
+        tag: _tag,);
     final gbifData = await _gbifService.fetchGbifData(latinName);
 
     if (gbifData != null) {
       AppLogger.api('Данные GBIF получены, обогащаем Llifle данные',
-          tag: _tag);
+          tag: _tag,);
       final enrichedData = Map<String, dynamic>.from(plantData);
 
       // Country: GBIF приоритетнее
@@ -334,7 +294,7 @@ class LlifleService {
           gbifData['gbifCountry'].toString().isNotEmpty) {
         enrichedData['country'] = gbifData['gbifCountry'];
         AppLogger.api('Страна обновлена из GBIF: ${gbifData['gbifCountry']}',
-            tag: _tag);
+            tag: _tag,);
       }
 
       // Habitat: объединяем
@@ -374,16 +334,16 @@ class LlifleService {
           'Данные успешно обогащены GBIF: '
           '${gbifData['gbifOccurrenceCount']} occurrence, '
           '${gbifData['gbifPhotoCount']} фото',
-          tag: _tag);
+          tag: _tag,);
 
       await prefs.setString(
-          '$_cachePrefix$searchName', jsonEncode(enrichedData));
+          '$_cachePrefix$searchName', jsonEncode(enrichedData),);
       AppLogger.db('Сохранены обогащенные данные для $searchName', tag: _tag);
       return enrichedData;
     } else {
       AppLogger.warning(
           'Не удалось получить данные из GBIF, используем только Llifle',
-          tag: _tag);
+          tag: _tag,);
       await prefs.setString('$_cachePrefix$searchName', jsonEncode(plantData));
       AppLogger.db('Сохранены данные Llifle для $searchName', tag: _tag);
       return plantData;

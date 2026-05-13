@@ -76,7 +76,7 @@ class _YearGerminationChartScreenState
           color: _getColorForPlant(plant)
               .withValues(alpha: 0.9), // исправлено устаревшее withOpacity
           markerSettings: const MarkerSettings(
-              isVisible: true, shape: DataMarkerType.circle),
+              isVisible: true, shape: DataMarkerType.circle,),
           enableTooltip: true,
         ),
       );

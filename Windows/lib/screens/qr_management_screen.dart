@@ -268,7 +268,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Удалить файл?'),
         content: Text(
-            'Файл "${file.fileName}" будет удалён.\nЭто действие нельзя отменить.'),
+            'Файл "${file.fileName}" будет удалён.\nЭто действие нельзя отменить.',),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../presentation/providers/cloud_storage_provider.dart';
@@ -36,7 +36,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         );
       }
     } catch (e) {
-      print('Ошибка при пропуске: $e');
+      debugPrint('Ошибка при пропуске: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка: $e')),
@@ -56,7 +56,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Открываем браузер для авторизации...\nПосле авторизации закройте браузер и вернитесь в приложение'),
+                'Открываем браузер для авторизации...\nПосле авторизации закройте браузер и вернитесь в приложение',),
             duration: Duration(seconds: 6),
           ),
         );
@@ -103,8 +103,8 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         );
       }
     } catch (e, stack) {
-      print('❌ Критическая ошибка авторизации: $e');
-      print(stack);
+      debugPrint('❌ Критическая ошибка авторизации: $e');
+      debugPrint(stack.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
@@ -117,9 +117,9 @@ class WelcomeScreenState extends State<WelcomeScreen> {
 
   // Безопасная синхронизация после первого подключения
   Future<void> _syncAfterFirstConnect(
-      PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider) async {
+      PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider,) async {
     try {
-      print('📥 Загружаем данные из Яндекс.Диска...');
+      debugPrint('📥 Загружаем данные из Яндекс.Диска...');
 
       await plantCrudProvider.loadPlants();
       await cloudProvider.fetchLastCloudUpdate();
@@ -127,13 +127,13 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       if (cloudProvider.lastCloudUpdate != null) {
         await cloudProvider.loadDataFromCloud(plantCrudProvider);
         await plantCrudProvider.savePlants();
-        print('✅ Данные успешно загружены из облака');
+        debugPrint('✅ Данные успешно загружены из облака');
       } else {
-        print('⚠️ В облаке пока нет данных, сохраняем локальные...');
+        debugPrint('⚠️ В облаке пока нет данных, сохраняем локальные...');
         await cloudProvider.syncData(plantCrudProvider);
       }
     } catch (e) {
-      print('❌ Ошибка при синхронизации после подключения: $e');
+      debugPrint('❌ Ошибка при синхронизации после подключения: $e');
     }
   }
 
@@ -179,11 +179,11 @@ class WelcomeScreenState extends State<WelcomeScreen> {
                           )
                         : const Icon(Icons.cloud),
                     label: Text(
-                        loading ? 'Подключение...' : 'Подключить Яндекс.Диск'),
+                        loading ? 'Подключение...' : 'Подключить Яндекс.Диск',),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                          horizontal: 20, vertical: 12,),
                     ),
                   );
                 },

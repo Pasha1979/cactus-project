@@ -27,8 +27,8 @@ class CollectionManagementScreen extends StatelessWidget {
     final wintering = context.watch<WinteringProvider>();
     final winteringStatus = wintering.winteringStartDate != null &&
             wintering.winteringEndDate != null
-        ? "Активна"
-        : "Не настроена";
+        ? 'Активна'
+        : 'Не настроена';
 
     return Scaffold(
       appBar: AppBar(
@@ -150,7 +150,7 @@ class CollectionManagementScreen extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                  '✅ Данные успешно восстановлены из локального бэкапа!'),
+                                  '✅ Данные успешно восстановлены из локального бэкапа!',),
                               backgroundColor: Colors.green,
                             ),
                           );
@@ -228,7 +228,7 @@ class CollectionManagementScreen extends StatelessWidget {
       String title,
       String value,
       IconData icon,
-      Color color) {
+      Color color,) {
     final isMobile = Responsive.isMobile(context);
 
     return Container(

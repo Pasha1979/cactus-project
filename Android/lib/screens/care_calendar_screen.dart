@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../presentation/providers/providers.dart';
@@ -73,10 +73,10 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
           tabs: [
             Tab(
                 icon: Icon(Icons.water_drop, color: tabColors[0]),
-                text: 'Полив'),
+                text: 'Полив',),
             Tab(
                 icon: Icon(Icons.local_florist, color: tabColors[1]),
-                text: 'Пересадка'),
+                text: 'Пересадка',),
             Tab(icon: Icon(Icons.eco, color: tabColors[2]), text: 'Подкормка'),
           ],
         ),
@@ -95,7 +95,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                         hintText: 'Поиск по названию или ID...',
                         prefixIcon: const Icon(Icons.search),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(16),),
                         filled: true,
                         fillColor: Colors.grey.shade100,
                       ),
@@ -106,7 +106,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                         padding: const EdgeInsets.only(top: 8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                              horizontal: 16, vertical: 8,),
                           decoration: BoxDecoration(
                             color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(12),
@@ -158,7 +158,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                         final isGlobal = watering.globalWateringDates.any((d) =>
                             d.year == date.year &&
                             d.month == date.month &&
-                            d.day == date.day);
+                            d.day == date.day,);
                         final individual =
                             plantCrud.individualWateringDates[normalized] ?? [];
                         final customCount =
@@ -168,16 +168,16 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                           markers.add(const Positioned(
                             bottom: 4,
                             child: Icon(Icons.water_drop,
-                                color: Colors.blue, size: 16),
-                          ));
+                                color: Colors.blue, size: 16,),
+                          ),);
                         }
                         if (customCount > 0 || individual.isNotEmpty) {
                           markers.add(const Positioned(
                             top: 2,
                             right: 2,
                             child: Icon(Icons.local_drink,
-                                color: Colors.green, size: 16),
-                          ));
+                                color: Colors.green, size: 16,),
+                          ),);
                         }
                       } else if (currentTab == 1) {
                         final needsTransplant = filteredPlants.any((p) {
@@ -190,8 +190,8 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                             top: 2,
                             right: 2,
                             child: Icon(Icons.warning_amber,
-                                color: Colors.red, size: 16),
-                          ));
+                                color: Colors.red, size: 16,),
+                          ),);
                         }
                       } else if (currentTab == 2) {
                         final fertilized =
@@ -209,7 +209,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                                   : Colors.orange,
                               size: 16,
                             ),
-                          ));
+                          ),);
                         }
                       }
 
@@ -242,14 +242,14 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                           icon: const Icon(Icons.water_drop),
                           label: const Text('Отметить полив всей коллекции'),
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade600),
+                              backgroundColor: Colors.blue.shade600,),
                           onPressed: () {
                             watering.addGlobalWateringDate(_selectedDay!);
                             plantCrud.updateRecommendedWateringDates();
                             setState(() {});
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Полив всей коллекции отмечен')),
+                                  content: Text('Полив всей коллекции отмечен'),),
                             );
                           },
                         ),
@@ -258,7 +258,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                           icon: const Icon(Icons.check_circle),
                           label: Text(currentTab == 1
                               ? 'Отметить пересадку'
-                              : 'Отметить подкормку'),
+                              : 'Отметить подкормку',),
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
                                 currentTab == 1 ? Colors.green : Colors.orange,
@@ -270,11 +270,11 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                                     _markGroupAsTransplanted();
                                   } else {
                                     plantCrud.markGroupAsFertilized(_selectedIds,
-                                        date: _selectedDay);
+                                        date: _selectedDay,);
                                     setState(() {});
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                          content: Text('Подкормка отмечена')),
+                                          content: Text('Подкормка отмечена'),),
                                     );
                                   }
                                 },
@@ -284,7 +284,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                           icon: const Icon(Icons.calendar_today),
                           label: const Text('Запланировать'),
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepPurple),
+                              backgroundColor: Colors.deepPurple,),
                           onPressed: _selectedIds.isEmpty
                               ? null
                               : () => _planGroupAction(currentTab),
@@ -304,7 +304,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                 child: filteredPlants.isEmpty
                     ? const Center(
                         child: Text('Растения не найдены',
-                            style: TextStyle(color: Colors.grey)))
+                            style: TextStyle(color: Colors.grey),),)
                     : ListView.builder(
                         itemCount: filteredPlants.length,
                         itemBuilder: (context, index) {
@@ -315,7 +315,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                           return Card(
                             elevation: 3,
                             margin: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
+                                horizontal: 12, vertical: 6,),
                             color: isSelected ? Colors.green.shade50 : null,
                             child: ListTile(
                               leading: Checkbox(
@@ -332,7 +332,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                               ),
                               title: Text(plant.latinName,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w600)),
+                                      fontWeight: FontWeight.w600,),),
                               subtitle: Text('ID: ${plant.displayId}'),
                               onTap: () {
                                 setState(() {
@@ -413,7 +413,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
         content: const Text('Удалить все записи для этой даты?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена'),),
           TextButton(
             onPressed: () {
               if (tab == 0) {

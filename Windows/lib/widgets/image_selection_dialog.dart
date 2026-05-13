@@ -50,7 +50,7 @@ class _ImageSelectionDialogState extends State<ImageSelectionDialog> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(Icons.broken_image,
-                              color: Colors.red, size: 32),
+                              color: Colors.red, size: 32,),
                           const SizedBox(height: 4),
                           Text(
                             'Фото недоступно',
@@ -69,7 +69,7 @@ class _ImageSelectionDialogState extends State<ImageSelectionDialog> {
                       right: 4,
                       top: 4,
                       child: Icon(Icons.check_circle,
-                          color: Colors.green, size: 28),
+                          color: Colors.green, size: 28,),
                     ),
                 ],
               ),

@@ -66,40 +66,40 @@ class YandexAuthService {
           );
 
           _isConnected = true;
-          print('✅ Токены успешно загружены и Яндекс.Диск подключён');
+          debugPrint('✅ Токены успешно загружены и Яндекс.Диск подключён');
         } else {
           _isConnected = false;
-          print('⚠️ Токены не найдены (ещё не было авторизации)');
+          debugPrint('⚠️ Токены не найдены (ещё не было авторизации)');
         }
       }
     } catch (e) {
       if (e.toString().contains('BadPaddingException') ||
           e.toString().contains('BAD_DECRYPT')) {
-        print('🔥 Обнаружен BadPaddingException после пересборки APK');
+        debugPrint('🔥 Обнаружен BadPaddingException после пересборки APK');
 
         final prefs = await SharedPreferences.getInstance();
         final alreadyCleaned =
             prefs.getBool('tokens_cleaned_after_rebuild') ?? false;
 
         if (!alreadyCleaned) {
-          print(
-              '🧹 Очищаем повреждённые токены (только один раз после пересборки)');
+          debugPrint(
+              '🧹 Очищаем повреждённые токены (только один раз после пересборки)',);
           await _storage.deleteAll();
           await _storage.delete(key: 'yandex_access_token');
           await _storage.delete(key: 'yandex_refresh_token');
 
           await prefs.setBool('tokens_cleaned_after_rebuild', true);
-          print('✅ Токены очищены. Следующий запуск будет нормальным.');
+          debugPrint('✅ Токены очищены. Следующий запуск будет нормальным.');
         } else {
-          print(
-              '✅ Токены уже были очищены ранее — оставляем _isConnected = false');
+          debugPrint(
+              '✅ Токены уже были очищены ранее — оставляем _isConnected = false',);
         }
 
         _isConnected = false;
         _yandexClient = null;
         _currentStorageType = null;
       } else {
-        print('❌ Неизвестная ошибка загрузки токенов: $e');
+        debugPrint('❌ Неизвестная ошибка загрузки токенов: $e');
         _isConnected = false;
       }
     }
@@ -141,7 +141,7 @@ class YandexAuthService {
         scopes: ['cloud_api:disk.read', 'cloud_api:disk.write'],
       );
 
-      print('Открываем авторизацию: $authorizationUrl');
+      debugPrint('Открываем авторизацию: $authorizationUrl');
 
       final launched = await launchUrl(
         authorizationUrl,
@@ -158,7 +158,7 @@ class YandexAuthService {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Авторизуйтесь в браузере.\nПосле этого САМОСТОЯТЕЛЬНО закройте браузер и вернитесь в приложение.'),
+                'Авторизуйтесь в браузере.\nПосле этого САМОСТОЯТЕЛЬНО закройте браузер и вернитесь в приложение.',),
             duration: Duration(seconds: 15),
           ),
         );
@@ -166,7 +166,7 @@ class YandexAuthService {
 
       // Android: ждём deep link (handleDeepLink вызывается системой)
       if (Platform.isAndroid) {
-        print('Браузер открыт. Ожидаем deep link от системы...');
+        debugPrint('Браузер открыт. Ожидаем deep link от системы...');
         return;
       }
 
@@ -176,7 +176,7 @@ class YandexAuthService {
         await handleYandexCallback(grant, code);
       }
     } catch (e) {
-      print('Ошибка авторизации: $e');
+      debugPrint('Ошибка авторизации: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка: $e')),
@@ -188,8 +188,8 @@ class YandexAuthService {
   }
 
   Future<void> handleYandexCallback(
-      oauth2.AuthorizationCodeGrant grant, String code) async {
-    print('Обмен кода на токен...');
+      oauth2.AuthorizationCodeGrant grant, String code,) async {
+    debugPrint('Обмен кода на токен...');
 
     try {
       _yandexClient = await grant.handleAuthorizationResponse({
@@ -197,14 +197,14 @@ class YandexAuthService {
         'redirect_uri': _yandexRedirectUri,
       });
 
-      print('Токен успешно получен');
+      debugPrint('Токен успешно получен');
 
       await _storage.write(
           key: 'yandex_access_token',
-          value: _yandexClient!.credentials.accessToken);
+          value: _yandexClient!.credentials.accessToken,);
       await _storage.write(
           key: 'yandex_refresh_token',
-          value: _yandexClient!.credentials.refreshToken!);
+          value: _yandexClient!.credentials.refreshToken!,);
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(PrefsKeys.cloudStorageType, 'yandex');
@@ -214,24 +214,24 @@ class YandexAuthService {
       _currentStorageType = 'yandex';
       _isConnected = true;
 
-      print('✅ Авторизация успешно завершена и токены сохранены');
+      debugPrint('✅ Авторизация успешно завершена и токены сохранены');
     } catch (e) {
-      print('Ошибка при обмене кода на токен: $e');
+      debugPrint('Ошибка при обмене кода на токен: $e');
       rethrow;
     }
   }
 
   /// Обработка deep link для Android
   Future<void> handleDeepLink(Uri uri) async {
-    print('🔄 handleDeepLink вызван с URI: $uri');
+    debugPrint('🔄 handleDeepLink вызван с URI: $uri');
 
     if (uri.scheme == 'mycactus' && uri.host == 'callback') {
       final code = uri.queryParameters['code'];
       if (code != null) {
-        print('✅ Получен authorization code: $code');
+        debugPrint('✅ Получен authorization code: $code');
 
         if (_currentGrant == null) {
-          print('⚠️ _currentGrant == null — создаём новый grant');
+          debugPrint('⚠️ _currentGrant == null — создаём новый grant');
           _currentGrant = oauth2.AuthorizationCodeGrant(
             _yandexClientId,
             Uri.parse(_yandexAuthEndpoint),
@@ -243,14 +243,14 @@ class YandexAuthService {
         try {
           await handleYandexCallback(_currentGrant!, code);
           _currentGrant = null;
-          print('✅ Grant очищен после успешной авторизации');
+          debugPrint('✅ Grant очищен после успешной авторизации');
         } catch (e, stack) {
-          print('❌ Ошибка обработки callback: $e');
-          print(stack);
+          debugPrint('❌ Ошибка обработки callback: $e');
+          debugPrint(stack.toString());
           _currentGrant = null;
         }
       } else {
-        print('⚠️ В deep link нет параметра code');
+        debugPrint('⚠️ В deep link нет параметра code');
       }
     }
   }
@@ -280,9 +280,9 @@ class YandexAuthService {
 
         _isConnected = true;
         _currentStorageType = 'yandex';
-        print('✅ Тихое подключение к Яндекс.Диску успешно');
+        debugPrint('✅ Тихое подключение к Яндекс.Диску успешно');
       } catch (e) {
-        print('Ошибка тихого подключения: $e');
+        debugPrint('Ошибка тихого подключения: $e');
         _isConnected = false;
       }
     }
@@ -307,12 +307,12 @@ class YandexAuthService {
     HttpServer? server;
     try {
       server = await HttpServer.bind('localhost', 8080);
-      print('Локальный сервер запущен на http://localhost:8080');
+      debugPrint('Локальный сервер запущен на http://localhost:8080');
 
       String? code;
       await for (var request in server) {
         final uri = request.uri;
-        print('Получен запрос: $uri');
+        debugPrint('Получен запрос: $uri');
 
         if (uri.queryParameters.containsKey('code')) {
           code = uri.queryParameters['code'];
@@ -327,7 +327,7 @@ class YandexAuthService {
           break;
         } else {
           if (uri.queryParameters.containsKey('error')) {
-            print('Ошибка от Yandex: ${uri.queryParameters['error']}');
+            debugPrint('Ошибка от Yandex: ${uri.queryParameters['error']}');
           }
           request.response
             ..statusCode = 400
@@ -337,11 +337,11 @@ class YandexAuthService {
       }
       return code;
     } catch (e) {
-      print('Ошибка запуска локального сервера: $e');
+      debugPrint('Ошибка запуска локального сервера: $e');
       rethrow;
     } finally {
       await server?.close(force: true);
-      print('Локальный сервер закрыт');
+      debugPrint('Локальный сервер закрыт');
     }
   }
 }

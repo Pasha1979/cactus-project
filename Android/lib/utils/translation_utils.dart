@@ -1,19 +1,21 @@
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+
 Future<String> translateText(String text,
-    {String from = 'en', String to = 'ru'}) async {
+    {String from = 'en', String to = 'ru',}) async {
   const int maxLength = 2000; // Ограничение для надежности
-  print('Начало перевода текста: "$text" (длина: ${text.length})');
-  print('Язык исходного текста: $from, язык перевода: $to');
+  debugPrint('Начало перевода текста: "$text" (длина: ${text.length})');
+  debugPrint('Язык исходного текста: $from, язык перевода: $to');
   if (text.length <= maxLength) {
     return _translateSingle(text, from, to);
   } else {
-    print('Текст слишком длинный, разбиваем на части...');
+    debugPrint('Текст слишком длинный, разбиваем на части...');
     List<String> parts = _splitText(text, maxLength);
     List<String> translatedParts = [];
     for (String part in parts) {
-      print('Перевод части: "$part"');
+      debugPrint('Перевод части: "$part"');
       String translatedPart = await _translateSingle(part, from, to);
       translatedParts.add(translatedPart);
       await Future.delayed(const Duration(seconds: 3)); // Задержка 3 секунды
@@ -51,32 +53,32 @@ Future<String> _translateSingle(String text, String from, String to) async {
       body: jsonEncode(requestBody),
     ).timeout(const Duration(seconds: 10));
 
-    print('Получен HTTP-ответ: статус ${response.statusCode}');
+    debugPrint('Получен HTTP-ответ: статус ${response.statusCode}');
     if (response.statusCode != 200) {
-      print('Ошибка загрузки: ${response.statusCode}');
+      debugPrint('Ошибка загрузки: ${response.statusCode}');
       throw Exception('Не удалось выполнить перевод: ${response.statusCode}');
     }
 
     // Парсим JSON-ответ
     final data = jsonDecode(response.body);
     if (data['result'] == null) {
-      print('Некорректный JSON-ответ: $data');
+      debugPrint('Некорректный JSON-ответ: $data');
       throw Exception('Некорректный ответ от API');
     }
 
     // Извлекаем переведенный текст
     final translatedText = data['result'] as String;
     if (translatedText.isEmpty) {
-      print('Переведенный текст пустой');
+      debugPrint('Переведенный текст пустой');
       throw Exception('Переведенный текст пустой');
     }
 
-    print('Переведённый текст: "$translatedText"');
+    debugPrint('Переведённый текст: "$translatedText"');
     return translatedText;
   } catch (e) {
-    print('Ошибка перевода через Lingvanex: $e');
+    debugPrint('Ошибка перевода через Lingvanex: $e');
     // В случае ошибки возвращаем исходный текст
-    print('Не удалось перевести текст, возвращаем исходный: "$text"');
+    debugPrint('Не удалось перевести текст, возвращаем исходный: "$text"');
     return text;
   }
 }

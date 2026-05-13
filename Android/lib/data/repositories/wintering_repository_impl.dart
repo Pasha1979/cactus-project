@@ -16,7 +16,7 @@ class WinteringRepositoryImpl implements WinteringRepository {
           .map((e) => {
                 'date': e.date.toIso8601String(),
                 'description': e.description,
-              })
+              },)
           .toList(),
       'lastUpdate': DateTime.now().toIso8601String(),
     };

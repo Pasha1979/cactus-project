@@ -70,7 +70,7 @@ class _GalleryTabState extends State<GalleryTab> {
                 style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey),
+                    color: Colors.grey,),
               ),
             ),
 
@@ -101,11 +101,11 @@ class _GalleryTabState extends State<GalleryTab> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.photo_library_outlined,
-                              size: 80, color: Colors.grey),
+                              size: 80, color: Colors.grey,),
                           SizedBox(height: 16),
                           Text('В этом фильтре нет фото',
                               style: TextStyle(
-                                  fontSize: 18, color: Colors.grey)),
+                                  fontSize: 18, color: Colors.grey,),),
                         ],
                       ),
                     )
@@ -126,7 +126,8 @@ class _GalleryTabState extends State<GalleryTab> {
                           final isMainPhoto = plant.userPhotos.isNotEmpty &&
                               plant.userPhotos.first == photo;
 
-                          return GestureDetector(
+                          return RepaintBoundary(
+                            child: GestureDetector(
                             onTap: () {
                               if (isNetwork &&
                                   photo.startsWith('https://')) {
@@ -138,7 +139,7 @@ class _GalleryTabState extends State<GalleryTab> {
                                 });
                               }
                               widget.onShowFullPhoto(
-                                  context, plant, photo, isNetwork);
+                                  context, plant, photo, isNetwork,);
                             },
                             onLongPress: () =>
                                 widget.onShowPhotoOptions(context, plant, photo),
@@ -153,11 +154,11 @@ class _GalleryTabState extends State<GalleryTab> {
                                           fit: BoxFit.cover,
                                           placeholder: (_, __) => const Center(
                                               child:
-                                                  CircularProgressIndicator()),
+                                                  CircularProgressIndicator(),),
                                           errorWidget: (_, __, ___) =>
                                               const Icon(Icons.broken_image,
                                                   color: Colors.red,
-                                                  size: 48),
+                                                  size: 48,),
                                         )
                                       : Image.file(
                                           File(photo),
@@ -165,19 +166,19 @@ class _GalleryTabState extends State<GalleryTab> {
                                           errorBuilder: (_, __, ___) =>
                                               const Icon(Icons.broken_image,
                                                   color: Colors.red,
-                                                  size: 48),
+                                                  size: 48,),
                                         ),
                                   if (isMainPhoto)
                                     const Positioned(
                                       top: 12,
                                       right: 12,
                                       child: Icon(Icons.star,
-                                          color: Colors.amber, size: 32),
+                                          color: Colors.amber, size: 32,),
                                     ),
                                 ],
                               ),
                             ),
-                          );
+                          ),);
                         },
                       ),
                     ),
@@ -219,7 +220,7 @@ class _GalleryTabState extends State<GalleryTab> {
 
     return FilterChip(
       avatar: Icon(icon,
-          size: 18, color: isSelected ? Colors.white : Colors.grey[700]),
+          size: 18, color: isSelected ? Colors.white : Colors.grey[700],),
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'constants/app_constants.dart';
@@ -36,7 +36,7 @@ void main() async {
   // Миграция данных из SharedPreferences в Hive (при первом запуске после обновления)
   final migrationSuccess = await DataMigrationManager.runMigrationIfNeeded();
   if (!migrationSuccess) {
-    print('⚠️ Миграция данных не удалась. Используем резервный режим.');
+    debugPrint('⚠️ Миграция данных не удалась. Используем резервный режим.');
   }
 
   await _initNotifications();
@@ -70,7 +70,7 @@ Future<void> _initNotifications() async {
   // Инициализация для Android/Windows (твоя иконка из mipmap/ic_launcher.png в android/app/src/main/res — сохранена для consistency).
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings(
-          '@mipmap/ic_launcher'); // Твоя иконка — не меняет, использует существующую.
+          '@mipmap/ic_launcher',); // Твоя иконка — не меняет, использует существующую.
 
   const InitializationSettings initializationSettings = InitializationSettings(
     android:
@@ -78,7 +78,7 @@ Future<void> _initNotifications() async {
   );
 
   await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings); // Базовая инициализация — ждет 1 сек max, не блокирует main().
+      initializationSettings,); // Базовая инициализация — ждет 1 сек max, не блокирует main().
 
   // Разрешения для Android 13+ (Windows — не применимо).
   // await flutterLocalNotificationsPlugin
@@ -156,7 +156,7 @@ class MyApp extends StatelessWidget {
   }
 
   Future<Map<String, dynamic>> _initializeAndCheckStatus(
-      CloudStorageProvider cloudProvider) async {
+      CloudStorageProvider cloudProvider,) async {
     final prefs = await SharedPreferences.getInstance();
     String? startupMessage;
 
@@ -188,35 +188,35 @@ class MyApp extends StatelessWidget {
   }
 
   Future<void> _syncData(
-      PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider) async {
+      PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider,) async {
     await plantCrudProvider.loadPlants();
     if (!cloudProvider.isConnected) {
-      print('Нет подключения к облаку, синхронизация пропущена');
+      debugPrint('Нет подключения к облаку, синхронизация пропущена');
       return;
     }
     await cloudProvider.fetchLastCloudUpdate();
     final localUpdate = plantCrudProvider.lastLocalUpdate;
     final cloudUpdate = cloudProvider.lastCloudUpdate;
-    print('Локальное обновление: $localUpdate');
-    print('Облачное обновление: $cloudUpdate');
+    debugPrint('Локальное обновление: $localUpdate');
+    debugPrint('Облачное обновление: $cloudUpdate');
     if (localUpdate == null && cloudUpdate == null) {
-      print('Оба хранилища пусты, синхронизация не требуется');
+      debugPrint('Оба хранилища пусты, синхронизация не требуется');
       return;
     }
     if (plantCrudProvider.plants.isEmpty && cloudUpdate != null) {
-      print('Локальные данные пусты, загружаем из облака');
+      debugPrint('Локальные данные пусты, загружаем из облака');
       await cloudProvider.loadDataFromCloud(plantCrudProvider);
       await plantCrudProvider.savePlants();
     } else if (cloudUpdate == null ||
         (localUpdate != null && localUpdate.isAfter(cloudUpdate))) {
-      print('Локальные данные новее или облако пусто, синхронизируем в облако');
+      debugPrint('Локальные данные новее или облако пусто, синхронизируем в облако');
       await cloudProvider.syncData(plantCrudProvider);
     } else if (localUpdate == null || cloudUpdate.isAfter(localUpdate)) {
-      print('Облачные данные новее или локальные пусты, загружаем из облака');
+      debugPrint('Облачные данные новее или локальные пусты, загружаем из облака');
       await cloudProvider.loadDataFromCloud(plantCrudProvider);
       await plantCrudProvider.savePlants();
     } else {
-      print('Данные синхронизированы, ничего не требуется');
+      debugPrint('Данные синхронизированы, ничего не требуется');
     }
   }
 }
@@ -300,10 +300,10 @@ class HomeScreenState extends State<HomeScreen>
                       style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: color)),
+                          color: color,),),
                   Text(title,
                       style: TextStyle(
-                          fontSize: 14, color: color.withValues(alpha: 0.8))),
+                          fontSize: 14, color: color.withValues(alpha: 0.8),),),
                 ],
               ),
             ],
@@ -344,42 +344,42 @@ class HomeScreenState extends State<HomeScreen>
               count: total,
               color: Colors.grey,
               onTapFilter:
-                  'all'),
+                  'all',),
           _buildStatCard(
               icon: Icons.collections,
               title: 'В коллекции',
               count: inCollectionCount,
               color: Colors.green,
               onTapFilter:
-                  'in_collection'), // Обновлён: onTapFilter 'in_collection' (instead of if title).
+                  'in_collection',), // Обновлён: onTapFilter 'in_collection' (instead of if title).
           _buildStatCard(
               icon: Icons.spa,
               title: 'Выращено из семян',
               count: sownInCollection,
               color: Colors.orange,
               onTapFilter:
-                  'sown_in_collection'), // Обновлён: onTapFilter 'sown_in_collection'.
+                  'sown_in_collection',), // Обновлён: onTapFilter 'sown_in_collection'.
           _buildStatCard(
               icon: Icons.shopping_cart,
               title: 'Купленные',
               count: purchasedInCollection,
               color: Colors.blue,
               onTapFilter:
-                  'purchased_in_collection'), // Обновлён: onTapFilter 'purchased_in_collection'.
+                  'purchased_in_collection',), // Обновлён: onTapFilter 'purchased_in_collection'.
           if (seedlingsCount > 0)
             _buildStatCard(
                 icon: Icons.spa,
                 title: 'Сеянцы',
                 count: seedlingsCount,
                 color: Colors.teal,
-                onTapFilter: null), // Сеянцы не кликабельны - они не на главном экране
+                onTapFilter: null,), // Сеянцы не кликабельны - они не на главном экране
           if (batchesCount > 0)
             _buildStatCard(
                 icon: Icons.group,
                 title: 'Партий',
                 count: batchesCount,
                 color: Colors.indigo,
-                onTapFilter: null), // Партии не кликабельны отдельно
+                onTapFilter: null,), // Партии не кликабельны отдельно
         ],
       ),
     );
@@ -587,7 +587,7 @@ class HomeScreenState extends State<HomeScreen>
                           children: [
                             ListTile(
                               title: const Text('Все посевы',
-                                  style: TextStyle(fontSize: 12)),
+                                  style: TextStyle(fontSize: 12),),
                               dense: true,
                               onTap: () {
                                 setState(() {
@@ -598,7 +598,7 @@ class HomeScreenState extends State<HomeScreen>
                             ),
                             ListTile(
                               title: const Text('Активные',
-                                  style: TextStyle(fontSize: 12)),
+                                  style: TextStyle(fontSize: 12),),
                               dense: true,
                               onTap: () {
                                 setState(() {
@@ -619,7 +619,7 @@ class HomeScreenState extends State<HomeScreen>
                                       _isSownExpanded = false;
                                     });
                                   },
-                                )),
+                                ),),
                           ],
                         ),
                       ),
@@ -654,7 +654,7 @@ class HomeScreenState extends State<HomeScreen>
       context,
       MaterialPageRoute(
           builder: (ctx) => AddPlantForm(
-              getNextCustomNumber: _getNextCustomNumber, isCustomNumberUnique: _isCustomNumberUnique)),
+              getNextCustomNumber: _getNextCustomNumber, isCustomNumberUnique: _isCustomNumberUnique,),),
     );
     if (result != null && mounted) {
       Provider.of<PlantCrudProvider>(context, listen: false).addPlant(result);
@@ -681,13 +681,13 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   bool _isCustomNumberUnique(int year, int number, String category,
-      {String? excludeId}) {
+      {String? excludeId,}) {
     final plants = context.read<PlantCrudProvider>().plants;
     return !plants.any((p) =>
         p.category == category &&
         p.year == year &&
         p.customNumber == number &&
-        p.permanentId != excludeId);
+        p.permanentId != excludeId,);
   }
 
   @override
@@ -785,7 +785,7 @@ class HomeScreenState extends State<HomeScreen>
                       ),
                       const SizedBox(
                           height:
-                              16), // Отступ перед 'Импорт из Excel' — баланс.
+                              16,), // Отступ перед 'Импорт из Excel' — баланс.
                       IconButton(
                         icon: const Icon(Icons.import_export),
                         tooltip: 'Импорт из Excel',
@@ -832,7 +832,7 @@ class HomeScreenState extends State<HomeScreen>
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                     content:
-                                        Text('Попытка подключения завершена')),
+                                        Text('Попытка подключения завершена'),),
                               );
                             }
                           },
@@ -849,7 +849,7 @@ class HomeScreenState extends State<HomeScreen>
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                     content:
-                                        Text('Облачное хранилище отключено')),
+                                        Text('Облачное хранилище отключено'),),
                               );
                             }
                           },
@@ -865,7 +865,7 @@ class HomeScreenState extends State<HomeScreen>
                             final scaffoldMessenger = ScaffoldMessenger.of(context);
                             scaffoldMessenger.showSnackBar(
                               const SnackBar(
-                                  content: Text('🔄 Синхронизация началась...')),
+                                  content: Text('🔄 Синхронизация началась...'),),
                             );
                             try {
                               await cloudProvider.syncData(plantCrudProvider);
@@ -898,11 +898,11 @@ class HomeScreenState extends State<HomeScreen>
                           }
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool(
-                              'has_seen_welcome', false); // Сбрасываем флаг
+                              'has_seen_welcome', false,); // Сбрасываем флаг
                           if (context.mounted) {
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(
-                                  builder: (context) => const WelcomeScreen()),
+                                  builder: (context) => const WelcomeScreen(),),
                             );
                           }
                         },
@@ -931,7 +931,7 @@ class HomeScreenState extends State<HomeScreen>
                                 Icon(Icons.update, color: Colors.blue),
                                 SizedBox(width: 8),
                                 Text('Изменить статус'),
-                              ]),
+                              ],),
                             ),
                             const PopupMenuItem(
                               value: 'delete',
@@ -939,16 +939,16 @@ class HomeScreenState extends State<HomeScreen>
                                 Icon(Icons.delete, color: Colors.red),
                                 SizedBox(width: 8),
                                 Text('Удалить'),
-                              ]),
+                              ],),
                             ),
                             const PopupMenuItem(
                               value: 'cleanupPhotos',
                               child: Row(children: [
                                 Icon(Icons.delete_forever,
-                                    color: Colors.orange),
+                                    color: Colors.orange,),
                                 SizedBox(width: 8),
                                 Text('Очистить старые фото'),
-                              ]),
+                              ],),
                             ),
                             const PopupMenuItem(
                               value: 'deleteAllPhotos',
@@ -956,7 +956,7 @@ class HomeScreenState extends State<HomeScreen>
                                 Icon(Icons.delete_sweep, color: Colors.red),
                                 SizedBox(width: 8),
                                 Text('Удалить все фото'),
-                              ]),
+                              ],),
                             ),
                           ],
                           onSelected: (value) async {
@@ -987,7 +987,7 @@ class HomeScreenState extends State<HomeScreen>
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),),
                     color: Colors.green.shade50,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -999,7 +999,7 @@ class HomeScreenState extends State<HomeScreen>
                             child: Text(
                               _getSeasonalTip(),
                               style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w500),
+                                  fontSize: 16, fontWeight: FontWeight.w500,),
                             ),
                           ),
                         ],
@@ -1008,7 +1008,7 @@ class HomeScreenState extends State<HomeScreen>
                   ),
                   const SizedBox(
                       height:
-                          16), // Отступ перед статистикой, чтобы карточки не сливались.
+                          16,), // Отступ перед статистикой, чтобы карточки не сливались.
                   _buildStatsRow(),
                   Expanded(
                     child: PlantCards(
@@ -1019,7 +1019,7 @@ class HomeScreenState extends State<HomeScreen>
                                   .contains(_searchQuery.toLowerCase()) ||
                               p.displayId
                                   .toLowerCase()
-                                  .contains(_searchQuery.toLowerCase()))
+                                  .contains(_searchQuery.toLowerCase()),)
                           .toList(),
                       sortColumn: _sortColumn,
                       isAscending: _isAscending,
@@ -1118,7 +1118,7 @@ class HomeScreenState extends State<HomeScreen>
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Импорт: Добавлено $added, пропущено $skipped')));
+            content: Text('Импорт: Добавлено $added, пропущено $skipped'),),);
       }
     } catch (e) {
       if (context.mounted) {
@@ -1207,7 +1207,7 @@ class HomeScreenState extends State<HomeScreen>
       'growing',
       'in_collection',
       'dead',
-      'failed'
+      'failed',
     ];
     showDialog(
       context: context,
@@ -1229,7 +1229,7 @@ class HomeScreenState extends State<HomeScreen>
                                       ? 'Погиб'
                                       : 'Не взошел',
                     ),
-                  ))
+                  ),)
               .toList(),
           onChanged: (value) {
             if (value != null) {
@@ -1241,7 +1241,7 @@ class HomeScreenState extends State<HomeScreen>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'))
+              child: const Text('Отмена'),),
         ],
       ),
     );
@@ -1270,12 +1270,12 @@ class HomeScreenState extends State<HomeScreen>
           if (!currentContext.mounted) return;
 
           _showSnackBar(
-              currentContext, 'Город "$city" сохранён! Погода обновится.');
+              currentContext, 'Город "$city" сохранён! Погода обновится.',);
         }
       } else {
         if (!currentContext.mounted) return;
         _showSnackBar(currentContext,
-            'Геолокация подключена! Погода обновится в календаре.');
+            'Геолокация подключена! Погода обновится в календаре.',);
       }
     } catch (e) {
       if (!currentContext.mounted) return;
@@ -1340,10 +1340,10 @@ class HomeScreenState extends State<HomeScreen>
 class AddPlantForm extends StatefulWidget {
   final int Function(int year, String category) getNextCustomNumber;
   final bool Function(int year, int number, String category,
-      {String? excludeId}) isCustomNumberUnique;
+      {String? excludeId,}) isCustomNumberUnique;
 
   const AddPlantForm(
-      {super.key, required this.getNextCustomNumber, required this.isCustomNumberUnique});
+      {super.key, required this.getNextCustomNumber, required this.isCustomNumberUnique,});
 
   @override
   State<AddPlantForm> createState() => _AddPlantFormState();
@@ -1395,7 +1395,7 @@ class _AddPlantFormState extends State<AddPlantForm> {
               return ListTile(
                 title: Text(year.toString()),
                 onTap: () => Navigator.pop(
-                    ctx, year), // Возвращаем год только для диалога
+                    ctx, year,), // Возвращаем год только для диалога
               );
             },
           ),
@@ -1420,10 +1420,10 @@ class _AddPlantFormState extends State<AddPlantForm> {
           customNumber: int.parse(_numberController.text),
           category: _category,
         );
-        print('Добавлено растение: ${newPlant.latinName}');
+        debugPrint('Добавлено растение: ${newPlant.latinName}');
         Navigator.pop(context, newPlant);
       } catch (e) {
-        print('Ошибка в _saveForm: $e');
+        debugPrint('Ошибка в _saveForm: $e');
       }
     }
   }
@@ -1467,7 +1467,7 @@ class _AddPlantFormState extends State<AddPlantForm> {
                       _category == 'purchased' ? 'Год покупки*' : 'Год посева*',
                   suffixIcon: IconButton(
                       icon: const Icon(Icons.calendar_today),
-                      onPressed: _showYearPicker),
+                      onPressed: _showYearPicker,),
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) => (value == null || value.isEmpty)
@@ -1479,7 +1479,7 @@ class _AddPlantFormState extends State<AddPlantForm> {
                 controller: _numberController,
                 decoration: const InputDecoration(
                     labelText: 'Номер растения*',
-                    hintText: 'Пример: 3 → ID: 23-003'),
+                    hintText: 'Пример: 3 → ID: 23-003',),
                 keyboardType: TextInputType.number,
                 validator: _validateNumber,
               ),
@@ -1490,7 +1490,7 @@ class _AddPlantFormState extends State<AddPlantForm> {
                 onPressed: _saveForm,
                 style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12)),
+                        horizontal: 20, vertical: 12,),),
               ),
             ],
           ),

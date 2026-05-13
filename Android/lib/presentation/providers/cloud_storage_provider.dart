@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../routers/app_router.dart' show navigatorKey;
@@ -52,7 +52,7 @@ class CloudStorageProvider with ChangeNotifier {
         final plantCrudProvider =
             Provider.of<PlantCrudProvider>(context, listen: false);
         await _syncManager.syncData(plantCrudProvider);
-        print('🔄 Полная синхронизация после авторизации выполнена');
+        debugPrint('🔄 Полная синхронизация после авторизации выполнена');
       }
     }
 

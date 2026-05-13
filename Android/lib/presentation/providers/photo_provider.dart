@@ -117,7 +117,7 @@ class PhotoProvider with ChangeNotifier {
 
   /// Очистить неиспользуемые фото у выбранных растений.
   Future<int> cleanupUnusedPhotosForSelected(
-      List<Plant> plants, Set<String> selectedIds) async {
+      List<Plant> plants, Set<String> selectedIds,) async {
     final photosDir = await _getPhotosDirectory();
     final dir = Directory(photosDir);
     if (!await dir.exists()) return 0;
@@ -151,7 +151,7 @@ class PhotoProvider with ChangeNotifier {
   /// Удалить все фото у выбранных растений.
   /// Возвращает список plantId, у которых были удалены фото.
   Future<List<String>> deleteAllPhotosForSelected(
-      List<Plant> plants, Set<String> selectedIds) async {
+      List<Plant> plants, Set<String> selectedIds,) async {
     final updatedIds = <String>[];
     for (var plant in plants) {
       if (selectedIds.contains(plant.permanentId)) {
@@ -218,7 +218,7 @@ class PhotoProvider with ChangeNotifier {
       int cachedCount = 0;
 
       debugPrint(
-          '🔄 ensureLocalPhotosExist запущен для ${plants.length} растений');
+          '🔄 ensureLocalPhotosExist запущен для ${plants.length} растений',);
 
       for (final plant in plants) {
         for (var photo in plant.userPhotos) {
@@ -245,13 +245,13 @@ class PhotoProvider with ChangeNotifier {
             cachedCount++;
           } catch (e) {
             debugPrint(
-                '⚠️ Не удалось закешировать облачное фото $photo: $e');
+                '⚠️ Не удалось закешировать облачное фото $photo: $e',);
           }
         }
       }
 
       debugPrint(
-          '✅ Prefetch завершён, новых закешированных фото: $cachedCount');
+          '✅ Prefetch завершён, новых закешированных фото: $cachedCount',);
       await _cleanupOldCache();
     } finally {
       _isPrefetchingPhotos = false;
@@ -271,7 +271,7 @@ class PhotoProvider with ChangeNotifier {
       } catch (e) {
         if (attempt == 2) rethrow;
         debugPrint(
-            '🔄 Попытка ${attempt + 1} для скачивания $url не удалась: $e');
+            '🔄 Попытка ${attempt + 1} для скачивания $url не удалась: $e',);
         await Future.delayed(Duration(seconds: attempt + 1));
       }
     }
@@ -308,7 +308,7 @@ class PhotoProvider with ChangeNotifier {
 
       if (deletedCount > 0) {
         debugPrint(
-            '🧹 Очистка кэша завершена: удалено $deletedCount старых файлов');
+            '🧹 Очистка кэша завершена: удалено $deletedCount старых файлов',);
       }
     } catch (e) {
       debugPrint('⚠️ Ошибка очистки кэша: $e');

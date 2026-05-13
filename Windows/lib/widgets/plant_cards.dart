@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // Сохранено: Для adultImageUrl и userPhotos network.
@@ -40,25 +40,10 @@ class PlantCards extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 13)),
           if (sortColumn == column)
             Icon(isAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 14),
+                size: 14,),
         ],
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'in_collection':
-        return Colors.amber.shade600;
-      case 'growing':
-        return Colors.green.shade400;
-      case 'dead':
-        return Colors.red.shade400;
-      case 'failed':
-        return Colors.blueGrey.shade400;
-      default:
-        return Colors.grey.shade400;
-    }
   }
 
   void _showStatusDialog(BuildContext context, Plant plant) {
@@ -67,7 +52,7 @@ class PlantCards extends StatelessWidget {
       'growing',
       'in_collection',
       'dead',
-      'failed'
+      'failed',
     ];
     showDialog(
       context: context,
@@ -89,7 +74,7 @@ class PlantCards extends StatelessWidget {
                                       ? 'Погиб'
                                       : 'Не взошел',
                     ),
-                  ))
+                  ),)
               .toList(),
           onChanged: (value) {
             if (value != null) {
@@ -199,7 +184,7 @@ class PlantCards extends StatelessWidget {
                                 Icon(Icons.eco, size: 80, color: Colors.grey),
                                 SizedBox(height: 8),
                                 Text('Нет фото',
-                                    style: TextStyle(color: Colors.grey)),
+                                    style: TextStyle(color: Colors.grey),),
                               ],
                             ),
                           ),
@@ -220,7 +205,7 @@ class PlantCards extends StatelessWidget {
                         Text('ID: ${plant.displayId}'),
                         Text('Последний полив: ${plant.lastWateringText}'),
                         Text(
-                            'Последний общий полив: ${context.read<WateringProvider>().lastGlobalWateringText}'),
+                            'Последний общий полив: ${context.read<WateringProvider>().lastGlobalWateringText}',),
                       ],
                     ),
                   ),
@@ -246,7 +231,7 @@ class PlantCards extends StatelessWidget {
                     ElevatedButton.icon(
                       icon: const Icon(Icons.delete, color: Colors.white),
                       label: const Text('Удалить',
-                          style: TextStyle(color: Colors.white)),
+                          style: TextStyle(color: Colors.white),),
                       onPressed: () {
                         Navigator.pop(ctx);
                         onDelete(plant.permanentId);
@@ -314,7 +299,7 @@ class PlantCards extends StatelessWidget {
                       errorWidget: (context, url, error) => const Icon(
                           Icons.error,
                           color: Colors.white,
-                          size: 50),
+                          size: 50,),
                     )
                   : Image.file(
                       File(photoUrl),
@@ -322,7 +307,7 @@ class PlantCards extends StatelessWidget {
                       errorBuilder: (context, error, stackTrace) => const Icon(
                           Icons.error,
                           color: Colors.white,
-                          size: 50),
+                          size: 50,),
                     ),
             ),
           ),
@@ -371,7 +356,7 @@ class PlantCards extends StatelessWidget {
                     onChanged: (value) {
                       if (value == true) {
                         provider.selectAll(
-                            plants.map((p) => p.permanentId).toList());
+                            plants.map((p) => p.permanentId).toList(),);
                       } else {
                         provider.clearSelections();
                       }
@@ -405,7 +390,7 @@ class PlantCards extends StatelessWidget {
                           const Icon(Icons.eco,
                               size: 80,
                               color: CactusColors
-                                  .primaryGreen), // временная иконка
+                                  .primaryGreen,), // временная иконка
                           const SizedBox(height: 16),
                           const Text(
                             'Коллекция пуста',
@@ -432,188 +417,17 @@ class PlantCards extends StatelessWidget {
                   itemCount: plants.length,
                   itemBuilder: (context, index) {
                     final plant = plants[index];
-                    final isSelected =
-                        provider.selectedIds.contains(plant.permanentId);
-                    final statusColor = _getStatusColor(plant.status);
-
-                    return GestureDetector(
-                      onTap: () => context.push(
-                        '/plant/${plant.permanentId}',
-                        extra: plant,
-                      ),
-                      onLongPress: () => _showQuickView(context, plant),
-                      child: Card(
-                        color:
-                            isSelected ? CactusColors.sandBeige : Colors.white,
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Checkbox(
-                                value: isSelected,
-                                onChanged: (value) => context
-                                    .read<PlantCrudProvider>()
-                                    .toggleSelection(plant.permanentId),
-                                activeColor: CactusColors.primaryGreen,
-                              ),
-                              const SizedBox(width: 8),
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: CactusColors.sandLight,
-                                child: Text('${index + 1}',
-                                    style: const TextStyle(
-                                        color: CactusColors.primaryGreen,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(width: 12),
-
-                              // Основная информация
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      plant.latinName,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          plant.category == 'purchased'
-                                              ? Icons.local_offer
-                                              : Icons.eco,
-                                          size: 16,
-                                          color: plant.category == 'purchased'
-                                              ? Colors.blue
-                                              : CactusColors.primaryGreen,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${plant.category == 'purchased' ? 'Куплено' : 'Посев'} ${plant.year}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: plant.category == 'purchased'
-                                                ? Colors.blue
-                                                : CactusColors.primaryGreen,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'ID: ${plant.displayId}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(width: 16),
-
-                              // Главное фото — улучшенная версия
-                              if (!isSelected)
-                                SizedBox(
-                                  width: 80,
-                                  height: 60,
-                                  child: _getSelectedPhotoUrl(
-                                              plant, provider) !=
-                                          null
-                                      ? GestureDetector(
-                                          onTap: () {
-                                            final photoUrl =
-                                                _getSelectedPhotoUrl(
-                                                    plant, provider)!;
-                                            final isNetwork =
-                                                photoUrl.startsWith('http');
-                                            _showFullPhoto(
-                                                context, photoUrl, isNetwork);
-                                          },
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            child: _getSelectedPhotoUrl(
-                                                        plant, provider)!
-                                                    .startsWith('http')
-                                                ? CachedNetworkImage(
-                                                    imageUrl:
-                                                        _getSelectedPhotoUrl(
-                                                            plant, provider)!,
-                                                    fit: BoxFit.cover,
-                                                    placeholder: (_, __) =>
-                                                        const CircularProgressIndicator(
-                                                            strokeWidth: 2),
-                                                    errorWidget: (_, __, ___) =>
-                                                        const Icon(Icons.error,
-                                                            color: Colors.red),
-                                                  )
-                                                : Image.file(
-                                                    File(_getSelectedPhotoUrl(
-                                                        plant, provider)!),
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (_, __,
-                                                            ___) =>
-                                                        const Icon(Icons.error,
-                                                            color: Colors.red),
-                                                  ),
-                                          ),
-                                        )
-                                      : Container(
-                                          color: Colors.grey.shade200,
-                                          child: const Icon(Icons.eco,
-                                              size: 32, color: Colors.grey),
-                                        ),
-                                ),
-
-                              const SizedBox(width: 12),
-
-                              // Статус
-                              GestureDetector(
-                                onTap: () => _showStatusDialog(context, plant),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: statusColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    plant.statusText,
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.white),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              IconButton(
-                                icon: const Icon(Icons.edit,
-                                    color: CactusColors.primaryGreen),
-                                onPressed: () => onEdit(plant),
-                                tooltip: 'Редактировать',
-                              ),
-                              IconButton(
-                                icon:
-                                    const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => onDelete(plant.permanentId),
-                                tooltip: 'Удалить',
-                              ),
-                            ],
-                          ),
-                        ),
+                    return RepaintBoundary(
+                      child: _PlantCardItem(
+                        plant: plant,
+                        index: index,
+                        onEdit: onEdit,
+                        onDelete: onDelete,
+                        onUpdate: onUpdate,
+                        onShowFullPhoto: _showFullPhoto,
+                        onShowQuickView: _showQuickView,
+                        onShowStatusDialog: _showStatusDialog,
+                        getPhotoUrl: _getSelectedPhotoUrl,
                       ),
                     );
                   },
@@ -624,4 +438,218 @@ class PlantCards extends StatelessWidget {
   }
 }
 
+class _PlantCardItem extends StatelessWidget {
+  final Plant plant;
+  final int index;
+  final Function(Plant) onEdit;
+  final Function(String) onDelete;
+  final Function(String, Plant) onUpdate;
+  final void Function(BuildContext, String, bool) onShowFullPhoto;
+  final void Function(BuildContext, Plant) onShowQuickView;
+  final void Function(BuildContext, Plant) onShowStatusDialog;
+  final String? Function(Plant, PlantCrudProvider) getPhotoUrl;
 
+  const _PlantCardItem({
+    required this.plant,
+    required this.index,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onUpdate,
+    required this.onShowFullPhoto,
+    required this.onShowQuickView,
+    required this.onShowStatusDialog,
+    required this.getPhotoUrl,
+  });
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'in_collection':
+        return Colors.amber.shade600;
+      case 'growing':
+        return Colors.green.shade400;
+      case 'dead':
+        return Colors.red.shade400;
+      case 'failed':
+        return Colors.blueGrey.shade400;
+      default:
+        return Colors.grey.shade400;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<PlantCrudProvider>();
+    final isSelected = provider.selectedIds.contains(plant.permanentId);
+    final statusColor = _statusColor(plant.status);
+    final photoUrl = getPhotoUrl(plant, provider);
+
+    return GestureDetector(
+      onTap: () => context.push(
+        '/plant/${plant.permanentId}',
+        extra: plant,
+      ),
+      onLongPress: () => onShowQuickView(context, plant),
+      child: Card(
+        color: isSelected ? CactusColors.sandBeige : Colors.white,
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Checkbox(
+                value: isSelected,
+                onChanged: (value) => context
+                    .read<PlantCrudProvider>()
+                    .toggleSelection(plant.permanentId),
+                activeColor: CactusColors.primaryGreen,
+              ),
+              const SizedBox(width: 8),
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: CactusColors.sandLight,
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(
+                    color: CactusColors.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Основная информация
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plant.latinName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          plant.category == 'purchased'
+                              ? Icons.local_offer
+                              : Icons.eco,
+                          size: 16,
+                          color: plant.category == 'purchased'
+                              ? Colors.blue
+                              : CactusColors.primaryGreen,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${plant.category == 'purchased' ? 'Куплено' : 'Посев'} ${plant.year}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: plant.category == 'purchased'
+                                ? Colors.blue
+                                : CactusColors.primaryGreen,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'ID: ${plant.displayId}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Главное фото
+              if (!isSelected)
+                SizedBox(
+                  width: 80,
+                  height: 60,
+                  child: photoUrl != null
+                      ? GestureDetector(
+                          onTap: () => onShowFullPhoto(
+                            context,
+                            photoUrl,
+                            photoUrl.startsWith('http'),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: photoUrl.startsWith('http')
+                                ? CachedNetworkImage(
+                                    imageUrl: photoUrl,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) =>
+                                        const CircularProgressIndicator(
+                                            strokeWidth: 2,),
+                                    errorWidget: (_, __, ___) => const Icon(
+                                        Icons.error,
+                                        color: Colors.red,),
+                                  )
+                                : Image.file(
+                                    File(photoUrl),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.error,
+                                        color: Colors.red,),
+                                  ),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.eco,
+                              size: 32, color: Colors.grey,),
+                        ),
+                ),
+
+              const SizedBox(width: 12),
+
+              // Статус
+              GestureDetector(
+                onTap: () => onShowStatusDialog(context, plant),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4,),
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    plant.statusText,
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.white,),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              IconButton(
+                icon: const Icon(Icons.edit,
+                    color: CactusColors.primaryGreen,),
+                onPressed: () => onEdit(plant),
+                tooltip: 'Редактировать',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => onDelete(plant.permanentId),
+                tooltip: 'Удалить',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -306,7 +306,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                         selectedPlants = filteredPlants
                             .where((p) =>
                                 p.category ==
-                                (group == 'Посевы' ? 'sown' : 'purchased'))
+                                (group == 'Посевы' ? 'sown' : 'purchased'),)
                             .toList();
                         title = 'Растения категории: $group';
                       }
@@ -401,7 +401,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
   Widget _buildNeumorphicCard(
       String title, String value, Color color, IconData icon,
-      {required bool isMobile}) {
+      {required bool isMobile,}) {
     return Container(
       width: isMobile ? 150 : 180,
       padding: EdgeInsets.all(isMobile ? 10 : 12),
@@ -465,13 +465,13 @@ class _StatisticsScreenState extends State<StatisticsScreen>
         children: [
           FilterChip(
             label: Text(
-                _selectedYear == null ? 'Все годы' : 'Год: $_selectedYear'),
+                _selectedYear == null ? 'Все годы' : 'Год: $_selectedYear',),
             selected: _selectedYear != null,
             onSelected: (selected) => _showYearSelectionDialog(context, years),
             checkmarkColor: Colors.white,
             selectedColor: Colors.blue,
             labelStyle: TextStyle(
-                color: _selectedYear != null ? Colors.white : Colors.black),
+                color: _selectedYear != null ? Colors.white : Colors.black,),
           ),
           if (_selectedYear != null)
             IconButton(
@@ -512,14 +512,14 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                               null; // Сохранено: Значение null для 'Все годы' — не меняется.
                         });
                         Navigator.pop(context,
-                            null); // Сохранено: Возврат значения — не меняется.
+                            null,); // Сохранено: Возврат значения — не меняется.
                       },
                       child: InkWell(
                         // Сохранено: InkWell for ripple on tap — M3-visual (selected style from theme).
                         child: ListTile(
                           // Сохранено: ListTile — title не меняется.
                           title: const Text(
-                              'Все годы'), // Сохранено: Текст — не меняется.
+                              'Все годы',), // Сохранено: Текст — не меняется.
                           leading: Radio<int?>(
                             // Сохранено: Radio for display — M3-стиль, no groupValue (deprecation fixed).
                             value:
@@ -545,7 +545,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                       child: ListTile(
                         // Сохранено: ListTile для года — title динамический.
                         title: Text(year
-                            .toString()), // Сохранено: Текст года — не меняется.
+                            .toString(),), // Сохранено: Текст года — не меняется.
                         leading: Radio<int>(
                           // Сохранено: Radio for display.
                           value:
@@ -581,13 +581,13 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 ? 'Все категории'
                 : _selectedCategory == 'sown'
                     ? 'Посевы'
-                    : 'Купленные'),
+                    : 'Купленные',),
             selected: _selectedCategory != null,
             onSelected: (selected) => _showCategorySelectionDialog(context),
             checkmarkColor: Colors.white,
             selectedColor: Colors.blue,
             labelStyle: TextStyle(
-                color: _selectedCategory != null ? Colors.white : Colors.black),
+                color: _selectedCategory != null ? Colors.white : Colors.black,),
           ),
           if (_selectedCategory != null)
             IconButton(
@@ -625,14 +625,14 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                             null; // Сохранено: Значение null для 'Все категории' — не меняется.
                       });
                       Navigator.pop(context,
-                          null); // Сохранено: Возврат значения — не меняется.
+                          null,); // Сохранено: Возврат значения — не меняется.
                     },
                     child: InkWell(
                       // Сохранено: InkWell for ripple on tap — M3-visual (selected style from theme).
                       child: ListTile(
                         // Сохранено: ListTile — title не меняется.
                         title: const Text(
-                            'Все категории'), // Сохранено: Текст — не меняется.
+                            'Все категории',), // Сохранено: Текст — не меняется.
                         leading: Radio<String?>(
                           // Сохранено: Radio for display — M3-стиль, no groupValue (deprecation fixed).
                           value:
@@ -653,7 +653,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     child: InkWell(
                       child: ListTile(
                         title: const Text(
-                            'Посевы'), // Сохранено: Текст — не меняется.
+                            'Посевы',), // Сохранено: Текст — не меняется.
                         leading: Radio<String>(
                           value: 'sown', // Сохранено: Значение — не меняется.
                         ), // Нет groupValue — visual via selected:.
@@ -672,7 +672,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     child: InkWell(
                       child: ListTile(
                         title: const Text(
-                            'Купленные'), // Сохранено: Текст — не меняется.
+                            'Купленные',), // Сохранено: Текст — не меняется.
                         leading: Radio<String>(
                           value:
                               'purchased', // Сохранено: Значение — не меняется.
@@ -739,7 +739,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                               secondaryValue: total > 0
                                   ? (e.value / total * 100).roundToDouble()
                                   : 0,
-                            ))
+                            ),)
                         .toList(),
                     xValueMapper: (ChartData d, _) => d.category,
                     yValueMapper: (ChartData d, _) => d.value,
@@ -784,7 +784,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           final total = provider.getPlantCountForYear(year);
           final alive = filteredPlants
               .where((p) =>
-                  p.year == year && !['dead', 'failed'].contains(p.status))
+                  p.year == year && !['dead', 'failed'].contains(p.status),)
               .length;
           return ChartData(
             year.toString(),
@@ -802,7 +802,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             const Padding(
               padding: EdgeInsets.all(8.0),
               child: Text('Динамика выживаемости',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
             ),
             SizedBox(
               height: 300,
@@ -810,7 +810,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 primaryXAxis: CategoryAxis(),
                 primaryYAxis: NumericAxis(
                     maximum: 100,
-                    title: AxisTitle(text: 'Процент выживших (%)')),
+                    title: AxisTitle(text: 'Процент выживших (%)'),),
                 axes: [
                   NumericAxis(
                     name: 'secondary',
@@ -822,7 +822,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 tooltipBehavior: TooltipBehavior(
                   enable: true,
                   builder: (dynamic data, dynamic point, dynamic series,
-                      int pointIndex, int seriesIndex) {
+                      int pointIndex, int seriesIndex,) {
                     final chartData = data as ChartData;
                     return Text(
                       'Год: ${chartData.category}\nВыживаемость: ${chartData.value.toStringAsFixed(1)}%\nВсего: ${chartData.secondaryValue.toInt()}',
@@ -942,7 +942,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                   Switch(
                       value: _groupByRange,
                       onChanged: (value) =>
-                          setState(() => _groupByRange = value)),
+                          setState(() => _groupByRange = value),),
                 ],
               ),
             ),
@@ -953,7 +953,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                   title: const ChartTitle(text: 'Распределение по возрасту'),
                   primaryXAxis: _groupByRange
                       ? CategoryAxis(
-                          title: AxisTitle(text: 'Диапазон возраста'))
+                          title: AxisTitle(text: 'Диапазон возраста'),)
                       : NumericAxis(title: AxisTitle(text: 'Возраст (лет)')),
                   primaryYAxis:
                       NumericAxis(title: AxisTitle(text: 'Количество')),
@@ -965,7 +965,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                               .toList()
                           : ageGroups.entries
                               .map((e) => ChartData(
-                                  e.key.toString(), e.value.toDouble()))
+                                  e.key.toString(), e.value.toDouble(),),)
                               .toList(),
                       xValueMapper: (ChartData d, _) =>
                           _groupByRange ? d.category : int.parse(d.category),
@@ -1031,7 +1031,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             const Padding(
               padding: EdgeInsets.all(8.0),
               child: Text('Активность поливов',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
             ),
             Expanded(
               child: SingleChildScrollView(child: _buildCustomHeatmap(events)),
@@ -1168,7 +1168,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
         for (var plant in filteredPlants) {
           if (plant.lastRepotting != null) {
             final key = DateTime(
-                    plant.lastRepotting!.year, plant.lastRepotting!.month, 1)
+                    plant.lastRepotting!.year, plant.lastRepotting!.month, 1,)
                 .toString()
                 .substring(0, 7);
             monthlyCare[key] = monthlyCare[key] ?? {'Полив': 0, 'Пересадка': 0};
@@ -1239,7 +1239,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           }
           if (plant.lastRepotting != null) {
             final normalized = DateTime(plant.lastRepotting!.year,
-                plant.lastRepotting!.month, plant.lastRepotting!.day);
+                plant.lastRepotting!.month, plant.lastRepotting!.day,);
             if (normalized.month == now.month && normalized.year == now.year) {
               events[normalized] = 'Пересадка';
             }
@@ -1258,7 +1258,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 padding: EdgeInsets.all(8.0),
                 child: Text('Календарь событий',
                     style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
               ),
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.4,
@@ -1290,7 +1290,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                             style: TextStyle(
                                 color: event == null
                                     ? Colors.black
-                                    : Colors.white),
+                                    : Colors.white,),
                           ),
                         ),
                       );

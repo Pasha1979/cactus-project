@@ -66,7 +66,7 @@ class PlantLocalDataSource {
     final lowerQuery = query.toLowerCase();
     return _plantBox.values
         .where((plant) =>
-            plant.latinName.toLowerCase().contains(lowerQuery))
+            plant.latinName.toLowerCase().contains(lowerQuery),)
         .toList();
   }
 

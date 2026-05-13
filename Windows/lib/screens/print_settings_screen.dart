@@ -112,7 +112,7 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
           items: items.map((item) => DropdownMenuItem(
             value: item,
             child: Text(display(item)),
-          )).toList(),
+          ),).toList(),
           onChanged: (newValue) {
             if (newValue != null) onChanged(newValue);
           },

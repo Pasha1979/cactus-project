@@ -59,7 +59,7 @@ class CareTipsSection extends StatelessWidget {
                                 tip,
                                 style: const TextStyle(fontSize: 16),
                               ),
-                            ))
+                            ),)
                         .toList(),
                   ),
           ),

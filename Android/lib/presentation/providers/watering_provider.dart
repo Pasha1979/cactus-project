@@ -87,7 +87,7 @@ class WateringProvider with ChangeNotifier {
 
   Future<void> removeGlobalWateringDate(DateTime date) async {
     _globalWateringDates.removeWhere((d) =>
-        d.year == date.year && d.month == date.month && d.day == date.day);
+        d.year == date.year && d.month == date.month && d.day == date.day,);
     await _save();
     _uiState = UiSuccess(List.unmodifiable(_globalWateringDates));
     notifyListeners();

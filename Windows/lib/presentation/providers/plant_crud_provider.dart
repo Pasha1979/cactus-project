@@ -108,7 +108,7 @@ class PlantCrudProvider with ChangeNotifier {
   /// Очистить неиспользуемые фото у выбранных растений.
   /// Делегирует к PhotoProvider.cleanupUnusedPhotosForSelected.
   Future<void> cleanupUnusedPhotosForSelected(
-      Set<String> selectedIds, BuildContext context) async {
+      Set<String> selectedIds, BuildContext context,) async {
     await createLocalBackup();
 
     final photoProvider = sl<PhotoProvider>();
@@ -121,7 +121,7 @@ class PlantCrudProvider with ChangeNotifier {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content:
-                Text('🗑 У выбранных растений удалено фото: $deletedCount')),
+                Text('🗑 У выбранных растений удалено фото: $deletedCount'),),
       );
     }
   }
@@ -129,7 +129,7 @@ class PlantCrudProvider with ChangeNotifier {
   /// Удалить все фото у выбранных растений.
   /// Делегирует удаление файлов к PhotoProvider, обновляет Plant модели.
   Future<void> deleteAllPhotosForSelected(
-      Set<String> selectedIds, BuildContext context) async {
+      Set<String> selectedIds, BuildContext context,) async {
     await createLocalBackup();
 
     final photoProvider = sl<PhotoProvider>();
@@ -221,7 +221,7 @@ class PlantCrudProvider with ChangeNotifier {
   /// Загрузка из облачного JSON с полным слиянием данных
   Future<void> loadFromCloudJson(Map<String, dynamic> data) async {
     debugPrint(
-        '🔄 loadFromCloudJson — загружаем ${data['plants']?.length ?? 0} растений из облака');
+        '🔄 loadFromCloudJson — загружаем ${data['plants']?.length ?? 0} растений из облака',);
 
     final plantsJson = data['plants'] as List<dynamic>? ?? [];
     final cloudPlants = <Plant>[];
@@ -355,7 +355,7 @@ class PlantCrudProvider with ChangeNotifier {
             .map((s) {
               try {
                 return WinteringLogEntry.fromJson(
-                    jsonDecode(s) as Map<String, dynamic>);
+                    jsonDecode(s) as Map<String, dynamic>,);
               } catch (_) {
                 return null;
               }
@@ -520,7 +520,7 @@ class PlantCrudProvider with ChangeNotifier {
   // ==================== ПОМОЩНИКИ ====================
   bool isNumberUnique(int year, int number, String category) {
     return !_plants.any((p) =>
-        p.category == category && p.year == year && p.customNumber == number);
+        p.category == category && p.year == year && p.customNumber == number,);
   }
 
   int getNextNumber(int year, String category) {
@@ -737,7 +737,7 @@ class PlantCrudProvider with ChangeNotifier {
       for (var plant in _plants) {
         if (plant.lastFertilization != null) {
           final date = DateTime(plant.lastFertilization!.year,
-              plant.lastFertilization!.month, plant.lastFertilization!.day);
+              plant.lastFertilization!.month, plant.lastFertilization!.day,);
           _fertilizationDatesCache[date] ??= [];
           _fertilizationDatesCache[date]!.add(plant);
         }
@@ -753,7 +753,7 @@ class PlantCrudProvider with ChangeNotifier {
         if (plant.plannedFertilizationDate != null) {
           final date = DateTime(plant.plannedFertilizationDate!.year,
               plant.plannedFertilizationDate!.month,
-              plant.plannedFertilizationDate!.day);
+              plant.plannedFertilizationDate!.day,);
           _plannedFertilizationDatesCache[date] ??= [];
           _plannedFertilizationDatesCache[date]!.add(plant);
         }
@@ -1054,17 +1054,17 @@ class PlantCrudProvider with ChangeNotifier {
           date: g.date,
           germinatedCount: g.germinatedCount,
           deadCount: g.deadCount,
-        )).toList(),
+        ),).toList(),
         floweringHistory: batch.floweringHistory.map((f) => FloweringRecord(
           date: f.date,
           event: f.event,
-        )).toList(),
+        ),).toList(),
         notes: batch.notes.map((n) => Note(
           id: n.id,
           title: n.title,
           text: n.text,
           createdAt: n.createdAt,
-        )).toList(),
+        ),).toList(),
         userPhotos: List<String>.from(batch.userPhotos),
         lliflePhotoUrls: List<String>.from(batch.lliflePhotoUrls),
         gbifPhotoUrls: List<String>.from(batch.gbifPhotoUrls),
@@ -1078,7 +1078,7 @@ class PlantCrudProvider with ChangeNotifier {
           year: o.year,
           month: o.month,
           day: o.day,
-        )).toList(),
+        ),).toList(),
         fieldNumber: batch.fieldNumber,
         seller: batch.seller,
         harvestYear: batch.harvestYear,
@@ -1129,7 +1129,7 @@ class PlantCrudProvider with ChangeNotifier {
     final updatedDates = _plants[index]
         .wateringDates
         .where((d) =>
-            d.year != date.year || d.month != date.month || d.day != date.day)
+            d.year != date.year || d.month != date.month || d.day != date.day,)
         .toList();
     final updated = _plants[index].copyWith(
       wateringDates: updatedDates,
@@ -1219,10 +1219,10 @@ class PlantCrudProvider with ChangeNotifier {
 
       final buffer = StringBuffer();
       buffer.writeln(
-          'permanentId,displayId,latinName,status,year,customNumber,category');
+          'permanentId,displayId,latinName,status,year,customNumber,category',);
       for (final plant in selectedPlants) {
         buffer.writeln(
-            '${plant.permanentId},${plant.displayId},${plant.latinName},${plant.status},${plant.year},${plant.customNumber},${plant.category}');
+            '${plant.permanentId},${plant.displayId},${plant.latinName},${plant.status},${plant.year},${plant.customNumber},${plant.category}',);
       }
 
       final directory = await getApplicationDocumentsDirectory();
@@ -1258,12 +1258,12 @@ class PlantCrudProvider with ChangeNotifier {
 
   /// Проверить уникальность номера
   bool isCustomNumberUnique(int year, int number, String category,
-      {String? excludeId}) {
+      {String? excludeId,}) {
     return !_plants.any((p) =>
         p.category == category &&
         p.year == year &&
         p.customNumber == number &&
-        p.permanentId != excludeId);
+        p.permanentId != excludeId,);
   }
 
   /// Получить следующий свободный номер
@@ -1288,7 +1288,7 @@ class PlantCrudProvider with ChangeNotifier {
     final other = useCloudAsBase ? local : cloud;
 
     debugPrint(
-        '🔄 Слияние ${base.latinName}: ${useCloudAsBase ? "облако > локальное" : "локальное > облако"}');
+        '🔄 Слияние ${base.latinName}: ${useCloudAsBase ? "облако > локальное" : "локальное > облако"}',);
 
     final mergedPhotos = _mergePhotoLists(base.userPhotos, other.userPhotos, _deletedUserPhotos);
     final mergedLliflePhotos = _mergePhotoLists(base.lliflePhotoUrls, other.lliflePhotoUrls, _deletedLliflePhotos);

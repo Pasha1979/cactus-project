@@ -42,7 +42,7 @@ class SynonymsSection extends StatelessWidget {
                                 syn,
                                 style: const TextStyle(fontSize: 16),
                               ),
-                            ))
+                            ),)
                         .toList(),
                   ),
           ),

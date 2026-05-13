@@ -57,7 +57,7 @@ class CareTab extends StatelessWidget {
               return Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
+                    borderRadius: BorderRadius.circular(16),),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -68,7 +68,7 @@ class CareTab extends StatelessWidget {
                           Icon(Icons.wb_sunny, color: Colors.orange),
                           SizedBox(width: 8),
                           Text('Сегодня',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                              style: TextStyle(fontWeight: FontWeight.bold),),
                         ],
                       ),
                       const SizedBox(height: 12),

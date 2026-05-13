@@ -305,7 +305,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                           color: Colors.white,
                           fontWeight: FontWeight.w500,
                           shadows: const [
-                            Shadow(blurRadius: 4, color: Colors.black54)
+                            Shadow(blurRadius: 4, color: Colors.black54),
                           ],
                         ),
                       ),
@@ -319,7 +319,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   shadows: const [
-                    Shadow(blurRadius: 10, color: Colors.black54)
+                    Shadow(blurRadius: 10, color: Colors.black54),
                   ],
                 ),
               ),
@@ -406,12 +406,12 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           textColor: Colors.white,
           onPressed: () {
             provider.removeIndividualWateringDate(
-                plant.permanentId, wateringDate);
+                plant.permanentId, wateringDate,);
             provider.savePlants();
             setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Полив отменён'), backgroundColor: Colors.grey),
+                  content: Text('Полив отменён'), backgroundColor: Colors.grey,),
             );
           },
         ),
@@ -441,7 +441,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            'Удобрение отмечено: ${DateFormat('dd.MM.yyyy').format(selectedDate)}'),
+            'Удобрение отмечено: ${DateFormat('dd.MM.yyyy').format(selectedDate)}',),
         backgroundColor: Colors.purple,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
@@ -450,10 +450,10 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           onPressed: () {
             if (oldFertilization != null) {
               provider.markAsFertilized(plant.permanentId,
-                  date: oldFertilization);
+                  date: oldFertilization,);
             } else {
               final updated = plant.copyWith(
-                  lastFertilization: null, plannedFertilizationDate: null);
+                  lastFertilization: null, plannedFertilizationDate: null,);
               provider.updatePlant(plant.permanentId, updated);
             }
             provider.savePlants();
@@ -461,7 +461,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Удобрение отменено'),
-                  backgroundColor: Colors.grey),
+                  backgroundColor: Colors.grey,),
             );
           },
         ),
@@ -493,7 +493,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            'Пересадка запланирована на ${DateFormat('dd.MM.yyyy').format(selectedDate)}'),
+            'Пересадка запланирована на ${DateFormat('dd.MM.yyyy').format(selectedDate)}',),
         backgroundColor: Colors.brown,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
@@ -508,7 +508,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Планирование пересадки отменено'),
-                  backgroundColor: Colors.grey),
+                  backgroundColor: Colors.grey,),
             );
           },
         ),
@@ -543,7 +543,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена'),),
         ],
       ),
     );
@@ -560,7 +560,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            event == 'bloomed' ? 'Отмечено цветение' : 'Отмечено увядание'),
+            event == 'bloomed' ? 'Отмечено цветение' : 'Отмечено увядание',),
         backgroundColor: event == 'bloomed' ? Colors.green : Colors.orange,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
@@ -579,7 +579,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Запись цветения отменена'),
-                  backgroundColor: Colors.grey),
+                  backgroundColor: Colors.grey,),
             );
           },
         ),
@@ -670,7 +670,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Сделать главным?'),
         content: const Text(
-            'Это фото будет отображаться в шапке карточки растения.'),
+            'Это фото будет отображаться в шапке карточки растения.',),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -698,7 +698,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
   }
 
   void _showFullPhoto(
-      BuildContext context, Plant plant, String photoUrl, bool isNetwork) {
+      BuildContext context, Plant plant, String photoUrl, bool isNetwork,) {
     final isMain =
         plant.userPhotos.isNotEmpty && plant.userPhotos.first == photoUrl;
 
@@ -738,11 +738,11 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         imageUrl: photoUrl,
                         fit: BoxFit.contain,
                         placeholder: (_, __) => const CircularProgressIndicator(
-                            color: Colors.white),
+                            color: Colors.white,),
                         errorWidget: (_, __, ___) => const Icon(
                             Icons.broken_image,
                             color: Colors.red,
-                            size: 100),
+                            size: 100,),
                       )
                     : Image.file(
                         File(photoUrl),
@@ -750,7 +750,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                         errorBuilder: (_, __, ___) => const Icon(
                             Icons.broken_image,
                             color: Colors.red,
-                            size: 100),
+                            size: 100,),
                       ),
               ),
             ),
@@ -826,7 +826,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                       Text(
                         dateText,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 15),
+                            color: Colors.white70, fontSize: 15,),
                       ),
                     ],
                   ),
@@ -886,7 +886,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
         .map((url) {
           var cleanUrl = url
               .replaceAll(
-                  'https://llifle.comphotos/', 'https://llifle.com/photos/')
+                  'https://llifle.comphotos/', 'https://llifle.com/photos/',)
               .replaceAll('+', '_')
               .replaceAll('_m.jpg', '_l.jpg')
               .replaceAll('_s.jpg', '_l.jpg');

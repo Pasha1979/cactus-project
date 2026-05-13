@@ -56,7 +56,7 @@ class WinteringProvider with ChangeNotifier {
             .map((s) {
               try {
                 return WinteringLogEntry.fromJson(
-                    jsonDecode(s) as Map<String, dynamic>);
+                    jsonDecode(s) as Map<String, dynamic>,);
               } catch (_) {
                 return null;
               }

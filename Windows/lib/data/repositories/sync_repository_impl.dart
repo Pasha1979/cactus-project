@@ -19,7 +19,7 @@ class SyncRepositoryImpl implements SyncRepository {
     /// Полная синхронизация идёт через CloudStorageProvider → SyncManager.
     /// Этот метод — no-op, чтобы не дублировать сложную логику.
     debugPrint(
-        '⚠️ SyncRepositoryImpl.syncWithCloud: no-op — используйте CloudStorageProvider.syncData()');
+        '⚠️ SyncRepositoryImpl.syncWithCloud: no-op — используйте CloudStorageProvider.syncData()',);
   }
 
   @override

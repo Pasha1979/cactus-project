@@ -1,11 +1,10 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/logger/app_logger.dart';
 import '../../models/gbif_occurrence.dart';
-import '../isolates/parser_isolate.dart';
+import '../isolates/http_isolate.dart';
 
 /// Сервис для работы с GBIF API (Global Biodiversity Information Facility).
 
@@ -37,7 +36,7 @@ class GbifService {
       final cachedData = await getCachedGbifData(latinName);
       if (cachedData != null) {
         AppLogger.api('Найдены кэшированные данные GBIF для $latinName',
-            tag: _tag);
+            tag: _tag,);
         return cachedData;
       }
 
@@ -46,16 +45,16 @@ class GbifService {
       if (gbifData != null) {
         await cacheGbifData(latinName, gbifData);
         AppLogger.api('Данные GBIF получены и закэшированы для $latinName',
-            tag: _tag);
+            tag: _tag,);
         return gbifData;
       }
 
       AppLogger.warning('Не удалось получить данные из GBIF для $latinName',
-          tag: _tag);
+          tag: _tag,);
       return null;
     } catch (e, stack) {
       AppLogger.error('Ошибка при получении данных GBIF для $latinName',
-          error: e, stackTrace: stack, tag: _tag);
+          error: e, stackTrace: stack, tag: _tag,);
       return null;
     }
   }
@@ -70,7 +69,7 @@ class GbifService {
       AppLogger.db('Данные GBIF закэшированы: $key', tag: _tag);
     } catch (e, stack) {
       AppLogger.error('Ошибка кэширования данных GBIF',
-          error: e, stackTrace: stack, tag: _tag);
+          error: e, stackTrace: stack, tag: _tag,);
     }
   }
 
@@ -98,7 +97,7 @@ class GbifService {
       return null;
     } catch (e, stack) {
       AppLogger.error('Ошибка получения кэша GBIF',
-          error: e, stackTrace: stack, tag: _tag);
+          error: e, stackTrace: stack, tag: _tag,);
       return null;
     }
   }
@@ -110,7 +109,7 @@ class GbifService {
       AppLogger.db('Кэш GBIF очищен для $latinName', tag: _tag);
     } catch (e, stack) {
       AppLogger.error('Ошибка очистки кэша GBIF',
-          error: e, stackTrace: stack, tag: _tag);
+          error: e, stackTrace: stack, tag: _tag,);
     }
   }
 
@@ -126,7 +125,7 @@ class GbifService {
       AppLogger.db('Весь кэш GBIF очищен', tag: _tag);
     } catch (e, stack) {
       AppLogger.error('Ошибка полной очистки кэша GBIF',
-          error: e, stackTrace: stack, tag: _tag);
+          error: e, stackTrace: stack, tag: _tag,);
     }
   }
 
@@ -134,33 +133,27 @@ class GbifService {
 
   Future<Map<String, dynamic>?> _fetchFromGbifApi(String latinName) async {
     final scientificName = _formatScientificName(latinName);
-    final url = Uri.parse(
-        '$_baseUrl?scientificName=$scientificName&limit=50&hasCoordinate=true');
-
-    final headers = {
-      'User-Agent': 'MyCactus-App/1.0 (https://github.com/pavel/mycactus)',
-      'Accept': 'application/json',
-    };
+    final url =
+        '$_baseUrl?scientificName=$scientificName&limit=50&hasCoordinate=true';
 
     int retries = 0;
     while (retries < _maxRetries) {
       try {
-        AppLogger.api('Запрос к GBIF API: $url', tag: _tag);
-        final response = await http.get(url, headers: headers);
+        AppLogger.api('Запрос к GBIF API (isolate): $url', tag: _tag);
 
-        if (response.statusCode == 200) {
-          final rawData = await ParserIsolate.parseJson(response.body);
-          return _buildGbifResult(rawData);
-        } else {
-          AppLogger.warning('GBIF API вернул статус ${response.statusCode}',
-              tag: _tag);
-          throw Exception('HTTP ${response.statusCode}: ${response.reasonPhrase}');
+        // Вариант Б: HTTP + парсинг + jsonEncode — всё в isolate
+        final serialized = await HttpIsolate.fetchAndParseGbif(url);
+        if (serialized == null) {
+          throw Exception('HttpIsolate вернул null');
         }
+
+        final rawData = jsonDecode(serialized) as Map<String, dynamic>;
+        return _buildGbifResult(rawData);
       } catch (e) {
         retries++;
         AppLogger.warning(
             'Ошибка запроса к GBIF API (попытка $retries/$_maxRetries): $e',
-            tag: _tag);
+            tag: _tag,);
         if (retries >= _maxRetries) return null;
         await Future.delayed(_retryDelay);
       }
@@ -173,7 +166,7 @@ class GbifService {
       final occurrenceMaps = rawData['occurrences'] as List<dynamic>? ?? [];
       if (occurrenceMaps.isEmpty) {
         AppLogger.warning('GBIF: нет валидных occurrence',
-            tag: _tag);
+            tag: _tag,);
         return null;
       }
 
@@ -194,7 +187,7 @@ class GbifService {
       AppLogger.api(
           'GBIF обработан: ${occurrences.length} occurrence, '
           '${photoUrls.length} фото, страна: $mostFrequentCountry',
-          tag: _tag);
+          tag: _tag,);
 
       return {
         'gbifOccurrences': occurrences.map((o) => o.toJson()).toList(),
@@ -208,7 +201,7 @@ class GbifService {
       };
     } catch (e, stack) {
       AppLogger.error('Ошибка сборки результата GBIF',
-          error: e, stackTrace: stack, tag: _tag);
+          error: e, stackTrace: stack, tag: _tag,);
       return null;
     }
   }

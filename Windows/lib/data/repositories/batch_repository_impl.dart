@@ -16,7 +16,7 @@ class BatchRepositoryImpl implements BatchRepository {
       'name': p.latinName,
       'childrenIds': p.childrenIds,
       'createdAt': p.year.toString(),
-    }).toList();
+    },).toList();
     return batches;
   }
 
@@ -57,7 +57,7 @@ class BatchRepositoryImpl implements BatchRepository {
 
   @override
   Future<void> updateBatch(
-      String batchId, Map<String, dynamic> batchData) async {
+      String batchId, Map<String, dynamic> batchData,) async {
     final batch = await _plantLocalDataSource.getPlantById(batchId);
     if (batch == null) return;
 

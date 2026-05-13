@@ -109,9 +109,9 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
                     style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green)),
+                        color: Colors.green,),),
                 const Text('Всхожесть',
-                    style: TextStyle(fontSize: 15, color: Colors.grey)),
+                    style: TextStyle(fontSize: 15, color: Colors.grey),),
               ],
             ),
             Column(
@@ -120,9 +120,9 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
                     style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.orange)),
+                        color: Colors.orange,),),
                 const Text('Выживаемость',
-                    style: TextStyle(fontSize: 15, color: Colors.grey)),
+                    style: TextStyle(fontSize: 15, color: Colors.grey),),
               ],
             ),
           ],
@@ -150,15 +150,15 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
       cumulativeDead += record.deadCount;
 
       germData.add(ChartData(record.date.toString().substring(0, 10),
-          cumulativeGerminated.toDouble()));
+          cumulativeGerminated.toDouble(),),);
       deadData.add(ChartData(
-          record.date.toString().substring(0, 10), cumulativeDead.toDouble()));
+          record.date.toString().substring(0, 10), cumulativeDead.toDouble(),),);
 
       // Живое = взошло всего минус погибло всего
       int alive = cumulativeGerminated - cumulativeDead;
       if (alive < 0) alive = 0;
       aliveData.add(
-          ChartData(record.date.toString().substring(0, 10), alive.toDouble()));
+          ChartData(record.date.toString().substring(0, 10), alive.toDouble()),);
     }
 
     return SfCartesianChart(
@@ -254,14 +254,14 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
           for (var record in floweringEvents) {
             if (record.event == 'bloomed') {
               final bloomDate = DateTime(
-                  record.date.year, record.date.month, record.date.day);
+                  record.date.year, record.date.month, record.date.day,);
               final nextWilt = floweringEvents
                   .where(
-                      (r) => r.event == 'wilted' && r.date.isAfter(record.date))
+                      (r) => r.event == 'wilted' && r.date.isAfter(record.date),)
                   .firstOrNull;
               final wiltDate = nextWilt != null
                   ? DateTime(nextWilt.date.year, nextWilt.date.month,
-                      nextWilt.date.day)
+                      nextWilt.date.day,)
                   : null;
               if (wiltDate != null &&
                   day.isAfter(bloomDate.subtract(const Duration(days: 1))) &&
@@ -313,14 +313,14 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
       builder: (context) {
         return AlertDialog(
           title: Text(
-              'Отметить цветение (${selectedDay.toString().substring(0, 10)})'),
+              'Отметить цветение (${selectedDay.toString().substring(0, 10)})',),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ElevatedButton(
                 onPressed: () {
                   plantCrud.addFloweringEvent(
-                      widget.plant.permanentId, selectedDay, 'bloomed');
+                      widget.plant.permanentId, selectedDay, 'bloomed',);
                   Navigator.pop(context);
                 },
                 child: const Text('Расцвёл'),
@@ -328,7 +328,7 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
               ElevatedButton(
                 onPressed: () {
                   plantCrud.addFloweringEvent(
-                      widget.plant.permanentId, selectedDay, 'wilted');
+                      widget.plant.permanentId, selectedDay, 'wilted',);
                   Navigator.pop(context);
                 },
                 child: const Text('Завял'),

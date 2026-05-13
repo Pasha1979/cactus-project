@@ -60,7 +60,7 @@ class SeedlingsTab extends StatelessWidget {
                               TextButton(
                                 onPressed: () => Navigator.pop(context, true),
                                 child: const Text('Удалить',
-                                    style: TextStyle(color: Colors.red)),
+                                    style: TextStyle(color: Colors.red),),
                               ),
                             ],
                           ),

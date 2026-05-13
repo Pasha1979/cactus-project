@@ -69,7 +69,7 @@ class _WinteringContentState extends State<WinteringContent> {
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green),
+                  color: Colors.green,),
             ),
             const SizedBox(height: 12),
             Row(
@@ -156,7 +156,7 @@ class _WinteringContentState extends State<WinteringContent> {
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green),
+                  color: Colors.green,),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -167,7 +167,7 @@ class _WinteringContentState extends State<WinteringContent> {
               ),
               keyboardType: TextInputType.number,
               controller: TextEditingController(
-                  text: winteringProvider.winteringTemperature?.toString()),
+                  text: winteringProvider.winteringTemperature?.toString(),),
               onChanged: (value) {
                 winteringProvider.winteringTemperature = double.tryParse(value);
                 _showTemperatureWarning(winteringProvider);
@@ -210,7 +210,7 @@ class _WinteringContentState extends State<WinteringContent> {
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green),
+                  color: Colors.green,),
             ),
             const SizedBox(height: 12),
             Text(
@@ -240,7 +240,7 @@ class _WinteringContentState extends State<WinteringContent> {
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green),
+                      color: Colors.green,),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add),
@@ -317,7 +317,7 @@ class _WinteringContentState extends State<WinteringContent> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'Температура вне диапазона! Текущая: ${winteringProvider.winteringTemperature}°C'),
+              'Температура вне диапазона! Текущая: ${winteringProvider.winteringTemperature}°C',),
           backgroundColor: Colors.red,
         ),
       );

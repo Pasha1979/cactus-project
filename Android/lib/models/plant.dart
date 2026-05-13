@@ -141,9 +141,9 @@ class Plant {
     if (aliveCount != null) return aliveCount!;
     // Авторасчёт: взошло - погибло
     final totalGerminated = germinationHistory.fold<int>(
-      0, (sum, record) => sum + record.germinatedCount);
+      0, (sum, record) => sum + record.germinatedCount,);
     final totalDead = germinationHistory.fold<int>(
-      0, (sum, record) => sum + record.deadCount);
+      0, (sum, record) => sum + record.deadCount,);
     return totalGerminated - totalDead;
   }
 
@@ -335,12 +335,12 @@ class Plant {
       plannedTransplantDate: _parseDateTimeSafe(json['plannedTransplantDate']),
       germinationHistory: (json['germinationHistory'] as List<dynamic>?)
               ?.map((item) =>
-                  GerminationRecord.fromJson(item as Map<String, dynamic>))
+                  GerminationRecord.fromJson(item as Map<String, dynamic>),)
               .toList() ??
           [],
       floweringHistory: (json['floweringHistory'] as List<dynamic>?)
               ?.map((item) =>
-                  FloweringRecord.fromJson(item as Map<String, dynamic>))
+                  FloweringRecord.fromJson(item as Map<String, dynamic>),)
               .toList() ??
           [],
       notes: (json['notes'] as List<dynamic>?)

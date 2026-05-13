@@ -38,7 +38,7 @@ class SowingManagementScreen extends StatelessWidget {
                   },
                   child: ListTile(
                     title: Text(year.toString(),
-                        style: const TextStyle(fontSize: 20)),
+                        style: const TextStyle(fontSize: 20),),
                     subtitle: Text('Количество растений: $plantCount'),
                   ),
                 ),
@@ -144,29 +144,29 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
             Column(children: [
               Text('$totalPlants',
                   style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold)),
-              const Text('Растений')
-            ]),
+                      fontSize: 24, fontWeight: FontWeight.bold,),),
+              const Text('Растений'),
+            ],),
             Column(children: [
               Text('$totalSeeds',
                   style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold)),
-              const Text('Семян')
-            ]),
+                      fontSize: 24, fontWeight: FontWeight.bold,),),
+              const Text('Семян'),
+            ],),
             Column(children: [
               Text('$totalAlive',
                   style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold)),
-              const Text('Живых')
-            ]),
+                      fontSize: 24, fontWeight: FontWeight.bold,),),
+              const Text('Живых'),
+            ],),
             Column(children: [
               Text('${germinationRate.toStringAsFixed(1)}%',
                   style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green)),
-              const Text('Пророст')
-            ]),
+                      color: Colors.green,),),
+              const Text('Пророст'),
+            ],),
           ],
         ),
       ),
@@ -244,7 +244,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                                 child: TextFormField(
                                   initialValue: plant.latinName,
                                   decoration: const InputDecoration(
-                                      labelText: 'Название'),
+                                      labelText: 'Название',),
                                   onChanged: (v) {
                                     setState(() {
                                       final index =
@@ -265,7 +265,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                                   initialValue: plant.seedsCount.toString(),
                                   keyboardType: TextInputType.number,
                                   decoration: const InputDecoration(
-                                      labelText: 'Всего семян'),
+                                      labelText: 'Всего семян',),
                                   onChanged: (v) {
                                     setState(() {
                                       final cnt = int.tryParse(v) ?? 0;
@@ -318,7 +318,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                                 child: TextFormField(
                                   initialValue: plant.fieldNumber ?? '',
                                   decoration: const InputDecoration(
-                                      labelText: 'Полевой номер'),
+                                      labelText: 'Полевой номер',),
                                   onChanged: (v) {
                                     setState(() {
                                       final val =
@@ -336,7 +336,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                                 child: TextFormField(
                                   initialValue: plant.seller ?? '',
                                   decoration: const InputDecoration(
-                                      labelText: 'Источник'),
+                                      labelText: 'Источник',),
                                   onChanged: (v) {
                                     setState(() {
                                       final val =
@@ -374,7 +374,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                             alignment: Alignment.centerRight,
                             child: IconButton(
                               icon: const Icon(Icons.bar_chart,
-                                  color: Colors.purple, size: 28),
+                                  color: Colors.purple, size: 28,),
                               tooltip: 'Статистика всхожести и выживаемости',
                               onPressed: () {
                                 context.push(
@@ -390,9 +390,9 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                           ElevatedButton.icon(
                             icon: const Icon(Icons.add),
                             label: const Text(
-                                'Добавить запись (взошло / погибло)'),
+                                'Добавить запись (взошло / погибло)',),
                             style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green),
+                                backgroundColor: Colors.green,),
                             onPressed: () =>
                                 _addGerminationRecordForPlant(plant),
                           ),
@@ -401,11 +401,11 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
 
                           // История записей
                           const Text('История изменений:',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                              style: TextStyle(fontWeight: FontWeight.bold),),
                           ...plant.germinationHistory.map((record) {
                             return ListTile(
                               title: Text(
-                                  '${record.date.day}.${record.date.month}.${record.date.year}'),
+                                  '${record.date.day}.${record.date.month}.${record.date.year}',),
                               subtitle: Text(
                                 'Взошло: +${record.germinatedCount} • Погибло: -${record.deadCount}',
                               ),
@@ -414,13 +414,13 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.edit,
-                                        color: Colors.blue),
+                                        color: Colors.blue,),
                                     onPressed: () =>
                                         _editGerminationRecord(plant, record),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete,
-                                        color: Colors.red),
+                                        color: Colors.red,),
                                     onPressed: () =>
                                         _deleteGerminationRecord(plant, record),
                                   ),
@@ -432,7 +432,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
                             const Padding(
                               padding: EdgeInsets.all(8),
                               child: Text('Записей пока нет',
-                                  style: TextStyle(color: Colors.grey)),
+                                  style: TextStyle(color: Colors.grey),),
                             ),
                         ],
                       ),
@@ -462,7 +462,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
     if (germinated == null) return;
 
     final int? dead = await _showNumberDialog('Сколько погибло? (0 если нет)',
-        initialValue: 0);
+        initialValue: 0,);
     if (dead == null) return;
 
     setState(() {
@@ -474,7 +474,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
           date: date,
           germinatedCount: germinated,
           deadCount: dead,
-        ));
+        ),);
 
       _editablePlants[index] = plant.copyWith(
         germinationHistory: newHistory,
@@ -484,7 +484,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
   }
 
   Future<void> _editGerminationRecord(
-      Plant plant, GerminationRecord oldRecord) async {
+      Plant plant, GerminationRecord oldRecord,) async {
     final DateTime? newDate = await showDatePicker(
       context: context,
       initialDate: oldRecord.date,
@@ -494,11 +494,11 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
     if (newDate == null) return;
 
     final int? newGerminated = await _showNumberDialog('Сколько взошло?',
-        initialValue: oldRecord.germinatedCount);
+        initialValue: oldRecord.germinatedCount,);
     if (newGerminated == null) return;
 
     final int? newDead = await _showNumberDialog('Сколько погибло?',
-        initialValue: oldRecord.deadCount);
+        initialValue: oldRecord.deadCount,);
     if (newDead == null) return;
 
     setState(() {
@@ -511,7 +511,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
           date: newDate,
           germinatedCount: newGerminated,
           deadCount: newDead,
-        ));
+        ),);
 
       _editablePlants[index] = plant.copyWith(
         germinationHistory: newHistory,
@@ -549,7 +549,7 @@ class _SowingYearDetailsScreenState extends State<SowingYearDetailsScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена'),),
           TextButton(
             onPressed: () {
               final val = int.tryParse(controller.text) ?? 0;

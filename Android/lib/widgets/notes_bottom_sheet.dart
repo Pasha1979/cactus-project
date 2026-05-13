@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -39,7 +39,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
                   Text(
                     'Заметки к ${widget.plant.latinName}',
                     style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                        fontSize: 20, fontWeight: FontWeight.bold,),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -52,7 +52,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
                 child: notes.isEmpty
                     ? const Center(
                         child: Text('Заметок пока нет',
-                            style: TextStyle(fontSize: 16, color: Colors.grey)),
+                            style: TextStyle(fontSize: 16, color: Colors.grey),),
                       )
                     : ListView.builder(
                         controller: scrollController,
@@ -64,7 +64,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
                             child: ListTile(
                               title: Text(note.title,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
+                                      fontWeight: FontWeight.bold,),),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -72,7 +72,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
                                     DateFormat('dd.MM.yyyy HH:mm')
                                         .format(note.createdAt),
                                     style: const TextStyle(
-                                        fontSize: 12, color: Colors.grey),
+                                        fontSize: 12, color: Colors.grey,),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(note.text),
@@ -83,12 +83,12 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.edit,
-                                        color: Colors.blue),
+                                        color: Colors.blue,),
                                     onPressed: () => _editNote(note),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete,
-                                        color: Colors.red),
+                                        color: Colors.red,),
                                     onPressed: () => _confirmDelete(note),
                                   ),
                                 ],
@@ -129,7 +129,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
@@ -148,14 +148,14 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
             TextField(
               controller: titleCtrl,
               decoration: const InputDecoration(
-                  labelText: 'Тема / заголовок', border: OutlineInputBorder()),
+                  labelText: 'Тема / заголовок', border: OutlineInputBorder(),),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: textCtrl,
               maxLines: 8,
               decoration: const InputDecoration(
-                  labelText: 'Текст заметки', border: OutlineInputBorder()),
+                  labelText: 'Текст заметки', border: OutlineInputBorder(),),
             ),
             const SizedBox(height: 16),
             Row(
@@ -163,7 +163,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
               children: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Отмена')),
+                    child: const Text('Отмена'),),
                 ElevatedButton(
                   onPressed: () {
                     if (titleCtrl.text.trim().isEmpty ||
@@ -184,7 +184,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
                       final updated = List<Note>.from(widget.plant.notes)
                         ..add(newNote);
                       provider.updatePlant(widget.plant.permanentId,
-                          widget.plant.copyWith(notes: updated));
+                          widget.plant.copyWith(notes: updated),);
                     } else {
                       final updated = widget.plant.notes.map((n) {
                         if (n.id == existing.id) {
@@ -192,12 +192,12 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
                               id: n.id,
                               title: titleCtrl.text.trim(),
                               text: textCtrl.text.trim(),
-                              createdAt: n.createdAt);
+                              createdAt: n.createdAt,);
                         }
                         return n;
                       }).toList();
                       provider.updatePlant(widget.plant.permanentId,
-                          widget.plant.copyWith(notes: updated));
+                          widget.plant.copyWith(notes: updated),);
                     }
                     provider.savePlants();
                     Navigator.pop(ctx);
@@ -221,7 +221,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
         content: const Text('Это действие нельзя отменить.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена'),),
           TextButton(
             onPressed: () {
               final provider =
@@ -229,7 +229,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet> {
               final updated =
                   widget.plant.notes.where((n) => n.id != note.id).toList();
               provider.updatePlant(widget.plant.permanentId,
-                  widget.plant.copyWith(notes: updated));
+                  widget.plant.copyWith(notes: updated),);
               provider.savePlants();
               Navigator.pop(ctx);
               setState(() {});

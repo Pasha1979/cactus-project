@@ -38,13 +38,13 @@ class WeatherService {
     if (permission == LocationPermission.deniedForever) return null;
 
     return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+        desiredAccuracy: LocationAccuracy.high,);
   }
 
   // ==================== ПОГОДА ====================
 
   Future<Map<String, dynamic>?> getCurrentWeather(
-      double? lat, double? lon) async {
+      double? lat, double? lon,) async {
     if (lat == null || lon == null) return null;
 
     final prefs = await SharedPreferences.getInstance();
@@ -65,7 +65,7 @@ class WeatherService {
         final data = response.data;
         await prefs.setString(_cacheKey, jsonEncode(data));
         await prefs.setInt(
-            '${_cacheKey}_time', DateTime.now().millisecondsSinceEpoch);
+            '${_cacheKey}_time', DateTime.now().millisecondsSinceEpoch,);
         return data;
       }
     } catch (e, stack) {
@@ -95,12 +95,12 @@ class WeatherService {
         final data = response.data;
         await prefs.setString('${_cacheKey}_city_$city', jsonEncode(data));
         await prefs.setInt('${_cacheKey}_time_city_$city',
-            DateTime.now().millisecondsSinceEpoch);
+            DateTime.now().millisecondsSinceEpoch,);
         return data;
       }
     } catch (e, stack) {
       AppLogger.error('Ошибка погоды по городу "$city"',
-          error: e, stackTrace: stack, tag: _tag);
+          error: e, stackTrace: stack, tag: _tag,);
     }
     return null;
   }

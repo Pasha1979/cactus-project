@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../presentation/providers/plant_crud_provider.dart';
 import 'photo_sync_service.dart';
@@ -41,17 +42,17 @@ class SyncManager {
       cloudDateFromServer =
           await _diskService.getFileModifiedDate('/MyCactus/plant_provider.json');
     } catch (e) {
-      print('⚠️ Ошибка запроса файла: $e');
+      debugPrint('⚠️ Ошибка запроса файла: $e');
     }
 
     if (cloudDateFromServer != null) {
       if (_lastCloudUpdate == null ||
           cloudDateFromServer.isAfter(_lastCloudUpdate!)) {
         _lastCloudUpdate = cloudDateFromServer;
-        print('✅ Дата обновлена из ФАЙЛА: $_lastCloudUpdate');
+        debugPrint('✅ Дата обновлена из ФАЙЛА: $_lastCloudUpdate');
       } else {
-        print(
-            'ℹ️ Дата с сервера ($cloudDateFromServer) не новее текущей ($_lastCloudUpdate) — оставляем текущую');
+        debugPrint(
+            'ℹ️ Дата с сервера ($cloudDateFromServer) не новее текущей ($_lastCloudUpdate) — оставляем текущую',);
       }
     } else {
       // Fallback на папку
@@ -61,15 +62,15 @@ class SyncManager {
         if (folderDate != null &&
             (_lastCloudUpdate == null || folderDate.isAfter(_lastCloudUpdate!))) {
           _lastCloudUpdate = folderDate;
-          print('⚠️ Файл не дал дату, взята дата папки: $_lastCloudUpdate');
+          debugPrint('⚠️ Файл не дал дату, взята дата папки: $_lastCloudUpdate');
         }
       } catch (e) {
-        print('❌ Не удалось получить дату папки: $e');
+        debugPrint('❌ Не удалось получить дату папки: $e');
       }
     }
 
     if (_lastCloudUpdate == null) {
-      print('⚠️ Не удалось получить дату ни файла, ни папки');
+      debugPrint('⚠️ Не удалось получить дату ни файла, ни папки');
     }
   }
 
@@ -77,7 +78,7 @@ class SyncManager {
 
   Future<void> syncData(PlantCrudProvider plantCrudProvider) async {
     if (!_authService.isConnected) {
-      print('Синхронизация невозможна: нет подключения');
+      debugPrint('Синхронизация невозможна: нет подключения');
       return;
     }
 
@@ -93,7 +94,7 @@ class SyncManager {
       if (cloudUpdate != null &&
           (localUpdate == null ||
               cloudUpdate.isAfter(localUpdate.add(timeTolerance)))) {
-        print('☁️ Облако новее → загружаем из облака');
+        debugPrint('☁️ Облако новее → загружаем из облака');
         await plantCrudProvider.createLocalBackup();
         await loadDataFromCloud(plantCrudProvider);
         await plantCrudProvider.savePlants();
@@ -101,19 +102,19 @@ class SyncManager {
       }
 
       if (plantCrudProvider.plants.isNotEmpty) {
-        print('📤 Локальные данные новее → отправляем в облако');
+        debugPrint('📤 Локальные данные новее → отправляем в облако');
         await _uploadToCloud(plantCrudProvider);
         await fetchLastCloudUpdate();
       } else if (cloudUpdate != null) {
-        print('📥 Локально пусто → загружаем из облака');
+        debugPrint('📥 Локально пусто → загружаем из облака');
         await plantCrudProvider.createLocalBackup();
         await loadDataFromCloud(plantCrudProvider);
         await plantCrudProvider.savePlants();
       }
 
-      print('✅ Синхронизация успешно завершена');
+      debugPrint('✅ Синхронизация успешно завершена');
     } catch (e) {
-      print('❌ Ошибка синхронизации: $e');
+      debugPrint('❌ Ошибка синхронизации: $e');
     } finally {
       _isSyncing = false;
     }
@@ -144,13 +145,13 @@ class SyncManager {
   }
 
   Future<void> loadDataFromCloud(
-      PlantCrudProvider plantCrudProvider) async {
+      PlantCrudProvider plantCrudProvider,) async {
     await plantCrudProvider.createLocalBackup();
 
     try {
       final data = await _diskService.downloadJsonFile();
 
-      print('📥 Загружено из облака: ${data['plants']?.length ?? 0} растений');
+      debugPrint('📥 Загружено из облака: ${data['plants']?.length ?? 0} растений');
 
       await plantCrudProvider.loadFromCloudJson(data);
 
@@ -163,12 +164,12 @@ class SyncManager {
       await plantCrudProvider.cleanupLocalPhotosAfterCloudLoad();
       await _photoSyncService.cleanDuplicatePhotos(plantCrudProvider);
 
-      print('✅ Данные загружены из облака + фото обработаны');
+      debugPrint('✅ Данные загружены из облака + фото обработаны');
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 404) {
         await _diskService.createEmptyPlantProviderFile();
       } else {
-        print('❌ Ошибка загрузки из облака: $e');
+        debugPrint('❌ Ошибка загрузки из облака: $e');
       }
     }
   }

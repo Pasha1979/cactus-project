@@ -3,10 +3,16 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
     - ../REFACTORING_ROADMAP/Стабильная/**
+    - simple_gbif_test.dart
+    - test_gbif.dart
+    - test_gbif_integration.dart
   strong-mode:
     implicit-casts: false
     implicit-dynamic: false
 
 linter:
   rules:
-    avoid_print: false
+    avoid_print: true
+    always_declare_return_types: true
+    prefer_single_quotes: true
+    require_trailing_commas: true

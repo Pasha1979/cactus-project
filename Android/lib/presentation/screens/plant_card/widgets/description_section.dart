@@ -59,7 +59,7 @@ class DescriptionSection extends StatelessWidget {
                                 desc,
                                 style: const TextStyle(fontSize: 16),
                               ),
-                            ))
+                            ),)
                         .toList(),
                   ),
           ),
