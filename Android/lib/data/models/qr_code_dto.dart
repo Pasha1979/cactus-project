@@ -4,6 +4,15 @@ part 'qr_code_dto.g.dart';
 
 @HiveType(typeId: 1)
 class QRCodeDto extends HiveObject {
+
+  QRCodeDto({
+    required this.plantId,
+    required this.plantName,
+    required this.permanentId,
+    required this.createdAt,
+    this.isActive = true,
+    this.filePath,
+  });
   @HiveField(0)
   String plantId;
 
@@ -21,13 +30,4 @@ class QRCodeDto extends HiveObject {
 
   @HiveField(5)
   String? filePath;
-
-  QRCodeDto({
-    required this.plantId,
-    required this.plantName,
-    required this.permanentId,
-    required this.createdAt,
-    this.isActive = true,
-    this.filePath,
-  });
 }

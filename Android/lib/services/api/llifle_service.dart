@@ -17,15 +17,15 @@ import 'gbif_service.dart';
 /// - Извлечение фото, описания, ареала, синонимов, советов по уходу
 /// - Интеграция с GBIF для обогащения данных
 class LlifleService {
+
+  LlifleService({GbifService? gbifService})
+      : _gbifService = gbifService ?? GbifService();
   static const String _tag = 'LLIFLE';
   static const String _cachePrefix = 'plant_data_';
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 2);
 
   final GbifService _gbifService;
-
-  LlifleService({GbifService? gbifService})
-      : _gbifService = gbifService ?? GbifService();
 
   // ==================== ПУБЛИЧНЫЙ API ====================
 

@@ -6,9 +6,9 @@ import '../models/plant.dart';
 import '../presentation/providers/providers.dart';
 
 class PlantStatisticsScreen extends StatefulWidget {
-  final Plant plant;
 
   const PlantStatisticsScreen({super.key, required this.plant});
+  final Plant plant;
 
   @override
   State<PlantStatisticsScreen> createState() => PlantStatisticsScreenState();
@@ -389,7 +389,7 @@ class PlantStatisticsScreenState extends State<PlantStatisticsScreen>
 }
 
 class ChartData {
+  ChartData(this.category, this.value);
   final String category;
   final double value;
-  ChartData(this.category, this.value);
 }

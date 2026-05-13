@@ -372,7 +372,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
       itemBuilder: (context, index) {
         final plant = filtered[index];
         final hasQR = plant.qrCode != null && plant.qrCode!.isActive;
-        return ListTile(
+        return RepaintBoundary(child: ListTile(
           leading: Icon(
             hasQR ? Icons.qr_code : Icons.qr_code_outlined,
             color: hasQR ? Colors.green : Colors.grey,
@@ -387,7 +387,7 @@ class _QRManagementScreenState extends State<QRManagementScreen>
                   },
                   child: const Text('Создать QR'),
                 ),
-        );
+        ),);
       },
     );
   }

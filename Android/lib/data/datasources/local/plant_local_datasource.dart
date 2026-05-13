@@ -12,13 +12,13 @@ import 'plant_index_manager.dart';
 /// Ключевое исправление: `getPlantById` использует `box.get(id)` (O(1))
 /// вместо `firstWhere` (O(n)), что критично для коллекций 1000+ растений.
 class PlantLocalDataSource {
-  final Box<PlantDto> _plantBox;
-  final PlantIndexManager? _indexManager;
 
   PlantLocalDataSource(
     this._plantBox, {
     PlantIndexManager? indexManager,
   }) : _indexManager = indexManager;
+  final Box<PlantDto> _plantBox;
+  final PlantIndexManager? _indexManager;
 
   /// Получить все растения (возвращает все значения box — O(n))
   Future<List<PlantDto>> getAllPlants() async {

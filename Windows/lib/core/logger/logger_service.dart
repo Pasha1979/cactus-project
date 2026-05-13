@@ -3,9 +3,9 @@ import 'app_logger.dart' as app_logger;
 
 /// Сервис для логирования с дополнительными возможностями
 class LoggerService {
-  final Logger _logger;
 
   LoggerService({Logger? logger}) : _logger = logger ?? app_logger.logger;
+  final Logger _logger;
 
   /// Логирование trace сообщения
   void trace(String message, {dynamic error, StackTrace? stackTrace}) {

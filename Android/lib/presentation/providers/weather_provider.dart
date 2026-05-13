@@ -61,4 +61,5 @@ class WeatherProvider with ChangeNotifier {
     }
     return service.getWateringAdvice(weather, plant);
   }
+
 }

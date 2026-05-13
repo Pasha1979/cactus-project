@@ -4,6 +4,13 @@ part 'note_dto.g.dart';
 
 @HiveType(typeId: 2)
 class NoteDto extends HiveObject {
+
+  NoteDto({
+    required this.id,
+    required this.title,
+    required this.text,
+    required this.createdAt,
+  });
   @HiveField(0)
   String id;
 
@@ -15,11 +22,4 @@ class NoteDto extends HiveObject {
 
   @HiveField(3)
   DateTime createdAt;
-
-  NoteDto({
-    required this.id,
-    required this.title,
-    required this.text,
-    required this.createdAt,
-  });
 }

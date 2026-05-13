@@ -16,12 +16,12 @@ import 'yandex_auth_service.dart';
 /// - Загрузку/скачивание файлов
 /// - CRUD операции с ресурсами на диске
 class YandexDiskService {
+
+  YandexDiskService(this._authService);
   static const String _yandexApiBaseUrl =
       'https://cloud-api.yandex.net/v1/disk';
 
   final YandexAuthService _authService;
-
-  YandexDiskService(this._authService);
 
   Dio _createDio() {
     final dio = Dio();

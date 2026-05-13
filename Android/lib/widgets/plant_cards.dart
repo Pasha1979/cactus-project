@@ -8,13 +8,6 @@ import '../models/plant.dart'; // Сохранено: Для Plant тип, statu
 import '../theme/cactus_theme.dart';
 
 class PlantCards extends StatelessWidget {
-  final List<Plant> plants;
-  final String sortColumn;
-  final bool isAscending;
-  final Function(String) onSort;
-  final Function(Plant) onEdit;
-  final Function(String, Plant) onUpdate;
-  final Function(String) onDelete;
 
   const PlantCards({
     super.key,
@@ -26,6 +19,13 @@ class PlantCards extends StatelessWidget {
     required this.onUpdate,
     required this.onDelete,
   });
+  final List<Plant> plants;
+  final String sortColumn;
+  final bool isAscending;
+  final Function(String) onSort;
+  final Function(Plant) onEdit;
+  final Function(String, Plant) onUpdate;
+  final Function(String) onDelete;
 
   Widget _buildSortButton(String column, String label) {
     return TextButton(
@@ -439,15 +439,6 @@ class PlantCards extends StatelessWidget {
 }
 
 class _PlantCardItem extends StatelessWidget {
-  final Plant plant;
-  final int index;
-  final Function(Plant) onEdit;
-  final Function(String) onDelete;
-  final Function(String, Plant) onUpdate;
-  final void Function(BuildContext, String, bool) onShowFullPhoto;
-  final void Function(BuildContext, Plant) onShowQuickView;
-  final void Function(BuildContext, Plant) onShowStatusDialog;
-  final String? Function(Plant, PlantCrudProvider) getPhotoUrl;
 
   const _PlantCardItem({
     required this.plant,
@@ -460,6 +451,15 @@ class _PlantCardItem extends StatelessWidget {
     required this.onShowStatusDialog,
     required this.getPhotoUrl,
   });
+  final Plant plant;
+  final int index;
+  final Function(Plant) onEdit;
+  final Function(String) onDelete;
+  final Function(String, Plant) onUpdate;
+  final void Function(BuildContext, String, bool) onShowFullPhoto;
+  final void Function(BuildContext, Plant) onShowQuickView;
+  final void Function(BuildContext, Plant) onShowStatusDialog;
+  final String? Function(Plant, PlantCrudProvider) getPhotoUrl;
 
   Color _statusColor(String status) {
     switch (status) {

@@ -3,9 +3,9 @@ import '../../../data/models/qr_code_dto.dart';
 
 /// Локальный источник данных для QR кодов (Hive)
 class QRCodeLocalDataSource {
-  final Box<QRCodeDto> _qrCodeBox;
 
   QRCodeLocalDataSource(this._qrCodeBox);
+  final Box<QRCodeDto> _qrCodeBox;
 
   /// Получить все QR коды
   Future<List<QRCodeDto>> getAllQRCodes() async {

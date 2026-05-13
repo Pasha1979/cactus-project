@@ -2,15 +2,6 @@
 ///
 /// Используется как часть доменной модели [Plant].
 class GbifOccurrence {
-  final double latitude;
-  final double longitude;
-  final String country;
-  final String? locality;
-  final String? habitat;
-  final String? coordinateUncertainty;
-  final String? year;
-  final String? month;
-  final String? day;
 
   GbifOccurrence({
     required this.latitude,
@@ -37,6 +28,15 @@ class GbifOccurrence {
       day: json['day'] as String?,
     );
   }
+  final double latitude;
+  final double longitude;
+  final String country;
+  final String? locality;
+  final String? habitat;
+  final String? coordinateUncertainty;
+  final String? year;
+  final String? month;
+  final String? day;
 
   Map<String, dynamic> toJson() {
     return {

@@ -26,56 +26,7 @@ List<DateTime> _parseDateTimeList(dynamic value) {
       .toList();
 }
 
-class Plant {
-  String permanentId;
-  String displayId; // Не final — нужно менять для сеянцев в системе партий
-  final String latinName;
-  final String status;
-  final int year;
-  final int customNumber;
-  final String category;
-  final int seedsCount;
-  final int germinatedCount;
-  final List<String> userPhotos;
-  final DateTime? lastFertilization;
-  final DateTime? plannedFertilizationDate;
-  final List<String> lliflePhotoUrls;
-
-  // === НОВОЕ ПОЛЕ ДЛЯ РАЗРЕШЕНИЯ КОНФЛИКТОВ ===
-  DateTime? lastModified;
-
-  String? fieldNumber;
-  String? seller;
-  int? harvestYear;
-  String? country;
-  String? habitat;
-  String? description;
-  String? synonyms;
-  String? careTips;
-  String? floweringPeriod;
-  String? countryFlag;
-  List<DateTime> wateringDates;
-  List<DateTime> customWateringDates;
-  bool hasUnreadNotification;
-  DateTime? lastRepotting;
-  DateTime? plannedTransplantDate;
-  List<GerminationRecord> germinationHistory;
-  final List<FloweringRecord> floweringHistory;
-  List<Note> notes;
-
-  // === GBIF ПОЛЯ (дополняющий источник данных) ===
-  final List<String> gbifPhotoUrls;
-  final List<GbifOccurrence> gbifOccurrences;
-  final DateTime? lastGbifUpdate;
-
-  // === ПОЛЯ ДЛЯ СИСТЕМЫ ПАРТИЙ ===
-  int? aliveCount;                    // null = авторасчёт, иначе ручное значение
-  bool isBatch;                       // true если это витрина-партия
-  List<String> childrenIds;           // ID сеянцев (для витрины)
-  String? parentId;                   // ID витрины (для сеянца)
-
-  // === ПОЛЕ ДЛЯ QR КОДА ===
-  QRCode? qrCode;                     // QR код растения (null если не создан)
+class Plant {                     // QR код растения (null если не создан)
 
   // Удалено: statusOrder → используйте PlantStatusMapper.sortOrder(status)
 
@@ -132,6 +83,125 @@ class Plant {
         lastModified =
             lastModified ?? DateTime.now(), // ← Автоматически ставим время
         childrenIds = childrenIds ?? [];
+
+  factory Plant.fromJson(Map<String, dynamic> json) {
+    final String status = PlantStatusMapper.normalize(json['status']);
+
+    return Plant(
+      latinName: json['latinName'],
+      status: status,
+      year: json['year'],
+      customNumber: json['customNumber'],
+      category: json['category'],
+      fieldNumber: json['fieldNumber'],
+      seller: json['seller'],
+      harvestYear: json['harvestYear'],
+      country: json['country'],
+      habitat: json['habitat'],
+      description: json['description'],
+      synonyms: json['synonyms'],
+      careTips: json['careTips'],
+      floweringPeriod: json['floweringPeriod'],
+      countryFlag: json['countryFlag'],
+      seedsCount: json['seedsCount'],
+      germinatedCount: json['germinatedCount'],
+      wateringDates: _parseDateTimeList(json['wateringDates']),
+      customWateringDates: _parseDateTimeList(json['customWateringDates']),
+      hasUnreadNotification: json['hasUnreadNotification'] ?? false,
+      lastRepotting: _parseDateTimeSafe(json['lastRepotting']),
+      plannedTransplantDate: _parseDateTimeSafe(json['plannedTransplantDate']),
+      germinationHistory: (json['germinationHistory'] as List<dynamic>?)
+              ?.map((item) =>
+                  GerminationRecord.fromJson(item as Map<String, dynamic>),)
+              .toList() ??
+          [],
+      floweringHistory: (json['floweringHistory'] as List<dynamic>?)
+              ?.map((item) =>
+                  FloweringRecord.fromJson(item as Map<String, dynamic>),)
+              .toList() ??
+          [],
+      notes: (json['notes'] as List<dynamic>?)
+              ?.map((e) => Note.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      userPhotos: (json['userPhotos'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      lastFertilization: _parseDateTimeSafe(json['lastFertilization']),
+      plannedFertilizationDate: _parseDateTimeSafe(json['plannedFertilizationDate']),
+      lliflePhotoUrls: List<String>.from(json['lliflePhotoUrls'] ?? []),
+      lastModified: _parseDateTimeSafe(json['lastModified']), // ← НОВОЕ
+      // GBIF поля с обратной совместимостью
+      gbifPhotoUrls: List<String>.from(json['gbifPhotoUrls'] ?? []),
+      gbifOccurrences: (json['gbifOccurrences'] as List<dynamic>?)
+              ?.map((e) => GbifOccurrence.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      lastGbifUpdate: _parseDateTimeSafe(json['lastGbifUpdate']),
+      // Поля для системы партий (обратная совместимость — null если не в JSON)
+      aliveCount: json['aliveCount'] as int?,
+      isBatch: json['isBatch'] ?? false,
+      childrenIds: (json['childrenIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      parentId: json['parentId'] as String?,
+      // Поле для QR кода (обратная совместимость — null если не в JSON)
+      qrCode: json['qrCode'] != null
+          ? QRCode.fromJson(json['qrCode'] as Map<String, dynamic>)
+          : null,
+    )..permanentId = json['permanentId'];
+  }
+  String permanentId;
+  String displayId; // Не final — нужно менять для сеянцев в системе партий
+  final String latinName;
+  final String status;
+  final int year;
+  final int customNumber;
+  final String category;
+  final int seedsCount;
+  final int germinatedCount;
+  final List<String> userPhotos;
+  final DateTime? lastFertilization;
+  final DateTime? plannedFertilizationDate;
+  final List<String> lliflePhotoUrls;
+
+  // === НОВОЕ ПОЛЕ ДЛЯ РАЗРЕШЕНИЯ КОНФЛИКТОВ ===
+  DateTime? lastModified;
+
+  String? fieldNumber;
+  String? seller;
+  int? harvestYear;
+  String? country;
+  String? habitat;
+  String? description;
+  String? synonyms;
+  String? careTips;
+  String? floweringPeriod;
+  String? countryFlag;
+  List<DateTime> wateringDates;
+  List<DateTime> customWateringDates;
+  bool hasUnreadNotification;
+  DateTime? lastRepotting;
+  DateTime? plannedTransplantDate;
+  List<GerminationRecord> germinationHistory;
+  final List<FloweringRecord> floweringHistory;
+  List<Note> notes;
+
+  // === GBIF ПОЛЯ (дополняющий источник данных) ===
+  final List<String> gbifPhotoUrls;
+  final List<GbifOccurrence> gbifOccurrences;
+  final DateTime? lastGbifUpdate;
+
+  // === ПОЛЯ ДЛЯ СИСТЕМЫ ПАРТИЙ ===
+  int? aliveCount;                    // null = авторасчёт, иначе ручное значение
+  bool isBatch;                       // true если это витрина-партия
+  List<String> childrenIds;           // ID сеянцев (для витрины)
+  String? parentId;                   // ID витрины (для сеянца)
+
+  // === ПОЛЕ ДЛЯ QR КОДА ===
+  QRCode? qrCode;
 
   int get statusPriority => PlantStatusMapper.sortOrder(status);
 
@@ -307,76 +377,6 @@ class Plant {
         'qrCode': qrCode?.toJson(),
       };
 
-  factory Plant.fromJson(Map<String, dynamic> json) {
-    final String status = PlantStatusMapper.normalize(json['status']);
-
-    return Plant(
-      latinName: json['latinName'],
-      status: status,
-      year: json['year'],
-      customNumber: json['customNumber'],
-      category: json['category'],
-      fieldNumber: json['fieldNumber'],
-      seller: json['seller'],
-      harvestYear: json['harvestYear'],
-      country: json['country'],
-      habitat: json['habitat'],
-      description: json['description'],
-      synonyms: json['synonyms'],
-      careTips: json['careTips'],
-      floweringPeriod: json['floweringPeriod'],
-      countryFlag: json['countryFlag'],
-      seedsCount: json['seedsCount'],
-      germinatedCount: json['germinatedCount'],
-      wateringDates: _parseDateTimeList(json['wateringDates']),
-      customWateringDates: _parseDateTimeList(json['customWateringDates']),
-      hasUnreadNotification: json['hasUnreadNotification'] ?? false,
-      lastRepotting: _parseDateTimeSafe(json['lastRepotting']),
-      plannedTransplantDate: _parseDateTimeSafe(json['plannedTransplantDate']),
-      germinationHistory: (json['germinationHistory'] as List<dynamic>?)
-              ?.map((item) =>
-                  GerminationRecord.fromJson(item as Map<String, dynamic>),)
-              .toList() ??
-          [],
-      floweringHistory: (json['floweringHistory'] as List<dynamic>?)
-              ?.map((item) =>
-                  FloweringRecord.fromJson(item as Map<String, dynamic>),)
-              .toList() ??
-          [],
-      notes: (json['notes'] as List<dynamic>?)
-              ?.map((e) => Note.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      userPhotos: (json['userPhotos'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
-      lastFertilization: _parseDateTimeSafe(json['lastFertilization']),
-      plannedFertilizationDate: _parseDateTimeSafe(json['plannedFertilizationDate']),
-      lliflePhotoUrls: List<String>.from(json['lliflePhotoUrls'] ?? []),
-      lastModified: _parseDateTimeSafe(json['lastModified']), // ← НОВОЕ
-      // GBIF поля с обратной совместимостью
-      gbifPhotoUrls: List<String>.from(json['gbifPhotoUrls'] ?? []),
-      gbifOccurrences: (json['gbifOccurrences'] as List<dynamic>?)
-              ?.map((e) => GbifOccurrence.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      lastGbifUpdate: _parseDateTimeSafe(json['lastGbifUpdate']),
-      // Поля для системы партий (обратная совместимость — null если не в JSON)
-      aliveCount: json['aliveCount'] as int?,
-      isBatch: json['isBatch'] ?? false,
-      childrenIds: (json['childrenIds'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
-      parentId: json['parentId'] as String?,
-      // Поле для QR кода (обратная совместимость — null если не в JSON)
-      qrCode: json['qrCode'] != null
-          ? QRCode.fromJson(json['qrCode'] as Map<String, dynamic>)
-          : null,
-    )..permanentId = json['permanentId'];
-  }
-
   String get statusText => PlantStatusMapper.toDisplayText(status);
 
   int get age {
@@ -428,22 +428,13 @@ class Plant {
   }
 }
 
-class GerminationRecord {
-  final DateTime date;
-  final int germinatedCount; // сколько взошло НА ЭТУ ДАТУ
-  final int deadCount; // сколько погибло НА ЭТУ ДАТУ (новое поле)
+class GerminationRecord { // сколько погибло НА ЭТУ ДАТУ (новое поле)
 
   GerminationRecord({
     required this.date,
     required this.germinatedCount,
     this.deadCount = 0, // по умолчанию 0
   });
-
-  Map<String, dynamic> toJson() => {
-        'date': date.toIso8601String(),
-        'germinatedCount': germinatedCount,
-        'deadCount': deadCount, // добавлено
-      };
 
   factory GerminationRecord.fromJson(Map<String, dynamic> json) {
     return GerminationRecord(
@@ -452,18 +443,20 @@ class GerminationRecord {
       deadCount: json['deadCount'] ?? 0, // поддержка старых записей
     );
   }
-}
-
-class FloweringRecord {
   final DateTime date;
-  final String event; // "bloomed" или "wilted"
-
-  FloweringRecord({required this.date, required this.event});
+  final int germinatedCount; // сколько взошло НА ЭТУ ДАТУ
+  final int deadCount;
 
   Map<String, dynamic> toJson() => {
         'date': date.toIso8601String(),
-        'event': event,
+        'germinatedCount': germinatedCount,
+        'deadCount': deadCount, // добавлено
       };
+}
+
+class FloweringRecord { // "bloomed" или "wilted"
+
+  FloweringRecord({required this.date, required this.event});
 
   factory FloweringRecord.fromJson(Map<String, dynamic> json) {
     return FloweringRecord(
@@ -471,13 +464,16 @@ class FloweringRecord {
       event: json['event'],
     );
   }
+  final DateTime date;
+  final String event;
+
+  Map<String, dynamic> toJson() => {
+        'date': date.toIso8601String(),
+        'event': event,
+      };
 }
 
-class Note {
-  final String id; // уникальный идентификатор
-  final String title; // короткая тема/заголовок
-  final String text; // основной текст заметки
-  final DateTime createdAt; // дата создания
+class Note { // дата создания
 
   Note({
     required this.id,
@@ -485,13 +481,6 @@ class Note {
     required this.text,
     required this.createdAt,
   });
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'text': text,
-        'createdAt': createdAt.toIso8601String(),
-      };
 
   factory Note.fromJson(Map<String, dynamic> json) {
     return Note(
@@ -501,4 +490,15 @@ class Note {
       createdAt: _parseDateTimeSafe(json['createdAt']) ?? DateTime.now(),
     );
   }
+  final String id; // уникальный идентификатор
+  final String title; // короткая тема/заголовок
+  final String text; // основной текст заметки
+  final DateTime createdAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'text': text,
+        'createdAt': createdAt.toIso8601String(),
+      };
 }

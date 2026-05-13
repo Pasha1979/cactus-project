@@ -312,7 +312,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                           final isSelected =
                               _selectedIds.contains(plant.permanentId);
 
-                          return Card(
+                          return RepaintBoundary(child: Card(
                             elevation: 3,
                             margin: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 6,),
@@ -344,7 +344,7 @@ class _CareCalendarScreenState extends State<CareCalendarScreen>
                                 });
                               },
                             ),
-                          );
+                          ),);
                         },
                       ),
               ),

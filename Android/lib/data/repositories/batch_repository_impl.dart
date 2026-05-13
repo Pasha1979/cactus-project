@@ -4,9 +4,9 @@ import '../models/plant_dto.dart';
 
 /// Реализация BatchRepository с использованием Hive (через PlantDto)
 class BatchRepositoryImpl implements BatchRepository {
-  final PlantLocalDataSource _plantLocalDataSource;
 
   BatchRepositoryImpl(this._plantLocalDataSource);
+  final PlantLocalDataSource _plantLocalDataSource;
 
   @override
   Future<List<Map<String, dynamic>>> getAllBatches() async {

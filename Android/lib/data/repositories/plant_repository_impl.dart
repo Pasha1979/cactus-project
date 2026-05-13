@@ -11,9 +11,9 @@ import '../models/plant_dto.dart';
 
 /// Реализация PlantRepository с использованием Hive
 class PlantRepositoryImpl implements PlantRepository {
-  final PlantLocalDataSource _localDataSource;
 
   PlantRepositoryImpl(this._localDataSource);
+  final PlantLocalDataSource _localDataSource;
 
   @override
   Future<List<Plant>> getAllPlants() async {

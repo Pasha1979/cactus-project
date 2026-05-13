@@ -5,9 +5,9 @@ import '../models/qr_code_dto.dart';
 
 /// Реализация QRCodeRepository с использованием Hive
 class QRCodeRepositoryImpl implements QRCodeRepository {
-  final QRCodeLocalDataSource _localDataSource;
 
   QRCodeRepositoryImpl(this._localDataSource);
+  final QRCodeLocalDataSource _localDataSource;
 
   @override
   Future<List<QRCodeFile>> getAllQRCodeFiles() async {

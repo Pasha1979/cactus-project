@@ -13,10 +13,6 @@ import 'ui_state.dart';
 /// )
 /// ```
 class UiStateBuilder<T> extends StatelessWidget {
-  final UiState<T> state;
-  final Widget Function() onLoading;
-  final Widget Function(T data) onSuccess;
-  final Widget Function(String message, VoidCallback? retry) onError;
 
   const UiStateBuilder({
     super.key,
@@ -25,6 +21,10 @@ class UiStateBuilder<T> extends StatelessWidget {
     required this.onSuccess,
     required this.onError,
   });
+  final UiState<T> state;
+  final Widget Function() onLoading;
+  final Widget Function(T data) onSuccess;
+  final Widget Function(String message, VoidCallback? retry) onError;
 
   @override
   Widget build(BuildContext context) {
@@ -38,14 +38,14 @@ class UiStateBuilder<T> extends StatelessWidget {
 
 /// Готовая карточка ошибки с кнопкой «Повторить».
 class ErrorCard extends StatelessWidget {
-  final String message;
-  final VoidCallback? onRetry;
 
   const ErrorCard({
     super.key,
     required this.message,
     this.onRetry,
   });
+  final String message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {

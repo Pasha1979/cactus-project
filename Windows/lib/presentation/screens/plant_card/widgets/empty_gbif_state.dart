@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import '../../../../models/plant.dart';
 
 class EmptyGbifState extends StatelessWidget {
-  final Plant plant;
-  final VoidCallback onRefresh;
 
   const EmptyGbifState({
     super.key,
     required this.plant,
     required this.onRefresh,
   });
+  final Plant plant;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {

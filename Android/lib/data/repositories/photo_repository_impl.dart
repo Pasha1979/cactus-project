@@ -3,9 +3,9 @@ import '../datasources/local/plant_local_datasource.dart';
 
 /// Реализация PhotoRepository с использованием Hive (через PlantDto)
 class PhotoRepositoryImpl implements PhotoRepository {
-  final PlantLocalDataSource _plantLocalDataSource;
 
   PhotoRepositoryImpl(this._plantLocalDataSource);
+  final PlantLocalDataSource _plantLocalDataSource;
 
   @override
   Future<void> addUserPhoto(String plantId, String photoPath) async {

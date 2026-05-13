@@ -1,12 +1,12 @@
 /// Абстрактный класс для всех ошибок в приложении
 abstract class Failure {
-  final String message;
-  final int? code;
 
   const Failure({
     required this.message,
     this.code,
   });
+  final String message;
+  final int? code;
 
   @override
   String toString() => 'Failure: $message (code: $code)';

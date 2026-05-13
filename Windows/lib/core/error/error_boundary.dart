@@ -3,9 +3,6 @@ import 'failures.dart';
 
 /// Виджет для отображения ошибок в UI
 class ErrorBoundary extends StatefulWidget {
-  final Widget child;
-  final void Function(Failure)? onError;
-  final Widget Function(Failure)? errorBuilder;
 
   const ErrorBoundary({
     super.key,
@@ -13,6 +10,9 @@ class ErrorBoundary extends StatefulWidget {
     this.onError,
     this.errorBuilder,
   });
+  final Widget child;
+  final void Function(Failure)? onError;
+  final Widget Function(Failure)? errorBuilder;
 
   @override
   State<ErrorBoundary> createState() => _ErrorBoundaryState();
@@ -46,14 +46,14 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
 
 /// Виджет по умолчанию для отображения ошибок
 class DefaultErrorWidget extends StatelessWidget {
-  final Failure failure;
-  final VoidCallback? onRetry;
 
   const DefaultErrorWidget({
     super.key,
     required this.failure,
     this.onRetry,
   });
+  final Failure failure;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {

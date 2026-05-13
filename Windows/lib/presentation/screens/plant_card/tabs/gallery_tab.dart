@@ -12,11 +12,6 @@ typedef PhotoOptionsCallback = void Function(BuildContext, Plant, String);
 typedef PlantContextCallback = void Function(BuildContext, Plant);
 
 class GalleryTab extends StatefulWidget {
-  final Plant plant;
-  final ShowFullPhotoCallback onShowFullPhoto;
-  final PhotoOptionsCallback onShowPhotoOptions;
-  final PlantContextCallback onUploadPhoto;
-  final PlantContextCallback onRefreshLlifle;
 
   const GalleryTab({
     super.key,
@@ -26,6 +21,11 @@ class GalleryTab extends StatefulWidget {
     required this.onUploadPhoto,
     required this.onRefreshLlifle,
   });
+  final Plant plant;
+  final ShowFullPhotoCallback onShowFullPhoto;
+  final PhotoOptionsCallback onShowPhotoOptions;
+  final PlantContextCallback onUploadPhoto;
+  final PlantContextCallback onRefreshLlifle;
 
   @override
   State<GalleryTab> createState() => _GalleryTabState();

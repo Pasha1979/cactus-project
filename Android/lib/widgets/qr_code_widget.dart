@@ -4,9 +4,6 @@ import '../models/plant.dart';
 
 /// Виджет для отображения QR кода растения
 class QRCodeWidget extends StatelessWidget {
-  final Plant plant;
-  final double size;
-  final bool showName;
 
   const QRCodeWidget({
     super.key,
@@ -14,6 +11,9 @@ class QRCodeWidget extends StatelessWidget {
     this.size = 200,
     this.showName = true,
   });
+  final Plant plant;
+  final double size;
+  final bool showName;
 
   @override
   Widget build(BuildContext context) {
@@ -90,14 +90,14 @@ class QRCodeWidget extends StatelessWidget {
 
 /// Иконка-индикатор наличия QR кода (для списка растений)
 class QRCodeIndicator extends StatelessWidget {
-  final bool hasQRCode;
-  final double size;
 
   const QRCodeIndicator({
     super.key,
     required this.hasQRCode,
     this.size = 16,
   });
+  final bool hasQRCode;
+  final double size;
 
   @override
   Widget build(BuildContext context) {

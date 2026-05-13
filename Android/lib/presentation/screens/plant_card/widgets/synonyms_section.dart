@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../../models/plant.dart';
 
 class SynonymsSection extends StatelessWidget {
-  final Plant plant;
 
   const SynonymsSection({super.key, required this.plant});
+  final Plant plant;
 
   @override
   Widget build(BuildContext context) {

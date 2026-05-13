@@ -5,14 +5,14 @@ import 'package:provider/provider.dart';
 import '../../../../models/plant.dart';
 import '../../../../presentation/providers/providers.dart';
 class SeedlingsTab extends StatelessWidget {
-  final Plant batch;
-  final void Function(BuildContext, Plant) onSeedlingTap;
 
   const SeedlingsTab({
     super.key,
     required this.batch,
     required this.onSeedlingTap,
   });
+  final Plant batch;
+  final void Function(BuildContext, Plant) onSeedlingTap;
 
   @override
   Widget build(BuildContext context) {

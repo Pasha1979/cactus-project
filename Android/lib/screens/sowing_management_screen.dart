@@ -76,9 +76,9 @@ class SowingManagementScreen extends StatelessWidget {
 }
 
 class SowingYearDetailsScreen extends StatefulWidget {
-  final int year;
 
   const SowingYearDetailsScreen({super.key, required this.year});
+  final int year;
 
   @override
   State<SowingYearDetailsScreen> createState() =>

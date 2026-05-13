@@ -3,9 +3,9 @@ import '../../../data/models/gbif_occurrence_dto.dart';
 
 /// Локальный источник данных для GBIF кэша (Hive)
 class GbifCacheLocalDataSource {
-  final Box<GbifOccurrenceDto> _gbifBox;
 
   GbifCacheLocalDataSource(this._gbifBox);
+  final Box<GbifOccurrenceDto> _gbifBox;
 
   /// Получить все записи
   Future<List<GbifOccurrenceDto>> getAllOccurrences() async {

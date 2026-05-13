@@ -10,14 +10,14 @@ import '../widgets/empty_gbif_state.dart';
 import '../widgets/stat_card.dart';
 
 class DistributionTab extends StatefulWidget {
-  final Plant plant;
-  final Future<void> Function(BuildContext, Plant) onRefreshGbif;
 
   const DistributionTab({
     super.key,
     required this.plant,
     required this.onRefreshGbif,
   });
+  final Plant plant;
+  final Future<void> Function(BuildContext, Plant) onRefreshGbif;
 
   @override
   State<DistributionTab> createState() => _DistributionTabState();

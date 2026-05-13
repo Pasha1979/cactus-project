@@ -5,9 +5,9 @@ import 'package:provider/provider.dart';
 import '../../../../presentation/providers/providers.dart';
 
 class CareTipsSection extends StatelessWidget {
-  final Plant plant;
 
   const CareTipsSection({super.key, required this.plant});
+  final Plant plant;
 
   @override
   Widget build(BuildContext context) {

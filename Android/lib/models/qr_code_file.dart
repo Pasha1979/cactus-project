@@ -2,15 +2,6 @@ import 'dart:convert';
 
 /// Модель для хранения метаданных о созданном PDF-файле с QR-этикетками
 class QRCodeFile {
-  final String id;
-  String fileName;
-  final String filePath;
-  final DateTime createdAt;
-  final List<String> plantIds;
-  final String pageFormat;
-  final String orientation;
-  final double labelWidthCm;
-  final double labelHeightCm;
 
   QRCodeFile({
     required this.id,
@@ -24,20 +15,6 @@ class QRCodeFile {
     required this.labelHeightCm,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'fileName': fileName,
-      'filePath': filePath,
-      'createdAt': createdAt.toIso8601String(),
-      'plantIds': plantIds,
-      'pageFormat': pageFormat,
-      'orientation': orientation,
-      'labelWidthCm': labelWidthCm,
-      'labelHeightCm': labelHeightCm,
-    };
-  }
-
   factory QRCodeFile.fromJson(Map<String, dynamic> json) {
     return QRCodeFile(
       id: json['id'] as String,
@@ -50,6 +27,29 @@ class QRCodeFile {
       labelWidthCm: (json['labelWidthCm'] as num).toDouble(),
       labelHeightCm: (json['labelHeightCm'] as num).toDouble(),
     );
+  }
+  final String id;
+  String fileName;
+  final String filePath;
+  final DateTime createdAt;
+  final List<String> plantIds;
+  final String pageFormat;
+  final String orientation;
+  final double labelWidthCm;
+  final double labelHeightCm;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'fileName': fileName,
+      'filePath': filePath,
+      'createdAt': createdAt.toIso8601String(),
+      'plantIds': plantIds,
+      'pageFormat': pageFormat,
+      'orientation': orientation,
+      'labelWidthCm': labelWidthCm,
+      'labelHeightCm': labelHeightCm,
+    };
   }
 
   static String encodeList(List<QRCodeFile> files) {

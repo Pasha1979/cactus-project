@@ -23,12 +23,12 @@ import 'tabs/distribution_tab.dart';
 import 'tabs/seedlings_tab.dart';
 
 class PlantCardScreen extends StatefulWidget {
-  final Plant plant;
 
   const PlantCardScreen({
     super.key,
     required this.plant,
   });
+  final Plant plant;
 
   @override
   State<PlantCardScreen> createState() => _PlantCardScreenState();

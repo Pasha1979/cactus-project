@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../presentation/providers/cloud_storage_provider.dart';
-import '../main.dart';
 import '../presentation/providers/providers.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -31,9 +31,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       await prefs.setBool('remember_me', _rememberMe);
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        context.go('/');
       }
     } catch (e) {
       debugPrint('Ошибка при пропуске: $e');
@@ -90,9 +88,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         await _syncAfterFirstConnect(plantCrudProvider, cloudProvider);
 
         if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
+          context.go('/');
         }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

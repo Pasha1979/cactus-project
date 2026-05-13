@@ -8,11 +8,11 @@ import '../datasources/local/plant_local_datasource.dart';
 
 /// Реализация WateringRepository с использованием Hive (через PlantDto)
 class WateringRepositoryImpl implements WateringRepository {
+
+  WateringRepositoryImpl(this._plantLocalDataSource);
   final PlantLocalDataSource _plantLocalDataSource;
 
   static const String _globalWateringKey = 'global_watering_dates';
-
-  WateringRepositoryImpl(this._plantLocalDataSource);
 
   @override
   Future<List<DateTime>> getWateringDates(String plantId) async {

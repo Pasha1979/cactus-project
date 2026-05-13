@@ -4,9 +4,9 @@ import 'exceptions.dart';
 
 /// Централизованный обработчик ошибок
 class ErrorHandler {
-  final Logger _logger;
 
   ErrorHandler({Logger? logger}) : _logger = logger ?? Logger();
+  final Logger _logger;
 
   /// Обрабатывает исключение и возвращает соответствующий Failure
   Failure handleException(Exception exception) {

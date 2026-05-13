@@ -18,10 +18,6 @@ import '../../services/yandex_disk_service.dart';
 ///
 /// Сохраняет публичный API для обратной совместимости с UI.
 class CloudStorageProvider with ChangeNotifier {
-  late final YandexAuthService _authService;
-  late final YandexDiskService _diskService;
-  late final SyncManager _syncManager;
-  late final PhotoSyncService _photoSyncService;
 
   CloudStorageProvider() {
     _authService = YandexAuthService();
@@ -29,6 +25,10 @@ class CloudStorageProvider with ChangeNotifier {
     _photoSyncService = PhotoSyncService(_authService, _diskService);
     _syncManager = SyncManager(_authService, _diskService, _photoSyncService);
   }
+  late final YandexAuthService _authService;
+  late final YandexDiskService _diskService;
+  late final SyncManager _syncManager;
+  late final PhotoSyncService _photoSyncService;
 
   // ==================== ГЕТТЕРЫ ====================
 
@@ -36,6 +36,12 @@ class CloudStorageProvider with ChangeNotifier {
   bool get isSyncing => _syncManager.isSyncing;
   String? get currentStorageType => _authService.currentStorageType;
   DateTime? get lastCloudUpdate => _syncManager.lastCloudUpdate;
+
+  /// 2.9.5: Прогресс синхронизации (0.0 – 1.0)
+  ValueNotifier<double> get syncProgress => _syncManager.syncProgress;
+
+  /// 2.9.5: Отменить текущую синхронизацию
+  void cancelSync() => _syncManager.cancelSync();
 
   // ==================== АВТОРИЗАЦИЯ ====================
 
@@ -141,5 +147,11 @@ class CloudStorageProvider with ChangeNotifier {
 
   void invalidateAllCaches(PlantCrudProvider plantCrudProvider) {
     plantCrudProvider.invalidateAllCaches();
+  }
+
+  @override
+  void dispose() {
+    _syncManager.dispose();
+    super.dispose();
   }
 }

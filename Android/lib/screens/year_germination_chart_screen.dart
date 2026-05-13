@@ -6,9 +6,9 @@ import '../presentation/providers/providers.dart';
 import 'package:intl/intl.dart';
 
 class YearGerminationChartScreen extends StatefulWidget {
-  final int year;
 
   const YearGerminationChartScreen({super.key, required this.year});
+  final int year;
 
   @override
   State<YearGerminationChartScreen> createState() =>
@@ -140,8 +140,8 @@ class _YearGerminationChartScreenState
 
 // Вспомогательный класс для точек графика
 class LiveDataPoint {
-  final DateTime date;
-  final double alive;
 
   LiveDataPoint(this.date, this.alive);
+  final DateTime date;
+  final double alive;
 }

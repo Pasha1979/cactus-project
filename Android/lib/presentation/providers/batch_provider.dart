@@ -55,4 +55,5 @@ class BatchProvider with ChangeNotifier {
   bool canConvertToBatch(Plant plant) {
     return plant.getCurrentAliveCount >= 2;
   }
+
 }

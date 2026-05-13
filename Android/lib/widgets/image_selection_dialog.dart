@@ -3,14 +3,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/responsive_helper.dart';
 
 class ImageSelectionDialog extends StatefulWidget {
-  final List<String> imageUrls;
-  final Function(String) onSelect;
 
   const ImageSelectionDialog({
     super.key,
     required this.imageUrls,
     required this.onSelect,
   });
+  final List<String> imageUrls;
+  final Function(String) onSelect;
 
   @override
   State<ImageSelectionDialog> createState() => _ImageSelectionDialogState();

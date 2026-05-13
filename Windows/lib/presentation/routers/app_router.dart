@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/plant.dart';
+import '../../screens/add_plant_screen.dart';
 import '../../screens/add_sowing_year_screen.dart';
 import '../../screens/batch_qr_creation_screen.dart';
 import '../../screens/care_calendar_screen.dart';
@@ -50,6 +51,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/welcome',
       builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: '/add-plant',
+      builder: (context, state) => const AddPlantScreen(),
     ),
     GoRoute(
       path: '/plant/:id',

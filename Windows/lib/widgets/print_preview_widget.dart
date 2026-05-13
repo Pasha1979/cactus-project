@@ -3,11 +3,11 @@ import '../models/plant.dart';
 
 /// Размеры листов бумаги в миллиметрах
 class PaperSize {
+
+  const PaperSize._(this.name, this.widthMm, this.heightMm);
   final String name;
   final double widthMm;
   final double heightMm;
-
-  const PaperSize._(this.name, this.widthMm, this.heightMm);
 
   static const PaperSize a3 = PaperSize._('A3', 297, 420);
   static const PaperSize a4 = PaperSize._('A4', 210, 297);
@@ -20,12 +20,6 @@ enum PageOrientation { portrait, landscape }
 
 /// Виджет предпросмотра макета печати этикеток
 class PrintPreviewWidget extends StatelessWidget {
-  final PaperSize paperSize;
-  final PageOrientation orientation;
-  final double labelWidthCm;
-  final double labelHeightCm;
-  final List<Plant> plants;
-  final double scale;
 
   const PrintPreviewWidget({
     super.key,
@@ -36,6 +30,12 @@ class PrintPreviewWidget extends StatelessWidget {
     required this.plants,
     this.scale = 0.5,
   });
+  final PaperSize paperSize;
+  final PageOrientation orientation;
+  final double labelWidthCm;
+  final double labelHeightCm;
+  final List<Plant> plants;
+  final double scale;
 
   /// Рассчитывает количество этикеток на листе
   _LayoutResult _calculateLayout() {
@@ -160,14 +160,6 @@ class PrintPreviewWidget extends StatelessWidget {
 }
 
 class _LayoutResult {
-  final int cols;
-  final int rows;
-  final int totalLabels;
-  final int pages;
-  final double pageWidth;
-  final double pageHeight;
-  final double labelWidth;
-  final double labelHeight;
 
   _LayoutResult({
     required this.cols,
@@ -179,19 +171,27 @@ class _LayoutResult {
     required this.labelWidth,
     required this.labelHeight,
   });
+  final int cols;
+  final int rows;
+  final int totalLabels;
+  final int pages;
+  final double pageWidth;
+  final double pageHeight;
+  final double labelWidth;
+  final double labelHeight;
 }
 
 /// Painter для рисования сетки этикеток
 class _LabelGridPainter extends CustomPainter {
-  final _LayoutResult layout;
-  final List<Plant> plants;
-  final double scale;
 
   _LabelGridPainter({
     required this.layout,
     required this.plants,
     required this.scale,
   });
+  final _LayoutResult layout;
+  final List<Plant> plants;
+  final double scale;
 
   @override
   void paint(Canvas canvas, Size size) {

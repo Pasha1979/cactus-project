@@ -124,4 +124,5 @@ class QrCodeProvider with ChangeNotifier {
       return null;
     }
   }
+
 }

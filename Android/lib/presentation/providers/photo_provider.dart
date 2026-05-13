@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
 import '../../models/plant.dart';
+import '../../services/image/image_processor.dart';
 
 /// Провайдер для управления фотографиями растений
 ///
@@ -188,8 +189,10 @@ class PhotoProvider with ChangeNotifier {
     if (!await sourceFile.exists()) {
       throw Exception('Исходный файл не существует: $originalPath');
     }
-    await sourceFile.copy(newPath);
-    return newPath;
+    return ImageProcessor.compressAndSave(
+      sourcePath: originalPath,
+      targetPath: newPath,
+    );
   }
 
   Future<void> _deletePhotoFromStorage(String photoPath) async {
@@ -314,4 +317,5 @@ class PhotoProvider with ChangeNotifier {
       debugPrint('⚠️ Ошибка очистки кэша: $e');
     }
   }
+
 }

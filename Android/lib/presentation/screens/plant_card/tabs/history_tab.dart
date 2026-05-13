@@ -4,14 +4,14 @@ import '../../../../models/plant.dart';
 import '../../../../widgets/notes_bottom_sheet.dart';
 
 class HistoryTab extends StatelessWidget {
-  final Plant plant;
-  final VoidCallback? onNotesChanged;
 
   const HistoryTab({
     super.key,
     required this.plant,
     this.onNotesChanged,
   });
+  final Plant plant;
+  final VoidCallback? onNotesChanged;
 
   @override
   Widget build(BuildContext context) {

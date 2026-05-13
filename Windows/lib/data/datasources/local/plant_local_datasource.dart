@@ -4,13 +4,13 @@ import 'plant_index_manager.dart';
 
 /// Локальный источник данных для растений (Hive) с индексным ускорением.
 class PlantLocalDataSource {
-  final Box<PlantDto> _plantBox;
-  final PlantIndexManager? _indexManager;
 
   PlantLocalDataSource(
     this._plantBox, {
     PlantIndexManager? indexManager,
   }) : _indexManager = indexManager;
+  final Box<PlantDto> _plantBox;
+  final PlantIndexManager? _indexManager;
 
   Future<List<PlantDto>> getAllPlants() async {
     return _plantBox.values.toList();

@@ -1,12 +1,12 @@
 /// Базовый класс для всех исключений в приложении
 abstract class AppException implements Exception {
-  final String message;
-  final int? code;
 
   const AppException({
     required this.message,
     this.code,
   });
+  final String message;
+  final int? code;
 
   @override
   String toString() => 'AppException: $message (code: $code)';

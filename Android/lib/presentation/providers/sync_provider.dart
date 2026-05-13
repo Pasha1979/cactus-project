@@ -74,4 +74,5 @@ class SyncProvider with ChangeNotifier {
       return false;
     }
   }
+
 }

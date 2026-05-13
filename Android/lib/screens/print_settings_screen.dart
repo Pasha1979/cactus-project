@@ -12,9 +12,9 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 class PrintSettingsScreen extends StatefulWidget {
-  final List<Plant> plantsToPrint;
 
   const PrintSettingsScreen({super.key, required this.plantsToPrint});
+  final List<Plant> plantsToPrint;
 
   @override
   PrintSettingsScreenState createState() => PrintSettingsScreenState();

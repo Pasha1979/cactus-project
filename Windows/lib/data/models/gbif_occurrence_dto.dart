@@ -4,6 +4,18 @@ part 'gbif_occurrence_dto.g.dart';
 
 @HiveType(typeId: 4)
 class GbifOccurrenceDto extends HiveObject {
+
+  GbifOccurrenceDto({
+    required this.latitude,
+    required this.longitude,
+    required this.country,
+    this.locality,
+    this.habitat,
+    this.coordinateUncertainty,
+    this.year,
+    this.month,
+    this.day,
+  });
   @HiveField(0)
   double latitude;
 
@@ -30,16 +42,4 @@ class GbifOccurrenceDto extends HiveObject {
 
   @HiveField(8)
   String? day;
-
-  GbifOccurrenceDto({
-    required this.latitude,
-    required this.longitude,
-    required this.country,
-    this.locality,
-    this.habitat,
-    this.coordinateUncertainty,
-    this.year,
-    this.month,
-    this.day,
-  });
 }

@@ -6,8 +6,8 @@ import '../models/plant.dart';
 import '../presentation/providers/providers.dart';
 
 class NotesBottomSheet extends StatefulWidget {
-  final Plant plant;
   const NotesBottomSheet({super.key, required this.plant});
+  final Plant plant;
 
   @override
   State<NotesBottomSheet> createState() => _NotesBottomSheetState();

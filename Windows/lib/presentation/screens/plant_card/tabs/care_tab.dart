@@ -4,12 +4,6 @@ import '../widgets/care_tips_section.dart';
 import '../widgets/action_card.dart';
 
 class CareTab extends StatelessWidget {
-  final Plant plant;
-  final Future<String>? weatherFuture;
-  final VoidCallback onWatering;
-  final VoidCallback onFertilization;
-  final VoidCallback onRepotting;
-  final VoidCallback onFlowering;
 
   const CareTab({
     super.key,
@@ -20,6 +14,12 @@ class CareTab extends StatelessWidget {
     required this.onRepotting,
     required this.onFlowering,
   });
+  final Plant plant;
+  final Future<String>? weatherFuture;
+  final VoidCallback onWatering;
+  final VoidCallback onFertilization;
+  final VoidCallback onRepotting;
+  final VoidCallback onFlowering;
 
   @override
   Widget build(BuildContext context) {

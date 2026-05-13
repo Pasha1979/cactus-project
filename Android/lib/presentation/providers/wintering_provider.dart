@@ -7,15 +7,8 @@ import '../../core/config/app_constants.dart';
 
 /// Запись журнала зимовки
 class WinteringLogEntry {
-  final DateTime date;
-  final String description;
 
   WinteringLogEntry({required this.date, required this.description});
-
-  Map<String, dynamic> toJson() => {
-        'date': date.toIso8601String(),
-        'description': description,
-      };
 
   factory WinteringLogEntry.fromJson(Map<String, dynamic> json) {
     return WinteringLogEntry(
@@ -23,6 +16,13 @@ class WinteringLogEntry {
       description: json['description'],
     );
   }
+  final DateTime date;
+  final String description;
+
+  Map<String, dynamic> toJson() => {
+        'date': date.toIso8601String(),
+        'description': description,
+      };
 }
 
 /// Провайдер для управления зимовкой
@@ -156,4 +156,5 @@ class WinteringProvider with ChangeNotifier {
       'entries': _logEntries.map((e) => e.toJson()).toList(),
     };
   }
+
 }

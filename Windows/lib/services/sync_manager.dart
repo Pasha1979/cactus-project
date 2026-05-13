@@ -8,6 +8,12 @@ import 'photo_sync_service.dart';
 import 'yandex_auth_service.dart';
 import 'yandex_disk_service.dart';
 
+/// Исключение отмены синхронизации пользователем.
+class _SyncCancelledException implements Exception {
+  @override
+  String toString() => 'SyncCancelledException';
+}
+
 /// Сервис управления синхронизацией данных между локальным хранилищем и облаком
 ///
 /// Отвечает за:
@@ -15,6 +21,9 @@ import 'yandex_disk_service.dart';
 /// - Решение конфликтов (кто новее — локальное или облачное)
 /// - Оrcheстрацию upload/download
 class SyncManager {
+
+  SyncManager(this._authService, this._diskService, PhotoSyncService? photoSync)
+      : _photoSyncService = photoSync ?? PhotoSyncService(_authService, _diskService);
   final YandexAuthService _authService;
   final YandexDiskService _diskService;
   final PhotoSyncService _photoSyncService;
@@ -23,12 +32,32 @@ class SyncManager {
 
   bool _isSyncing = false;
   DateTime? _lastCloudUpdate;
+  bool _cancelRequested = false;
+
+  /// 2.9.5: Прогресс синхронизации (0.0 – 1.0)
+  final ValueNotifier<double> syncProgress = ValueNotifier(0.0);
 
   bool get isSyncing => _isSyncing;
   DateTime? get lastCloudUpdate => _lastCloudUpdate;
 
-  SyncManager(this._authService, this._diskService, PhotoSyncService? photoSync)
-      : _photoSyncService = photoSync ?? PhotoSyncService(_authService, _diskService);
+  /// 2.9.5: Запросить отмену текущей синхронизации.
+  void cancelSync() {
+    if (_isSyncing) {
+      _cancelRequested = true;
+      debugPrint('⏹️ Запрошена отмена синхронизации');
+    }
+  }
+
+  /// Освобождение ресурсов.
+  void dispose() {
+    syncProgress.dispose();
+  }
+
+  void _checkCancelled() {
+    if (_cancelRequested) {
+      throw _SyncCancelledException();
+    }
+  }
 
   // ==================== FETCH ====================
 
@@ -89,14 +118,18 @@ class SyncManager {
       debugPrint('⏸️ Синхронизация уже выполняется, пропускаем');
       return;
     }
+    _cancelRequested = false;
+    syncProgress.value = 0.0;
     _isSyncing = true;
 
     try {
       // 2.9.2: Exponential backoff retry для fetchLastCloudUpdate
+      syncProgress.value = 0.1;
       await _retryWithBackoff(
         () => fetchLastCloudUpdate(),
         operationName: 'fetchLastCloudUpdate',
       );
+      _checkCancelled();
 
       final localUpdate = plantCrudProvider.lastLocalUpdate;
       final cloudUpdate = _lastCloudUpdate;
@@ -107,27 +140,49 @@ class SyncManager {
           (localUpdate == null ||
               cloudUpdate.isAfter(localUpdate.add(timeTolerance)))) {
         debugPrint('☁️ Облако новее → загружаем из облака');
+        syncProgress.value = 0.2;
         await plantCrudProvider.createLocalBackup();
+        _checkCancelled();
+        syncProgress.value = 0.3;
         await loadDataFromCloud(plantCrudProvider);
+        _checkCancelled();
+        syncProgress.value = 0.5;
         await plantCrudProvider.savePlants();
+        syncProgress.value = 1.0;
+        debugPrint('✅ Синхронизация успешно завершена (загрузка из облака)');
         return;
       }
 
       if (plantCrudProvider.plants.isNotEmpty) {
         debugPrint('📤 Локальные данные новее → отправляем в облако');
+        syncProgress.value = 0.3;
         await _retryWithBackoff(
           () => _uploadToCloud(plantCrudProvider),
           operationName: 'uploadToCloud',
         );
+        _checkCancelled();
+        syncProgress.value = 0.8;
         await fetchLastCloudUpdate();
+        syncProgress.value = 1.0;
+        debugPrint('✅ Синхронизация успешно завершена (выгрузка в облако)');
       } else if (cloudUpdate != null) {
         debugPrint('📥 Локально пусто → загружаем из облака');
+        syncProgress.value = 0.2;
         await plantCrudProvider.createLocalBackup();
+        _checkCancelled();
+        syncProgress.value = 0.3;
         await loadDataFromCloud(plantCrudProvider);
+        _checkCancelled();
+        syncProgress.value = 0.5;
         await plantCrudProvider.savePlants();
+        syncProgress.value = 1.0;
+        debugPrint('✅ Синхронизация успешно завершена (загрузка из облака)');
+      } else {
+        syncProgress.value = 1.0;
+        debugPrint('✅ Синхронизация: нет данных для передачи');
       }
-
-      debugPrint('✅ Синхронизация успешно завершена');
+    } on _SyncCancelledException {
+      debugPrint('⏹️ Синхронизация отменена пользователем');
     } catch (e) {
       debugPrint('❌ Ошибка синхронизации: $e');
     } finally {
@@ -142,10 +197,12 @@ class SyncManager {
     required String operationName,
   }) async {
     for (int attempt = 0; attempt < _maxSyncRetries; attempt++) {
+      _checkCancelled();
       try {
         await operation();
         return;
       } catch (e) {
+        if (e is _SyncCancelledException) rethrow;
         final isLastAttempt = attempt == _maxSyncRetries - 1;
         if (isLastAttempt) {
           debugPrint('❌ $operationName: исчерпаны все попытки ($_maxSyncRetries): $e');
@@ -197,6 +254,7 @@ class SyncManager {
 
       debugPrint('📥 Загружено из облака: ${data['plants']?.length ?? 0} растений');
 
+      _checkCancelled();
       await plantCrudProvider.loadFromCloudJson(data);
 
       await fetchLastCloudUpdate();
@@ -252,7 +310,45 @@ class SyncManager {
       return false;
     }
 
+    // 2.9.3: Валидация обязательных полей каждого растения
+    for (int i = 0; i < plantsList.length; i++) {
+      final plantData = plantsList[i];
+      if (plantData is! Map<String, dynamic>) {
+        debugPrint('⛔ Валидация: элемент $i не является Map');
+        return false;
+      }
+      if (!_validatePlantJson(plantData)) {
+        debugPrint('⛔ Валидация: растение $i не прошло проверку полей');
+        return false;
+      }
+    }
+
     debugPrint('✅ Валидация облачных данных прошла (${plantsList.length} растений)');
+    return true;
+  }
+
+  /// 2.9.3: Проверка обязательных полей растения.
+  ///
+  /// Проверяет:
+  /// - permanentId: не null, не пустой, строка
+  /// - latinName: не null, не пустой, строка
+  /// - year: целое число в диапазоне 1900–2100
+  static bool _validatePlantJson(Map<String, dynamic> json) {
+    final permanentId = json['permanentId'];
+    if (permanentId is! String || permanentId.isEmpty) {
+      return false;
+    }
+
+    final latinName = json['latinName'];
+    if (latinName is! String || latinName.isEmpty) {
+      return false;
+    }
+
+    final year = json['year'];
+    if (year is! int || year < 1900 || year > 2100) {
+      return false;
+    }
+
     return true;
   }
 }

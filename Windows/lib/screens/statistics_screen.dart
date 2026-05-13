@@ -1307,18 +1307,18 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 }
 
 class ChartData {
+
+  ChartData(this.category, this.value, {this.secondaryValue = 0.0});
   final String category;
   final double value;
   final double secondaryValue;
-
-  ChartData(this.category, this.value, {this.secondaryValue = 0.0});
 }
 
 class PlantListScreen extends StatelessWidget {
-  final List<Plant> plants;
-  final String title;
 
   const PlantListScreen({super.key, required this.plants, required this.title});
+  final List<Plant> plants;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -1326,9 +1326,11 @@ class PlantListScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: ListView.builder(
         itemCount: plants.length,
-        itemBuilder: (ctx, i) => ListTile(
-          title: Text(plants[i].latinName),
-          subtitle: Text(plants[i].displayId),
+        itemBuilder: (ctx, i) => RepaintBoundary(
+          child: ListTile(
+            title: Text(plants[i].latinName),
+            subtitle: Text(plants[i].displayId),
+          ),
         ),
       ),
     );

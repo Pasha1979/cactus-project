@@ -954,6 +954,22 @@ dev_dependencies:
 
 ---
 
+### 2.11 Интеграция go_router (0.5 дня)
+
+**Задачи:**
+2.11.1 Убрать вложенный `MaterialApp` в `main.dart`, заменить `runApp(MaterialApp(home: MyApp()))` на `runApp(MyApp())`
+2.11.2 Заменить все `Navigator.push` / `Navigator.pushReplacement` на `context.push()` / `context.go()`
+2.11.3 Вынести `AddPlantForm` в отдельный экран `AddPlantScreen` с маршрутом `/add-plant`
+2.11.4 Убедиться, что `PlantListScreen` корректно импортирован в `app_router.dart`
+2.11.5 Добавить `_syncManager.dispose()` в `CloudStorageProvider.dispose()`
+
+**Проверка:**
+- Навигация работает через go_router на всех экранах
+- `flutter analyze` проходит без ошибок
+- Нет утечек ресурсов при отключении облака
+
+---
+
 ## ФАЗА 3: ЖЕЛАТЕЛЬНЫЕ УЛУЧШЕНИЯ (P2)
 
 ### 3.1 Тестирование (3 дня)

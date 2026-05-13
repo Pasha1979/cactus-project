@@ -299,8 +299,8 @@ Map<String, dynamic> _parseLlifleDocument(dynamic document) {
 // ==================== Exceptions ====================
 
 class HttpIsolateException implements Exception {
-  final String message;
   HttpIsolateException(this.message);
+  final String message;
 
   @override
   String toString() => 'HttpIsolateException: $message';

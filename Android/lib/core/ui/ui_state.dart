@@ -23,16 +23,16 @@ final class UiLoading<T> extends UiState<T> {
 
 /// Данные успешно загружены / операция завершена.
 final class UiSuccess<T> extends UiState<T> {
-  final T data;
   const UiSuccess(this.data);
+  final T data;
 }
 
 /// Произошла ошибка. Содержит сообщение и callback для повтора.
 final class UiError<T> extends UiState<T> {
-  final String message;
-  final VoidCallback? onRetry;
 
   const UiError(this.message, {this.onRetry});
+  final String message;
+  final VoidCallback? onRetry;
 }
 
 /// Псевдоним для callback без параметров.

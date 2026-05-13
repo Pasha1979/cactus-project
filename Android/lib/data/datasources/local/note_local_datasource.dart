@@ -3,9 +3,9 @@ import '../../../data/models/note_dto.dart';
 
 /// Локальный источник данных для заметок (Hive)
 class NoteLocalDataSource {
-  final Box<NoteDto> _noteBox;
 
   NoteLocalDataSource(this._noteBox);
+  final Box<NoteDto> _noteBox;
 
   /// Получить все заметки
   Future<List<NoteDto>> getAllNotes() async {

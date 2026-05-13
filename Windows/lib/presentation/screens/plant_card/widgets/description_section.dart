@@ -5,9 +5,9 @@ import 'package:provider/provider.dart';
 import '../../../../presentation/providers/providers.dart';
 
 class DescriptionSection extends StatelessWidget {
-  final Plant plant;
 
   const DescriptionSection({super.key, required this.plant});
+  final Plant plant;
 
   @override
   Widget build(BuildContext context) {

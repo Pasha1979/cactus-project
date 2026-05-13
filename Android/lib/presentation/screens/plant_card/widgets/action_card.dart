@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
 class ActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Color color;
-  final VoidCallback onTap;
 
   const ActionCard({
     super.key,
@@ -13,6 +9,10 @@ class ActionCard extends StatelessWidget {
     required this.color,
     required this.onTap,
   });
+  final IconData icon;
+  final String title;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {

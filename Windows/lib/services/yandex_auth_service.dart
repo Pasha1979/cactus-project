@@ -18,6 +18,9 @@ import '../core/config/app_constants.dart';
 /// - Тихое подключение (silent reconnect)
 /// - Отключение (logout)
 class YandexAuthService {
+
+  YandexAuthService({FlutterSecureStorage? storage})
+      : _storage = storage ?? const FlutterSecureStorage();
   final FlutterSecureStorage _storage;
 
   oauth2.Client? _yandexClient;
@@ -36,9 +39,6 @@ class YandexAuthService {
   bool get isAuthorizing => _isAuthorizing;
   String? get currentStorageType => _currentStorageType;
   oauth2.Client? get yandexClient => _yandexClient;
-
-  YandexAuthService({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
 
   // ==================== ЗАГРУЗКА ТОКЕНОВ ====================
 

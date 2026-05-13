@@ -3,9 +3,9 @@ import '../../../data/models/wintering_log_entry_dto.dart';
 
 /// Локальный источник данных для зимовки (Hive)
 class WinteringLocalDataSource {
-  final Box<WinteringLogEntryDto> _winteringBox;
 
   WinteringLocalDataSource(this._winteringBox);
+  final Box<WinteringLogEntryDto> _winteringBox;
 
   /// Получить все записи зимовки
   Future<List<WinteringLogEntryDto>> getAllEntries() async {

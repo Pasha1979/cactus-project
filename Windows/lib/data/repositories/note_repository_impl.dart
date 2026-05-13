@@ -5,9 +5,9 @@ import '../models/note_dto.dart';
 
 /// Реализация NoteRepository с использованием Hive
 class NoteRepositoryImpl implements NoteRepository {
-  final NoteLocalDataSource _localDataSource;
 
   NoteRepositoryImpl(this._localDataSource);
+  final NoteLocalDataSource _localDataSource;
 
   @override
   Future<List<Note>> getNotes(String plantId) async {

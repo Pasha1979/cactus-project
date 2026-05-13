@@ -154,18 +154,20 @@ class _SelectPlantsForPrintScreenState extends State<SelectPlantsForPrintScreen>
                         ...plant.gbifPhotoUrls,
                       ];
 
-                      return CheckboxListTile(
-                        value: isSelected,
-                        onChanged: (_) => _toggleSelection(plant.permanentId),
-                        title: Text(plant.latinName),
-                        subtitle: Text('${plant.displayId} ${hasQR ? "✓ QR" : ""}'),
-                        secondary: CircleAvatar(
-                          backgroundImage: allPhotos.isNotEmpty
-                              ? NetworkImage(allPhotos.first)
-                              : null,
-                          child: allPhotos.isEmpty
-                              ? const Icon(Icons.local_florist)
-                              : null,
+                      return RepaintBoundary(
+                        child: CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (_) => _toggleSelection(plant.permanentId),
+                          title: Text(plant.latinName),
+                          subtitle: Text('${plant.displayId} ${hasQR ? "✓ QR" : ""}'),
+                          secondary: CircleAvatar(
+                            backgroundImage: allPhotos.isNotEmpty
+                                ? NetworkImage(allPhotos.first)
+                                : null,
+                            child: allPhotos.isEmpty
+                                ? const Icon(Icons.local_florist)
+                                : null,
+                          ),
                         ),
                       );
                     },

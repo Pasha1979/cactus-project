@@ -9,12 +9,7 @@ import 'package:uuid/uuid.dart';
 ///   "name": "Echinocereus reichenbachii",
 ///   "permanentId": "uuid-string"
 /// }
-class QRCode {
-  final String plantId;         // displayId (например: "24-001")
-  final String plantName;       // латинское название
-  final String permanentId;     // permanentId для поиска в базе
-  final DateTime createdAt;     // когда создан QR код
-  final bool isActive;          // активен ли QR код (false если растение удалено)
+class QRCode {          // активен ли QR код (false если растение удалено)
 
   QRCode({
     required this.plantId,
@@ -38,6 +33,32 @@ class QRCode {
     );
   }
 
+  /// Создает QRCode из строки данных QR кода
+  factory QRCode.fromQRData(String qrData) {
+    final data = jsonDecode(qrData) as Map<String, dynamic>;
+    return QRCode(
+      plantId: data['id'] as String,
+      plantName: data['name'] as String,
+      permanentId: data['permanentId'] as String,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  factory QRCode.fromJson(Map<String, dynamic> json) {
+    return QRCode(
+      plantId: json['plantId'] as String,
+      plantName: json['plantName'] as String,
+      permanentId: json['permanentId'] as String,
+      createdAt: DateTime.tryParse(json['createdAt'] as String) ?? DateTime(1970, 1, 1),
+      isActive: json['isActive'] as bool? ?? true,
+    );
+  }
+  final String plantId;         // displayId (например: "24-001")
+  final String plantName;       // латинское название
+  final String permanentId;     // permanentId для поиска в базе
+  final DateTime createdAt;     // когда создан QR код
+  final bool isActive;
+
   /// Генерирует строку данных для QR кода (альтернативное имя для совместимости)
   String toQRCodeData() => qrData;
 
@@ -51,17 +72,6 @@ class QRCode {
     return jsonEncode(data);
   }
 
-  /// Создает QRCode из строки данных QR кода
-  factory QRCode.fromQRData(String qrData) {
-    final data = jsonDecode(qrData) as Map<String, dynamic>;
-    return QRCode(
-      plantId: data['id'] as String,
-      plantName: data['name'] as String,
-      permanentId: data['permanentId'] as String,
-      createdAt: DateTime.now(),
-    );
-  }
-
   Map<String, dynamic> toJson() => {
     'plantId': plantId,
     'plantName': plantName,
@@ -69,16 +79,6 @@ class QRCode {
     'createdAt': createdAt.toIso8601String(),
     'isActive': isActive,
   };
-
-  factory QRCode.fromJson(Map<String, dynamic> json) {
-    return QRCode(
-      plantId: json['plantId'] as String,
-      plantName: json['plantName'] as String,
-      permanentId: json['permanentId'] as String,
-      createdAt: DateTime.tryParse(json['createdAt'] as String) ?? DateTime(1970, 1, 1),
-      isActive: json['isActive'] as bool? ?? true,
-    );
-  }
 
   QRCode copyWith({
     String? plantId,

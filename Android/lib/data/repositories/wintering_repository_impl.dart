@@ -4,9 +4,9 @@ import '../models/wintering_log_entry_dto.dart';
 
 /// Реализация WinteringRepository с использованием Hive
 class WinteringRepositoryImpl implements WinteringRepository {
-  final WinteringLocalDataSource _localDataSource;
 
   WinteringRepositoryImpl(this._localDataSource);
+  final WinteringLocalDataSource _localDataSource;
 
   @override
   Future<Map<String, dynamic>> getWinteringSettings() async {

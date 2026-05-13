@@ -7,9 +7,9 @@ import '../widgets/description_section.dart';
 import '../widgets/synonyms_section.dart';
 
 class OverviewTab extends StatelessWidget {
-  final Plant plant;
 
   const OverviewTab({super.key, required this.plant});
+  final Plant plant;
 
   @override
   Widget build(BuildContext context) {

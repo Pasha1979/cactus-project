@@ -15,10 +15,10 @@ import 'yandex_disk_service.dart';
 /// - Дедупликацию фото
 /// - Валидацию cloud URL
 class PhotoSyncService {
-  final YandexAuthService _authService;
-  final YandexDiskService _diskService;
 
   PhotoSyncService(this._authService, this._diskService);
+  final YandexAuthService _authService;
+  final YandexDiskService _diskService;
 
   // ==================== СИНХРОНИЗАЦИЯ ФОТО ====================
 

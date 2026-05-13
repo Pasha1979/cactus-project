@@ -5,9 +5,9 @@ import '../../domain/repositories/sync_repository.dart';
 
 /// Реализация SyncRepository
 class SyncRepositoryImpl implements SyncRepository {
-  final NetworkInfo _networkInfo;
 
   SyncRepositoryImpl(this._networkInfo);
+  final NetworkInfo _networkInfo;
 
   @override
   Future<bool> hasInternetConnection() async {

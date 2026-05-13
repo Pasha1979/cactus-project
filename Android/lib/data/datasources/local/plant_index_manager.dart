@@ -16,9 +16,9 @@ import '../../models/plant_dto.dart';
 /// final plants = ids.map((id) => box.get(id)).whereType<PlantDto>().toList();
 /// ```
 class PlantIndexManager {
-  final Box<List<dynamic>> _indexBox;
 
   PlantIndexManager(this._indexBox);
+  final Box<List<dynamic>> _indexBox;
 
   /// Зарегистрировать растение во всех индексах.
   void addPlant(PlantDto plant) {

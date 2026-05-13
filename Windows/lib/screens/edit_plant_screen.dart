@@ -9,16 +9,16 @@ import 'package:provider/provider.dart';
 import '../presentation/providers/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api/llifle_service.dart';
-import '../utils/translation_utils.dart';
+import '../core/utils/translation_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class EditPlantScreen extends StatefulWidget {
-  final Plant plant;
 
   const EditPlantScreen({
     super.key,
     required this.plant,
   });
+  final Plant plant;
 
   @override
   State<EditPlantScreen> createState() => _EditPlantScreenState();
@@ -1156,9 +1156,6 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
 }
 
 class AnimatedRefreshIcon extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback onPressed;
-  final String tooltip;
 
   const AnimatedRefreshIcon({
     super.key,
@@ -1166,6 +1163,9 @@ class AnimatedRefreshIcon extends StatelessWidget {
     required this.onPressed,
     required this.tooltip,
   });
+  final bool isLoading;
+  final VoidCallback onPressed;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -1187,9 +1187,6 @@ class AnimatedRefreshIcon extends StatelessWidget {
 }
 
 class AnimatedSearchIcon extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback onPressed;
-  final String tooltip;
 
   const AnimatedSearchIcon({
     super.key,
@@ -1197,6 +1194,9 @@ class AnimatedSearchIcon extends StatelessWidget {
     required this.onPressed,
     required this.tooltip,
   });
+  final bool isLoading;
+  final VoidCallback onPressed;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -1218,9 +1218,6 @@ class AnimatedSearchIcon extends StatelessWidget {
 }
 
 class AnimatedTranslateIcon extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback onPressed;
-  final String tooltip;
 
   const AnimatedTranslateIcon({
     super.key,
@@ -1228,6 +1225,9 @@ class AnimatedTranslateIcon extends StatelessWidget {
     required this.onPressed,
     required this.tooltip,
   });
+  final bool isLoading;
+  final VoidCallback onPressed;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
