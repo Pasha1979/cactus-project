@@ -307,4 +307,101 @@ class YandexDiskService {
     }
     return null;
   }
+
+  // ==================== ВЕРСИОНИРОВАНИЕ БЭКАПОВ ====================
+
+  /// Загружает бэкап с уникальным именем (версионирование).
+  ///
+  /// Создаёт файл в папке `/MyCactus/backups/` с именем вида
+  /// `plant_backup_20260515_1230.json`.
+  Future<String> uploadVersionedBackup(List<int> data, String fileName) async {
+    if (!_authService.isConnected) throw Exception('Нет подключения');
+
+    final dio = _createDio();
+
+    // Убедиться, что папка backups существует
+    try {
+      await dio.put('$_yandexApiBaseUrl/resources?path=/MyCactus/backups');
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 409) {
+        debugPrint('Ошибка создания /MyCactus/backups: $e');
+      }
+    }
+
+    final cloudPath = '/MyCactus/backups/$fileName';
+
+    final uploadResponse = await dio.get(
+      '$_yandexApiBaseUrl/resources/upload?path=$cloudPath&overwrite=true',
+    );
+    final uploadUrl = uploadResponse.data['href'];
+
+    final putResponse = await http.put(
+      Uri.parse(uploadUrl),
+      body: data,
+      headers: {'Content-Type': 'application/json; charset=utf-8'},
+    );
+
+    if (putResponse.statusCode != 201 && putResponse.statusCode != 200) {
+      throw Exception('Ошибка загрузки версии бэкапа: ${putResponse.statusCode}');
+    }
+
+    debugPrint('✅ Версионный бэкап загружен: $cloudPath');
+    return cloudPath;
+  }
+
+  /// Возвращает список файлов бэкапов из папки `/MyCactus/backups/`.
+  ///
+  /// Файлы отсортированы по дате (новые первыми).
+  Future<List<Map<String, dynamic>>> listVersionedBackups() async {
+    if (!_authService.isConnected) return [];
+
+    final dio = _createDio();
+    try {
+      final response = await dio.get(
+        '$_yandexApiBaseUrl/resources?path=/MyCactus/backups&limit=100&sort=-modified',
+      );
+
+      if (response.statusCode != 200) return [];
+
+      final items = response.data['_embedded']?['items'] as List<dynamic>?;
+      if (items == null) return [];
+
+      return items
+          .where(
+            (item) =>
+                item['type'] == 'file' &&
+                (item['name'] as String).endsWith('.json'),
+          )
+          .map(
+            (item) => {
+              'name': item['name'] as String,
+              'path': item['path'] as String,
+              'modified': item['modified'] as String?,
+              'size': item['size'] as int? ?? 0,
+            },
+          )
+          .toList();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return [];
+      debugPrint('Ошибка получения списка бэкапов: $e');
+      return [];
+    }
+  }
+
+  /// Удаляет файл с Яндекс.Диска.
+  Future<void> deleteCloudFile(String cloudPath) async {
+    if (!_authService.isConnected) throw Exception('Нет подключения');
+
+    final dio = _createDio();
+    try {
+      await dio.delete(
+        '$_yandexApiBaseUrl/resources?path=$cloudPath&permanently=true',
+      );
+      debugPrint('🗑️ Удалён файл: $cloudPath');
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) {
+        throw Exception('Ошибка удаления файла $cloudPath: $e');
+      }
+    }
+  }
 }

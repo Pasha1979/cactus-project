@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/logger/app_logger.dart';
+import '../../../data/datasources/local/plant_local_datasource.dart';
+import '../../../injection_container.dart';
+import '../../../services/data_export_service.dart';
+import '../../../services/api/gbif_service.dart';
 import '../../../services/image/photo_cache_manager.dart';
 
 /// Экран управления данными.
@@ -61,19 +65,31 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
   Future<void> _clearGbifCache() async {
     setState(() => _isLoading = true);
 
-    // Здесь можно добавить очистку кэша GBIF
-    await Future.delayed(const Duration(seconds: 1)); // Заглушка
+    try {
+      await sl<GbifService>().clearAllGbifCache();
+      AppLogger.api('GBIF cache cleared by user', tag: 'DATA_MANAGEMENT');
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Кэш GBIF очищен'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Кэш GBIF очищен'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.error('Error clearing GBIF cache: $e', tag: 'DATA_MANAGEMENT');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Ошибка: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
     }
-
-    setState(() => _isLoading = false);
   }
 
   @override
@@ -145,14 +161,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
                   title: const Text('Экспорт всех данных'),
                   subtitle: const Text('Сохранить локальную копию базы данных'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // TODO: Реализовать экспорт
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Функция в разработке'),
-                      ),
-                    );
-                  },
+                  onTap: () => _showExportDialog(context),
                 ),
 
                 const SizedBox(height: 32),
@@ -198,5 +207,82 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
               ],
             ),
     );
+  }
+
+  /// Показывает диалог выбора формата экспорта.
+  Future<void> _showExportDialog(BuildContext context) async {
+    final format = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Выберите формат экспорта'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.code, color: Colors.blue),
+              title: const Text('JSON'),
+              subtitle: const Text('Полная резервная копия'),
+              onTap: () => Navigator.pop(ctx, 'json'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart, color: Colors.green),
+              title: const Text('CSV'),
+              subtitle: const Text('Таблица для Excel'),
+              onTap: () => Navigator.pop(ctx, 'csv'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+
+    if (format == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Получаем PlantLocalDataSource через DI
+      final dataSource = sl<PlantLocalDataSource>();
+      final exportService = DataExportService(dataSource);
+
+      String? filePath;
+      if (format == 'json') {
+        filePath = await exportService.exportToJson();
+      } else {
+        filePath = await exportService.exportToCsv();
+      }
+
+      if (filePath != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Экспорт завершен: $filePath'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Экспорт отменен или произошла ошибка'),
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.error('Ошибка при экспорте', error: e);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Ошибка: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 }

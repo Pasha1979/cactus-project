@@ -1,15 +1,28 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-// import 'package:share_plus/share_plus.dart'; // TODO: Добавить зависимость
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../../core/logger/app_logger.dart';
 import '../../../presentation/providers/cloud_storage_provider.dart';
 import '../../../presentation/providers/settings_provider.dart';
 
 /// Экран отладки.
 ///
 /// Позволяет просматривать логи, проводить диагностику и настраивать отладку.
-class DebugSettingsScreen extends StatelessWidget {
+class DebugSettingsScreen extends StatefulWidget {
   const DebugSettingsScreen({super.key});
+
+  @override
+  State<DebugSettingsScreen> createState() => _DebugSettingsScreenState();
+}
+
+class _DebugSettingsScreenState extends State<DebugSettingsScreen> {
+  bool? _networkStatus;
+  bool _checkingNetwork = false;
 
   @override
   Widget build(BuildContext context) {
@@ -143,9 +156,41 @@ class DebugSettingsScreen extends StatelessWidget {
               falseText: 'Идёт синхронизация...',
             ),
             const SizedBox(height: 8),
-            _buildDiagnosticRow(
-              'Доступ к сети',
-              true, // TODO: Реальная проверка
+            Row(
+              children: [
+                Icon(
+                  _networkStatus == null
+                      ? Icons.help_outline
+                      : (_networkStatus! ? Icons.check_circle : Icons.error),
+                  color: _networkStatus == null
+                      ? Colors.grey
+                      : (_networkStatus! ? Colors.green : Colors.red),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Доступ к сети')),
+                if (_checkingNetwork)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  GestureDetector(
+                    onTap: () => _checkNetworkAccess(context),
+                    child: Text(
+                      _networkStatus == null
+                          ? 'Проверить'
+                          : (_networkStatus! ? 'Доступна' : 'Недоступна'),
+                      style: TextStyle(
+                        color: _networkStatus == null
+                            ? Colors.blue
+                            : (_networkStatus! ? Colors.green : Colors.red),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
             Text(
@@ -197,14 +242,10 @@ class DebugSettingsScreen extends StatelessWidget {
   }
 
   Future<void> _showLogs(BuildContext context) async {
-    // TODO: Получить реальные логи из AppLogger
-    final mockLogs = [
-      '[2024-01-15 09:23:45] [API] GET /plants - 200 OK',
-      '[2024-01-15 09:23:42] [SYNC] Синхронизация завершена',
-      '[2024-01-15 09:23:40] [CLOUD] Подключение к Яндекс.Диск',
-      '[2024-01-15 09:23:38] [DB] Загружено 150 растений',
-      '[2024-01-15 09:23:35] [INIT] Приложение запущено',
-    ];
+    final logs = AppLogger.getRecentLogs(limit: 50);
+    final displayLogs = logs.isEmpty
+        ? ['[Логи отсутствуют — возможно, приложение только что запущено]']
+        : logs.reversed.toList();
 
     showDialog(
       context: context,
@@ -212,21 +253,52 @@ class DebugSettingsScreen extends StatelessWidget {
         title: const Text('📋 Последние логи'),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: mockLogs.length,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  mockLogs[index],
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
+          height: 400,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${displayLogs.length} записей',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
+                  TextButton.icon(
+                    onPressed: () {
+                      AppLogger.clearLogs();
+                      Navigator.pop(ctx);
+                    },
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Очистить'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  ),
+                ],
+              ),
+              const Divider(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: displayLogs.length,
+                  itemBuilder: (context, index) {
+                    final log = displayLogs[index];
+                    Color textColor = Colors.black87;
+                    if (log.contains('[ERROR]')) textColor = Colors.red;
+                    if (log.contains('[WARN]')) textColor = Colors.orange;
+                    if (log.contains('[API]')) textColor = Colors.blue[800]!;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        log,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: textColor,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
         actions: [
@@ -234,17 +306,84 @@ class DebugSettingsScreen extends StatelessWidget {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Закрыть'),
           ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _shareLogs(context);
+            },
+            icon: const Icon(Icons.share, size: 16),
+            label: const Text('Отправить'),
+          ),
         ],
       ),
     );
   }
 
   Future<void> _shareLogs(BuildContext context) async {
-    // TODO: Добавить share_plus в pubspec.yaml и реализовать отправку
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Функция отправки логов в разработке'),
-      ),
-    );
+    try {
+      final logs = AppLogger.getRecentLogs(limit: 200);
+      if (logs.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Нет логов для отправки')),
+          );
+        }
+        return;
+      }
+
+      final logContent = [
+        '=== My Cactus App Logs ===',
+        'Дата: ${DateTime.now().toIso8601String()}',
+        '=========================',
+        ...logs,
+      ].join('\n');
+
+      // Сохраняем во временный файл
+      final dir = await getTemporaryDirectory();
+      final now = DateTime.now();
+      final fileName =
+          'cactus_logs_${now.year}${_twoDigits(now.month)}${_twoDigits(now.day)}_'
+          '${_twoDigits(now.hour)}${_twoDigits(now.minute)}.txt';
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsString(logContent);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'My Cactus — логи для диагностики',
+        text: 'Файл логов приложения My Cactus',
+      );
+
+      AppLogger.api('Логи отправлены через share_plus', tag: 'DEBUG');
+    } catch (e, stack) {
+      AppLogger.error('Ошибка отправки логов', error: e, stackTrace: stack);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка отправки логов: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
+
+  Future<void> _checkNetworkAccess(BuildContext context) async {
+    setState(() {
+      _checkingNetwork = true;
+      _networkStatus = null;
+    });
+
+    try {
+      final response = await http
+          .get(Uri.parse('https://yandex.ru'))
+          .timeout(const Duration(seconds: 5));
+      setState(() => _networkStatus = response.statusCode < 500);
+    } catch (_) {
+      setState(() => _networkStatus = false);
+    } finally {
+      setState(() => _checkingNetwork = false);
+    }
+  }
+
+  String _twoDigits(int n) => n >= 10 ? '$n' : '0$n';
 }

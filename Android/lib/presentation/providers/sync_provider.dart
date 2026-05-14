@@ -18,10 +18,8 @@ import 'plant_crud_provider.dart';
 class SyncProvider with ChangeNotifier {
 
   DateTime? _lastLocalUpdate;
-  final bool _isSyncing = false;
 
   DateTime? get lastLocalUpdate => _lastLocalUpdate;
-  bool get isSyncing => _isSyncing;
 
   void setLastLocalUpdate(DateTime date) {
     _lastLocalUpdate = date;

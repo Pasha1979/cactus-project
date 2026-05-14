@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Экран "О приложении".
 ///
 /// Показывает версию приложения, лицензии, ссылки.
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
+
+  static const String _privacyPolicyUrl =
+      'https://github.com/PaveUA/my-cactus/blob/main/PRIVACY.md';
+  static const String _supportEmail = 'mycactus.support@gmail.com';
 
   @override
   Widget build(BuildContext context) {
@@ -79,9 +84,16 @@ class AboutScreen extends StatelessWidget {
             leading: const Icon(Icons.code),
             title: const Text('Лицензии открытого ПО'),
             trailing: const Icon(Icons.open_in_new),
-            onTap: () {
-              // TODO: Открыть лицензии
-            },
+            onTap: () => showLicensePage(
+              context: context,
+              applicationName: 'MyCactus',
+              applicationVersion: '1.0.0',
+              applicationIcon: const Icon(
+                Icons.local_florist,
+                size: 48,
+                color: Colors.green,
+              ),
+            ),
           ),
 
           const Divider(),
@@ -90,9 +102,7 @@ class AboutScreen extends StatelessWidget {
             leading: const Icon(Icons.privacy_tip),
             title: const Text('Политика конфиденциальности'),
             trailing: const Icon(Icons.open_in_new),
-            onTap: () {
-              // TODO: Открыть политику
-            },
+            onTap: () => _openUrl(context, _privacyPolicyUrl),
           ),
 
           const Divider(),
@@ -101,9 +111,7 @@ class AboutScreen extends StatelessWidget {
             leading: const Icon(Icons.support),
             title: const Text('Поддержка'),
             trailing: const Icon(Icons.open_in_new),
-            onTap: () {
-              // TODO: Открыть поддержку
-            },
+            onTap: () => _openEmail(context, _supportEmail),
           ),
 
           const SizedBox(height: 32),
@@ -111,7 +119,7 @@ class AboutScreen extends StatelessWidget {
           // Разработчики
           Center(
             child: Text(
-              '© 2024 MyCactus Team',
+              '© 2026 MyCactus',
               style: TextStyle(
                 color: Colors.grey[500],
                 fontSize: 12,
@@ -121,5 +129,31 @@ class AboutScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _openUrl(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Не удалось открыть: $url')),
+      );
+    }
+  }
+
+  Future<void> _openEmail(BuildContext context, String email) async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: email,
+      queryParameters: {'subject': 'MyCactus — Обращение в поддержку'},
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Email-клиент недоступен. Напишите на: $email')),
+      );
+    }
   }
 }

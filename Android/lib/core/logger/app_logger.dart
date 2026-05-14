@@ -84,20 +84,60 @@ void logWithCategory(LogCategory category, String message, {dynamic error, Stack
 
 /// Удобная обёртка для логирования с тегом.
 class AppLogger {
-  static void api(String message, {String? tag}) =>
-      logger.i('${tag != null ? '[$tag] ' : ''}$message');
+  /// Буфер последних логов для отображения в UI.
+  static final List<String> _recentLogs = [];
+  static const int _maxRecentLogs = 200;
 
-  static void db(String message, {String? tag}) =>
-      logger.d('${tag != null ? '[$tag] ' : ''}$message');
+  /// Возвращает последние [limit] записей лога.
+  static List<String> getRecentLogs({int limit = 100}) {
+    final logs = List<String>.from(_recentLogs);
+    return logs.length > limit ? logs.sublist(logs.length - limit) : logs;
+  }
 
-  static void ui(String message, {String? tag}) =>
-      logger.d('${tag != null ? '[$tag] ' : ''}$message');
+  /// Очищает буфер логов.
+  static void clearLogs() => _recentLogs.clear();
 
-  static void warning(String message, {String? tag, dynamic error, StackTrace? stackTrace}) =>
-      logger.w('${tag != null ? '[$tag] ' : ''}$message', error: error, stackTrace: stackTrace);
+  static void _addToBuffer(String message) {
+    _recentLogs.add(message);
+    if (_recentLogs.length > _maxRecentLogs) {
+      _recentLogs.removeAt(0);
+    }
+  }
+
+  static void api(String message, {String? tag}) {
+    final msg = '${tag != null ? '[$tag] ' : ''}$message';
+    _addToBuffer('[${_timestamp()}] [API] $msg');
+    logger.i(msg);
+  }
+
+  static void db(String message, {String? tag}) {
+    final msg = '${tag != null ? '[$tag] ' : ''}$message';
+    _addToBuffer('[${_timestamp()}] [DB] $msg');
+    logger.d(msg);
+  }
+
+  static void ui(String message, {String? tag}) {
+    final msg = '${tag != null ? '[$tag] ' : ''}$message';
+    _addToBuffer('[${_timestamp()}] [UI] $msg');
+    logger.d(msg);
+  }
+
+  static void warning(String message, {String? tag, dynamic error, StackTrace? stackTrace}) {
+    final msg = '${tag != null ? '[$tag] ' : ''}$message';
+    _addToBuffer('[${_timestamp()}] [WARN] $msg${error != null ? ' | $error' : ''}');
+    logger.w(msg, error: error, stackTrace: stackTrace);
+  }
+
+  static String _timestamp() {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')}:'
+        '${now.second.toString().padLeft(2, '0')}';
+  }
 
   static void error(String message, {String? tag, dynamic error, StackTrace? stackTrace}) {
     final fullMessage = '${tag != null ? '[$tag] ' : ''}$message';
+    _addToBuffer('[${_timestamp()}] [ERROR] $fullMessage${error != null ? ' | $error' : ''}');
     logger.e(fullMessage, error: error, stackTrace: stackTrace);
     
     // Отправляем в Crashlytics (только в release режиме)

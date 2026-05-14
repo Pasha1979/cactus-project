@@ -64,6 +64,8 @@ dependencies:
   firebase_analytics: ^10.8.0
   # Фаза 4.1: Feature Flags
   firebase_remote_config: ^4.3.2
+  # Шаг 5.2: Реализация TODO из настроек
+  share_plus: ^10.0.0  # Для отправки логов и файлов
 
 dev_dependencies:
   flutter_test:

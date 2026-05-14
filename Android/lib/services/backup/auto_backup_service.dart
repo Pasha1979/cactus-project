@@ -21,8 +21,7 @@ import '../../services/yandex_disk_service.dart';
 /// ```
 class AutoBackupService {
   static const String _tag = 'BACKUP';
-  // ignore: unused_field
-  static const int _maxBackups = 30; // TODO: Использовать при реализации хранения 30 версий
+  static const int _maxBackups = 30;
   static const String _prefsLastBackup = 'last_auto_backup';
   static const String _prefsBackupEnabled = 'auto_backup_enabled';
   static const String _prefsBackupFrequency = 'backup_frequency_hours';
@@ -185,15 +184,25 @@ class AutoBackupService {
       final backupData = await _exportData();
       final jsonBytes = utf8.encode(jsonEncode(backupData));
 
-      // 4. Загружаем в облако через существующий метод
+      // 4. Загружаем как резервную копию с временной меткой
+      final now = DateTime.now();
+      final versionedName = 'plant_backup_'
+          '${now.year}${_twoDigits(now.month)}${_twoDigits(now.day)}_'
+          '${_twoDigits(now.hour)}${_twoDigits(now.minute)}.json';
+      await _diskService!.uploadVersionedBackup(jsonBytes, versionedName);
+
+      // Также обновляем основной plant_provider.json для совместимости
       await _diskService!.uploadJsonFile(jsonBytes);
 
-      // 5. Сохраняем время бэкапа
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_prefsLastBackup, DateTime.now().millisecondsSinceEpoch);
+      // 5. Удаляем старые версии если превышен лимит
+      await _cleanupOldBackups();
 
-      AppLogger.api('Бэкап успешно создан', tag: _tag);
-      return BackupResult.success(DateTime.now(), 'plant_provider.json');
+      // 6. Сохраняем время бэкапа
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_prefsLastBackup, now.millisecondsSinceEpoch);
+
+      AppLogger.api('Бэкап успешно создан: $versionedName', tag: _tag);
+      return BackupResult.success(now, versionedName);
 
     } catch (e, stack) {
       AppLogger.error('Ошибка при создании бэкапа', error: e, stackTrace: stack, tag: _tag);
@@ -263,9 +272,54 @@ class AutoBackupService {
   }
 
   Future<List<BackupInfo>> _listCloudBackups() async {
-    // Заглушка - реальная реализация требует метода listFiles в YandexDiskService
-    return [];
+    _authService ??= YandexAuthService();
+    _diskService ??= YandexDiskService(_authService!);
+
+    if (!_authService!.isConnected) return [];
+
+    final files = await _diskService!.listVersionedBackups();
+    return files.map((f) {
+      final date = DateTime.tryParse(f['modified'] as String? ?? '') ??
+          DateTime.now();
+      return BackupInfo(
+        fileName: f['name'] as String,
+        date: date,
+        size: f['size'] as int? ?? 0,
+      );
+    }).toList();
   }
+
+  /// Удаляет старые версии бэкапов, оставляя не более [_maxBackups] файлов.
+  Future<void> _cleanupOldBackups() async {
+    try {
+      final files = await _diskService!.listVersionedBackups();
+
+      if (files.length <= _maxBackups) {
+        AppLogger.api(
+          'Бэкапов: ${files.length}/$_maxBackups — очистка не нужна',
+          tag: _tag,
+        );
+        return;
+      }
+
+      // Файлы уже отсортированы по дате (API возвращает sort=-modified)
+      // Удаляем всё что превышает лимит
+      final toDelete = files.sublist(_maxBackups);
+      for (final file in toDelete) {
+        await _diskService!.deleteCloudFile(file['path'] as String);
+        AppLogger.api('Удалён старый бэкап: ${file['name']}', tag: _tag);
+      }
+
+      AppLogger.api(
+        'Очистка бэкапов: удалено ${toDelete.length}, осталось $_maxBackups',
+        tag: _tag,
+      );
+    } catch (e, stack) {
+      AppLogger.error('Ошибка очистки старых бэкапов', error: e, stackTrace: stack, tag: _tag);
+    }
+  }
+
+  String _twoDigits(int n) => n >= 10 ? '$n' : '0$n';
 
   Future<BackupResult> _doRestoreFromCloud() async {
     try {
