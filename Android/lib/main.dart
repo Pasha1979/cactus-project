@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'core/logger/app_logger.dart';
 import 'core/config/feature_flags.dart';
+import 'services/backup/auto_backup_service.dart';
+import 'presentation/providers/settings_provider.dart';
 import 'constants/app_constants.dart';
 import 'models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
@@ -40,6 +42,9 @@ void main() async {
     debugPrint('⚠️ Firebase не настроен: $e');
   }
 
+  // Инициализация автобэкапа (фаза 4.2)
+  await AutoBackupService.initialize();
+
   // Инициализация Hive базы данных
   await HiveDatabase.initialize();
 
@@ -69,6 +74,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => SyncProvider()),
         ChangeNotifierProvider(create: (_) => QrCodeProvider()),
         ChangeNotifierProvider(create: (_) => WeatherProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
       child: const MyApp(),
     ),
@@ -890,6 +896,12 @@ class HomeScreenState extends State<HomeScreen>
                           );
                         },)
                       ,
+                      // Кнопка настроек
+                      IconButton(
+                        icon: const Icon(Icons.settings),
+                        tooltip: 'Настройки',
+                        onPressed: () => context.push('/settings'),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.logout, color: Colors.red),
                         tooltip: 'Выйти из аккаунта',

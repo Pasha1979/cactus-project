@@ -19,6 +19,18 @@ import '../../screens/welcome_screen.dart';
 import '../../screens/wintering_screen.dart';
 import '../../screens/year_germination_chart_screen.dart';
 import '../screens/plant_card/plant_card_screen.dart';
+import '../screens/settings/about_screen.dart';
+import '../screens/settings/appearance_settings_screen.dart';
+import '../screens/settings/backup_settings_screen.dart';
+import '../screens/settings/behavior_settings_screen.dart';
+import '../screens/settings/cloud_settings_screen.dart';
+import '../screens/settings/data_management_screen.dart';
+import '../screens/settings/debug_settings_screen.dart';
+import '../screens/settings/experiments_settings_screen.dart';
+import '../screens/settings/notifications_settings_screen.dart';
+import '../screens/settings/settings_screen.dart';
+import '../screens/settings/system_settings_screen.dart';
+import '../screens/settings/weather_settings_screen.dart';
 import '../../main.dart' show HomeScreen;
 
 /// Централизованный роутер приложения.
@@ -184,6 +196,54 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/sowing/add',
       builder: (context, state) => const AddSowingYearScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/appearance',
+      builder: (context, state) => const AppearanceSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/cloud',
+      builder: (context, state) => const CloudSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/weather',
+      builder: (context, state) => const WeatherSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/backup',
+      builder: (context, state) => const BackupSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/notifications',
+      builder: (context, state) => const NotificationsSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/behavior',
+      builder: (context, state) => const BehaviorSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/experiments',
+      builder: (context, state) => const ExperimentsSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/data',
+      builder: (context, state) => const DataManagementScreen(),
+    ),
+    GoRoute(
+      path: '/settings/debug',
+      builder: (context, state) => const DebugSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/system',
+      builder: (context, state) => const SystemSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/about',
+      builder: (context, state) => const AboutScreen(),
     ),
   ],
 );

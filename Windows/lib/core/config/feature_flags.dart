@@ -33,7 +33,7 @@ class FeatureFlags {
       await _remoteConfig!.setConfigSettings(RemoteConfigSettings(
         fetchTimeout: const Duration(minutes: 1),
         minimumFetchInterval: const Duration(hours: 1),
-      ));
+      ),);
 
       await _remoteConfig!.setDefaults(_defaultValues);
       await _remoteConfig!.fetchAndActivate();
@@ -174,15 +174,15 @@ enum FeatureFlag {
     description: 'Напоминания о начале/окончании зимовки',
   );
 
-  final String key;
-  final bool defaultValue;
-  final String description;
-
   const FeatureFlag({
     required this.key,
     required this.defaultValue,
     required this.description,
   });
+
+  final String key;
+  final bool defaultValue;
+  final String description;
 }
 
 /// Extension для удобного использования

@@ -1127,22 +1127,138 @@ dev_dependencies:
 
 ---
 
-### 4.2 Система прав доступа (2 дня)
+### ~~4.2 Система прав доступа (2 дня)~~ ⚠️ ОТЛОЖЕНО
+
+**Причина:** Для личного использования не требуется. Вернуться при необходимости делиться коллекцией.
+
+---
+
+### 4.2 Альтернатива: Автоматическое резервное копирование (1-1.5 дня) 🔄 В РАБОТЕ
 
 **Задачи:**
-4.2.1 Создать domain/entities/user_permission.dart
-4.2.2 Создать domain/entities/user_role.dart (owner, editor, viewer)
+4.2.1 Создать сервис автобэкапа `services/backup/auto_backup_service.dart`
+4.2.2 Добавить настройки бэкапа (частота, хранилище, количество копий)
+4.2.3 Интегрировать с существующей синхронизацией Яндекс.Диск
+4.2.4 Создать UI для управления бэкапами
+4.2.5 Добавить восстановление из бэкапа
+4.2.6 Тестирование автобэкапа
+
+**Функционал:**
+- Автобэкап каждые 24 часа
+- Хранение 30 последних версий
+- Восстановление на любую дату
+- Уведомления об успешном/ failed бэкапе
 
 **Файлы:**
-- `domain/entities/user_permission.dart`
-- `domain/repositories/user_repository.dart`
-- `presentation/screens/settings/permissions_screen.dart`
+- `services/backup/auto_backup_service.dart`
+- `presentation/providers/backup_provider.dart`
+- `presentation/screens/settings/backup_settings_screen.dart`
 
 **Проверка:**
-- Права доступа работают корректно
-- Viewer не может редактировать
-- Editor может редактировать только уход
-- Owner имеет полный доступ
+- Бэкап создаётся автоматически
+- Восстановление работает корректно
+- Нет потери данных при восстановлении
+
+---
+
+### 4.2b Полноценный экран настроек (1-1.5 дня) 🔄 В РАБОТЕ
+
+**Цель:** Создать централизованный экран настроек с переносом функций из AppBar.
+
+**Задачи:**
+4.2b.1 Создать главный экран настроек со списком разделов
+4.2b.2 Создать детальные экраны для каждого раздела
+4.2b.3 Перенести функции из AppBar в соответствующие разделы:
+   - ☁️ Подключение Яндекс.Диск (из AppBar)
+   - 🌤️ Погода — город и включение/выключение (из AppBar ElevatedButton)
+   - 🚪 Выход из аккаунта (из AppBar)
+4.2b.4 Сохранить в AppBar только часто используемые:
+   - Поиск, Импорт Excel, Сохранить, Синхронизация
+4.2b.5 Добавить Provider для хранения настроек (`SettingsProvider`)
+
+**Структура настроек:**
+```
+🎨 Внешний вид
+   └── Тема (светлая/темная/системная) — если реализуемо
+
+☁️ Облако и синхронизация
+   ├── Статус: Подключен / Не подключен
+   ├── Кнопка: Подключить/Отключить Яндекс.Диск
+   └── Авто-синхронизация при старте (ON/OFF)
+
+🌤️ Погода
+   ├── Текущий город: [Москва]
+   ├── Кнопка: Сменить город
+   └── Погода включена: [ON/OFF]
+
+💾 Резервное копирование
+   ├── Автобэкап: [ON/OFF]
+   ├── Частота: [12ч / 24ч / 7дн]
+   ├── Последний бэкап: 2 часа назад
+   ├── Кнопка: Создать бэкап сейчас
+   └── Кнопка: Восстановить из облака
+
+🔔 Уведомления
+   ├── Напоминания о поливе: [ON/OFF]
+   └── Время напоминаний: [09:00]
+
+⚡ Поведение приложения
+   ├── Автосохранение изменений: [ON/OFF]
+   ├── Подтверждение перед удалением: [ON/OFF]
+   └── Анимации интерфейса: [ON/OFF]
+
+🧪 Экспериментальные функции (Feature Flags)
+   └── GBIF парсинг: [ON/OFF] (через FeatureFlags)
+
+🗑️ Управление данными
+   ├── Размер базы: 45 MB
+   ├── Кнопка: Очистить кэш фото
+   ├── Кнопка: Очистить кэш GBIF
+   └── Кнопка: Экспорт всех данных
+
+🔧 Отладка (для диагностики)
+   ├── Логирование API: [ON/OFF]
+   ├── Показывать ID растений: [ON/OFF]
+   ├── [🔍 Диагностика облака] → AlertDialog со статусом
+   ├── [📋 Посмотреть логи] → Экран последних 50 логов
+   └── [✉️ Отправить логи] → Share файлом
+
+⚙️ Системные
+   ├── [🚪 Выйти из аккаунта] → AlertDialog с подтверждением
+   └── [🔄 Сбросить обучение] → Показать WelcomeScreen
+
+ℹ️ О приложении
+   ├── Версия: 1.0.0
+   ├── Лицензии
+   └── Политика конфиденциальности
+```
+
+**Важно:**
+- Все функции кнопок должны работать как раньше (проверить по "Стабильной")
+- Android и Windows — параллельно, с сохранением платформенных различий
+- Подтверждение при критических действиях (выход, восстановление бэкапа)
+
+**Файлы:**
+- `presentation/screens/settings/settings_screen.dart` — главный экран
+- `presentation/screens/settings/appearance_settings_screen.dart`
+- `presentation/screens/settings/cloud_settings_screen.dart`
+- `presentation/screens/settings/weather_settings_screen.dart`
+- `presentation/screens/settings/backup_settings_screen.dart` (уже есть)
+- `presentation/screens/settings/notifications_settings_screen.dart`
+- `presentation/screens/settings/behavior_settings_screen.dart`
+- `presentation/screens/settings/experiments_settings_screen.dart`
+- `presentation/screens/settings/data_management_screen.dart`
+- `presentation/screens/settings/debug_settings_screen.dart`
+- `presentation/screens/settings/system_settings_screen.dart`
+- `presentation/screens/settings/about_screen.dart`
+- `presentation/providers/settings_provider.dart` — хранение настроек
+- `core/config/settings_constants.dart` — константы ключей SharedPreferences
+
+**Проверка:**
+- ✅ Все функции из AppBar сохранены и работают
+- ✅ Платформенные различия Android/Windows сохранены
+- ✅ Настройки сохраняются в SharedPreferences
+- ✅ flutter analyze чистый
 
 ---
 
@@ -1221,6 +1337,66 @@ dev_dependencies:
 - Все изменения после рефакторинга учтены в ROADMAP
 - Приоритеты актуальны
 - Оценки времени актуальны
+
+---
+
+## Шаг 5.2: Реализация TODO из настроек (2-3 дня) 🆕
+
+**Цель:** Реализовать все TODO, оставленные в коде настроек при их создании.
+
+**Задачи:**
+
+### 5.2.1 Экспорт данных (0.5 дня) - data_management_screen.dart
+- Реализовать функцию экспорта локальной копии базы данных
+- Добавить диалог выбора формата (JSON, CSV)
+- Интегрировать с файловой системой (file_picker для выбора пути)
+- Добавить прогресс и обработку ошибок
+- Файлы: `data_management_screen.dart`, новый сервис `DataExportService`
+
+### 5.2.2 Отправка логов через share_plus (0.5 дня) - debug_settings_screen.dart
+- Добавить зависимость `share_plus: ^10.0.0` в pubspec.yaml (Android + Windows)
+- Раскомментировать импорт и реализацию `_shareLogs()`
+- Создать временный файл с логами и открыть Share диалог
+- Файлы: `debug_settings_screen.dart`, `pubspec.yaml` (оба проекта)
+
+### 5.2.3 Реальная проверка доступа к сети (0.5 дня) - debug_settings_screen.dart
+- Реализовать `_checkNetworkAccess()` с реальным пингом сервера
+- Использовать `http` или `connectivity_plus` для проверки
+- Отображать статус: доступен/недоступен с деталями
+- Файл: `debug_settings_screen.dart`
+
+### 5.2.4 Интеграция с AppLogger (0.5 дня) - debug_settings_screen.dart
+- Реализовать `_showLogs()` с реальными логами из `AppLogger`
+- Добавить метод `getRecentLogs()` в `AppLogger`
+- Отображать последние 100 логов с фильтрацией по категориям
+- Файлы: `debug_settings_screen.dart`, `core/logger/app_logger.dart`
+
+### 5.2.5 Внешние ссылки в "О приложении" (0.5 дня) - about_screen.dart
+- Добавить зависимость `url_launcher` (уже есть)
+- Реализовать открытие Лицензий открытого ПО (github или pub.dev)
+- Реализовать открытие Политики конфиденциальности (внешняя ссылка)
+- Реализовать открытие Поддержки (email или telegram)
+- Файл: `about_screen.dart`
+
+### 5.2.6 Хранение 30 версий бэкапов (0.5 дня) - auto_backup_service.dart
+- Использовать поле `_maxBackups` (уже объявлено)
+- Реализовать `_cleanupOldBackups()` для удаления старых версий
+- Сохранять метаданные бэкапов в Hive
+- Добавить UI для просмотра и восстановления из старых версий
+- Файлы: `auto_backup_service.dart`, `cloud_settings_screen.dart`
+
+**Проверка:**
+- Все TODO в настройках реализованы
+- `flutter analyze` проходит без предупреждений
+- Все функции работают на Android и Windows
+- Код покрыт комментариями
+
+**Зависимости (добавить в pubspec.yaml):**
+```yaml
+dependencies:
+  share_plus: ^10.0.0
+  file_picker: ^8.0.0+1
+```
 
 ---
 
