@@ -26,7 +26,24 @@ List<DateTime> _parseDateTimeList(dynamic value) {
       .toList();
 }
 
-class Plant {                     // QR код растения (null если не создан)
+/// Domain entity representing a plant/cactus.
+///
+/// This is the core business object used throughout the application.
+/// It contains all information about a plant including:
+/// - Basic info (name, status, category)
+/// - Photos (user photos, LLIFLE photos, GBIF photos)
+/// - Care information (watering, fertilization, repotting)
+/// - Historical data (germination, flowering)
+/// - External data (GBIF occurrences, country, habitat)
+///
+/// The [permanentId] is a unique UUID that never changes.
+/// The [displayId] is a user-friendly identifier that can be customized.
+///
+/// See also:
+/// - [PlantDto] - the Hive storage representation
+/// - [PlantRepository] - for CRUD operations
+/// - [PlantCrudProvider] - for UI state management
+class Plant {
 
   // Удалено: statusOrder → используйте PlantStatusMapper.sortOrder(status)
 

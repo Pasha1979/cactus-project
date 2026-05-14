@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'core/logger/app_logger.dart';
 import 'constants/app_constants.dart';
 import 'models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
@@ -26,6 +28,14 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Инициализация Firebase (фаза 3.4) - опционально
+  try {
+    await Firebase.initializeApp();
+    await AppLogger.initializeCrashlytics();
+  } catch (e) {
+    debugPrint('⚠️ Firebase не настроен: $e');
+  }
 
   // Инициализация Hive базы данных
   await HiveDatabase.initialize();

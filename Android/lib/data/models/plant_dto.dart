@@ -2,9 +2,24 @@ import 'package:hive/hive.dart';
 
 part 'plant_dto.g.dart';
 
+/// Data Transfer Object для хранения информации о растении в Hive БД.
+///
+/// Используется для сериализации/десериализации данных растения.
+/// Соответствует сущности [Plant] из domain слоя.
+///
+/// См. также:
+/// - [Plant] - domain entity
+/// - [PlantRepository] - репозиторий для работы с растениями
 @HiveType(typeId: 0)
 class PlantDto extends HiveObject {
 
+  /// Создает новый [PlantDto].
+  ///
+  /// Обязательные поля: [permanentId], [displayId], [latinName], [status],
+  /// [year], [customNumber], [category], [seedsCount], [germinatedCount],
+  /// [userPhotos], [lliflePhotoUrls], [wateringDates], [customWateringDates],
+  /// [hasUnreadNotification], [germinationHistoryJson], [floweringHistoryJson],
+  /// [notesJson], [gbifPhotoUrls], [gbifOccurrencesJson], [isBatch], [childrenIds].
   PlantDto({
     required this.permanentId,
     required this.displayId,
@@ -47,30 +62,41 @@ class PlantDto extends HiveObject {
     this.parentId,
     this.qrCodeJson,
   });
+  /// Уникальный постоянный идентификатор растения (UUID).
   @HiveField(0)
   String permanentId;
 
+  /// Отображаемый идентификатор (например: "001", "A-123").
   @HiveField(1)
   String displayId;
 
+  /// Латинское название растения.
+  ///
+  /// Используется для поиска в GBIF API.
   @HiveField(2)
   String latinName;
 
+  /// Статус растения: alive, dead, unknown, etc.
   @HiveField(3)
   String status;
 
+  /// Год посева/покупки растения.
   @HiveField(4)
   int year;
 
+  /// Пользовательский номер растения.
   @HiveField(5)
   int customNumber;
 
+  /// Категория растения (кактус, суккулент, etc.).
   @HiveField(6)
   String category;
 
+  /// Количество семян/растений при посеве.
   @HiveField(7)
   int seedsCount;
 
+  /// Количество пророщенных/выживших растений.
   @HiveField(8)
   int germinatedCount;
 

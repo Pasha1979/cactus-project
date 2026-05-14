@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "537480603871",
+    "project_id": "my-cactus-app",
+    "storage_bucket": "my-cactus-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537480603871:android:893bf8c3c422c42ca2216a",
+        "android_client_info": {
+          "package_name": "com.pavel.mycactus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCf_kny662UBtuD-ieNFPhhRYXlSncY8FA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

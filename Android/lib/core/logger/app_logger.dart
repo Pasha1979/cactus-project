@@ -1,3 +1,6 @@
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
 /// Глобальный экземпляр logger
@@ -93,7 +96,46 @@ class AppLogger {
   static void warning(String message, {String? tag, dynamic error, StackTrace? stackTrace}) =>
       logger.w('${tag != null ? '[$tag] ' : ''}$message', error: error, stackTrace: stackTrace);
 
-  static void error(String message, {String? tag, dynamic error, StackTrace? stackTrace}) =>
-      logger.e('${tag != null ? '[$tag] ' : ''}$message', error: error, stackTrace: stackTrace);
+  static void error(String message, {String? tag, dynamic error, StackTrace? stackTrace}) {
+    final fullMessage = '${tag != null ? '[$tag] ' : ''}$message';
+    logger.e(fullMessage, error: error, stackTrace: stackTrace);
+    
+    // Отправляем в Crashlytics (только в release режиме)
+    if (!kDebugMode) {
+      FirebaseCrashlytics.instance.recordError(
+        error ?? Exception(message),
+        stackTrace,
+        reason: fullMessage,
+        information: tag != null ? [tag] : [],
+      );
+    }
+  }
+
+  /// Отправка custom event в Analytics
+  static void logEvent(String name, {Map<String, dynamic>? parameters}) {
+    if (!kDebugMode) {
+      FirebaseAnalytics.instance.logEvent(
+        name: name,
+        parameters: parameters,
+      );
+    }
+  }
+
+  /// Инициализация Firebase Crashlytics
+  static Future<void> initializeCrashlytics() async {
+    // Включаем автоматический сбор крашей
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    
+    // Перехватываем все непойманные ошибки Flutter
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+    
+    // Перехватываем ошибки в зонах (async)
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
 }
 
