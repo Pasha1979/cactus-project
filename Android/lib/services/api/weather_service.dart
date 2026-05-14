@@ -14,9 +14,11 @@ import '../../models/plant.dart';
 /// - Запрос текущей погоды по координатам или городу
 /// - Кэширование на 1 час
 /// - Формирование рекомендаций по поливу
+import '../../../core/config/api_config.dart';
+
 class WeatherService {
   static const String _tag = 'WEATHER';
-  static const String _apiKey = '7fd64eefdd81d17943bbcd4e17a87e5d';
+  static const String _apiKey = ApiConstants.openWeatherApiKey;
   static const String _baseUrl =
       'https://api.openweathermap.org/data/2.5/weather';
   static const String _cacheKey = 'weather_cache';

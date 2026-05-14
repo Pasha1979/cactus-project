@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/logger/app_logger.dart';
 import '../../models/plant.dart';
+import '../../../core/config/api_config.dart';
 
 /// Сервис для получения погодных данных через OpenWeatherMap API.
 ///
@@ -16,7 +17,7 @@ import '../../models/plant.dart';
 /// - Формирование рекомендаций по поливу
 class WeatherService {
   static const String _tag = 'WEATHER';
-  static const String _apiKey = '7fd64eefdd81d17943bbcd4e17a87e5d';
+  static const String _apiKey = ApiConstants.openWeatherApiKey;
   static const String _baseUrl =
       'https://api.openweathermap.org/data/2.5/weather';
   static const String _cacheKey = 'weather_cache';

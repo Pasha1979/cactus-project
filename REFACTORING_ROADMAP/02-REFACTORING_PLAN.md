@@ -961,7 +961,7 @@ dev_dependencies:
 2.11.2 Заменить все `Navigator.push` / `Navigator.pushReplacement` на `context.push()` / `context.go()`
 2.11.3 Вынести `AddPlantForm` в отдельный экран `AddPlantScreen` с маршрутом `/add-plant`
 2.11.4 Убедиться, что `PlantListScreen` корректно импортирован в `app_router.dart`
-2.11.5 Добавить `_syncManager.dispose()` в `CloudStorageProvider.dispose()`
+2.11.5 ✅ Добавить `_syncManager.dispose()` в `CloudStorageProvider.dispose()` — **ВЫПОЛНЕНО на шаге 4.2b**
 
 **Проверка:**
 - Навигация работает через go_router на всех экранах
@@ -1332,7 +1332,138 @@ dependencies:
 
 ---
 
-### 4.3 Финальная проверка перед разблокировкой ROADMAP (1-2 дня) ⬅️ ПОСЛЕ 5.2
+### 2.2 UiState pattern (loading/error) (1 день) — ПЕРЕД 4.3
+
+**Цель:** Создать единый паттерн для отображения loading/error/success состояний во всех экранах.
+
+**Задачи:**
+2.2.1 Создать `core/ui/ui_state.dart` — sealed class для состояний (loading, error, success)
+2.2.2 Создать `core/ui/ui_error.dart` — класс для ошибок с сообщением
+2.2.3 Создать `core/ui/ui_loading.dart` — виджет для индикатора загрузки
+2.2.4 Создать `core/ui/ui_success.dart` — виджет для успешного состояния
+2.2.5 Интегрировать UiState в PlantCrudProvider
+2.2.6 Интегрировать UiState в WateringProvider
+2.2.7 Обновить UI для отображения loading/error/success состояний
+2.2.8 Добавить retry логику для error состояний
+
+**Файлы:**
+- `core/ui/ui_state.dart`
+- `core/ui/ui_error.dart`
+- `core/ui/ui_loading.dart`
+- `core/ui/ui_success.dart`
+- `presentation/providers/plant_crud_provider.dart`
+- `presentation/providers/watering_provider.dart`
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Loading states отображаются корректно
+- Error states отображаются с retry кнопкой
+- Success states отображаются корректно
+
+---
+
+### 2.5 Оптимизация дерева виджетов (1 день) — ПЕРЕД 4.3
+
+**Цель:** Улучшить производительность UI за счёт const-оптимизации и RepaintBoundary.
+
+**Задачи:**
+2.5.1 Добавить const виджеты где возможно (PlantCard, кнопки, текст)
+2.5.2 Добавить RepaintBoundary для PlantCard
+2.5.3 Добавить RepaintBoundary для галереи фото
+2.5.4 Использовать ValueListenableBuilder вместо полного rebuild где применимо
+2.5.5 Проверить использование ListView.builder везде
+2.5.6 Профилирование с Flutter DevTools до/после
+2.5.7 Оптимизация перерисовок (remove unnecessary rebuilds)
+
+**Файлы:**
+- `presentation/screens/plant_card/plant_card_screen.dart`
+- `presentation/screens/plant_card/tabs/gallery_tab.dart`
+- `presentation/widgets/plant_cards.dart`
+
+**Проверка:**
+- Flutter DevTools показывает меньше перерисовок
+- FPS стабилен при скролле
+- Память не растет при скролле
+- `flutter analyze` чистый
+
+---
+
+### 2.6 Очистка deprecated кода (0.5-1 день) — ПЕРЕД 4.3
+
+**Цель:** Удалить неиспользуемый код, закомментированные функции и заменить debugPrint на AppLogger.
+
+**Задачи:**
+2.6.1 Найти и удалить неиспользуемые импорты (`dart fix --apply`)
+2.6.2 Удалить старые utils-файлы, заменённые сервисами из 1.13 (если остались)
+2.6.3 Удалить закомментированный код и мёртвые функции
+2.6.4 Проверить, что все TODO(1.15.x) удалены из кода
+2.6.5 Удалить старый `PlantProvider` если ещё существует
+2.6.6 Удалить старый `CloudStorageProvider` если ещё существует
+2.6.7 Заменить все 242 вхождения `debugPrint` на `AppLogger` (24 файла)
+2.6.8 Проверить, что все константы централизованы в ApiConstants
+
+**Файлы:**
+- `pubspec.yaml` (убрать неиспользуемые зависимости если есть)
+- `utils/gbif_utils.dart` (если ещё есть)
+- `utils/llifle_utils.dart` (если ещё есть)
+- `utils/weather_service.dart` (если ещё есть)
+- Все файлы с `debugPrint` (24 файла)
+
+**Проверка:**
+- flutter analyze проходит без ошибок
+- Нет неиспользуемых импортов
+- Все старые utils удалены или перенесены
+- debugPrint заменён на AppLogger
+
+---
+
+### 2.10 Сжатие изображений (0.5 дня) — ПЕРЕД 4.3
+
+**Цель:** Сжимать фото при добавлении в галерею для экономии места и ускорения синхронизации.
+
+**Задачи:**
+2.10.1 Создать `services/image/image_processor.dart` — обёртка над `flutter_image_compress`
+2.10.2 Интегрировать сжатие в `PhotoProvider.addUserPhoto()` — сжимать копию, оригинал в галерее телефона оставить
+2.10.3 Тестирование сжатия на Android и Windows (5 МБ → 300 КБ)
+2.10.4 Проверить что синхронизация Яндекс Диска работает с сжатыми фото (размер меньше, путь тот же)
+
+**Файлы:**
+- `services/image/image_processor.dart`
+- `presentation/providers/photo_provider.dart`
+
+**Проверка:**
+- Фото сжимается (5 МБ → 300 КБ)
+- Синхронизация не ломается
+- Пути в `Plant.userPhotos` остаются корректными
+- flutter analyse проходит без ошибок
+- **Бэкап перед началом**
+
+---
+
+### 2.11 Полная go_router интеграция (0.5 дня) — ПЕРЕД 4.3
+
+**Цель:** Полностью перейти на go_router для навигации.
+
+**Задачи:**
+2.11.1 Убрать вложенный `MaterialApp` в `main.dart`, заменить `runApp(MaterialApp(home: MyApp()))` на `runApp(MyApp())`
+2.11.2 Заменить все `Navigator.push` / `Navigator.pushReplacement` на `context.push()` / `context.go()`
+2.11.3 Вынести `AddPlantForm` в отдельный экран `AddPlantScreen` с маршрутом `/add-plant`
+2.11.4 Убедиться, что `PlantListScreen` корректно импортирован в `app_router.dart`
+2.11.5 ✅ Добавить `_syncManager.dispose()` в `CloudStorageProvider.dispose()` — **ВЫПОЛНЕНО на шаге 4.2b**
+
+**Файлы:**
+- `main.dart`
+- `presentation/routers/app_router.dart`
+- `presentation/screens/add_plant_screen.dart` (создать)
+
+**Проверка:**
+- Навигация работает через go_router на всех экранах
+- `flutter analyze` проходит без ошибок
+- Нет утечек ресурсов при отключении облака
+
+---
+
+### 4.3 Финальная проверка перед разблокировкой ROADMAP (1-2 дня) ⬅️ ПОСЛЕ НЕВЫПОЛНЕННЫХ ШАГОВ ФАЗЫ 2
 
 **Цель:** Полная проверка работоспособности приложения (ВКЛЮЧАЯ реализованные TODO из 5.2) перед разблокировкой доступа к ROADMAP.
 

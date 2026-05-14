@@ -40,4 +40,7 @@ class ApiConstants {
   static const int connectTimeout = 30;
   static const int receiveTimeout = 30;
   static const int sendTimeout = 30;
+
+  // OpenWeather API Key
+  static const String openWeatherApiKey = '7fd64eefdd81d17943bbcd4e17a87e5d';
 }
