@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'core/logger/app_logger.dart';
+import 'core/config/feature_flags.dart';
 import 'constants/app_constants.dart';
 import 'firebase_options.dart';
 import 'models/plant.dart';
@@ -36,6 +37,8 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     await AppLogger.initializeCrashlytics();
+    // Инициализация Feature Flags (фаза 4.1)
+    await FeatureFlags.initialize();
   } catch (e) {
     debugPrint('⚠️ Firebase не настроен: $e');
   }

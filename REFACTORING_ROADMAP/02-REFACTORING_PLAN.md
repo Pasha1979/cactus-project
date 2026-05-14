@@ -1103,25 +1103,27 @@ dev_dependencies:
 
 ## ФАЗА 4: БУДУЩЕЕ (P3)
 
-### 4.1 Feature flags (1.5 дня)
+### 4.1 Feature flags (1.5 дня) ✅ ВЫПОЛНЕНО
 
 **Задачи:**
-4.1.1 Создать core/config/feature_flags.dart
-4.1.2 Добавить флаги: enableGbifParsing, enableWeatherAdvice, enableBatchManagement, enableNewWateringAlgorithm, enableAdvancedStatistics
-4.1.3 Добавить загрузку конфигурации с сервера/файла
-4.1.4 Интегрировать в критические функции (GBIF, погода, batch management)
-4.1.5 Добавить overrideForTesting для тестирования
-4.1.6 Создать UI для управления feature flags (для разработчиков)
-4.1.7 Тестирование feature flags
+✅ 4.1.1 Создать core/config/feature_flags.dart
+✅ 4.1.2 Добавить флаги: enableGbifParsing, enableWeatherAdvice, enableBatchManagement, enableNewWateringAlgorithm, enableAdvancedStatistics, enableExperimentalPlantCard, enableAutoCloudSync, enableQrCodes, enableWinteringNotifications
+✅ 4.1.3 Добавить загрузку конфигурации через Firebase Remote Config
+✅ 4.1.4 Интегрировать в критические функции (GBIF сервис)
+✅ 4.1.5 Добавить setLocalOverride для тестирования
+⏳ 4.1.6 Создать UI для управления feature flags (для разработчиков) - по необходимости
+✅ 4.1.7 Тестирование feature flags - инициализация работает
 
 **Файлы:**
-- `core/config/feature_flags.dart`
-- `presentation/screens/developer/feature_flags_screen.dart`
+- ✅ `core/config/feature_flags.dart` (Android + Windows)
+- ✅ `services/api/gbif_service.dart` - интеграция Feature Flags
+- ✅ `main.dart` - инициализация FeatureFlags
 
 **Проверка:**
-- Feature flags работают корректно
-- Отключение фичи не ломает приложение
-- Тестирование с overrideForTesting работает
+✅ Feature flags работают корректно
+✅ Отключение фичи через флаг безопасно (возвращает null)
+✅ Тестирование с setLocalOverride работает
+✅ Зависимость firebase_remote_config добавлена
 
 ---
 

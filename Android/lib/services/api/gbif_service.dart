@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/logger/app_logger.dart';
+import '../../core/config/feature_flags.dart';
 import '../../models/gbif_occurrence.dart';
 import '../isolates/http_isolate.dart';
 
@@ -28,7 +29,15 @@ class GbifService {
   ///
   /// Сначала проверяет кэш, затем делает HTTP-запрос.
   /// Возвращает Map с обогащающими данными или null.
+  ///
+  /// Проверяет FeatureFlag [enableGbifParsing] - если выключен, возвращает null.
   Future<Map<String, dynamic>?> fetchGbifData(String latinName) async {
+    // Проверяем Feature Flag
+    if (!FeatureFlags.isEnabled(FeatureFlag.enableGbifParsing)) {
+      AppLogger.api('GBIF parsing отключен через Feature Flag', tag: _tag);
+      return null;
+    }
+
     try {
       AppLogger.api('Запрос данных GBIF для: $latinName', tag: _tag);
 
