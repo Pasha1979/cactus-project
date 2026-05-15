@@ -19,8 +19,7 @@ import '../../../core/config/api_config.dart';
 class WeatherService {
   static const String _tag = 'WEATHER';
   static const String _apiKey = ApiConstants.openWeatherApiKey;
-  static const String _baseUrl =
-      'https://api.openweathermap.org/data/2.5/weather';
+  static const String _baseUrl = ApiConstants.openWeatherBaseUrl;
   static const String _cacheKey = 'weather_cache';
   static const Duration _cacheDuration = Duration(hours: 1);
 

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/logger/app_logger.dart';
 import '../../models/plant.dart';
 import '../../services/image/image_processor.dart';
 
@@ -76,9 +77,9 @@ class PhotoProvider with ChangeNotifier {
         _adultImages = {};
       }
       notifyListeners();
-      debugPrint('✅ PhotoProvider loaded: ${_adultImages.length} adult images');
+      AppLogger.api('✅ PhotoProvider loaded: ${_adultImages.length} adult images', tag: 'PHOTO');
     } catch (e) {
-      debugPrint('❌ PhotoProvider load error: $e');
+      AppLogger.error('❌ PhotoProvider load error: $e', tag: 'PHOTO');
       _adultImages = {};
     }
   }
@@ -88,7 +89,7 @@ class PhotoProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(PrefsKeys.adultImages, jsonEncode(_adultImages));
     } catch (e) {
-      debugPrint('❌ PhotoProvider save error: $e');
+      AppLogger.error('❌ PhotoProvider save error: $e', tag: 'PHOTO');
     }
   }
 
@@ -142,7 +143,7 @@ class PhotoProvider with ChangeNotifier {
           await fileEntity.delete();
           deletedCount++;
         } catch (e) {
-          debugPrint('⚠️ Не удалось удалить: ${fileEntity.path}');
+          AppLogger.warning('⚠️ Не удалось удалить: ${fileEntity.path}', tag: 'PHOTO');
         }
       }
     }
@@ -211,7 +212,7 @@ class PhotoProvider with ChangeNotifier {
   /// Скачивает cloud URL (https://...) в локальный кэш для offline-просмотра.
   Future<void> ensureLocalPhotosExist(List<Plant> plants) async {
     if (_isPrefetchingPhotos) {
-      debugPrint('⏸️ ensureLocalPhotosExist уже выполняется, пропускаем');
+      AppLogger.api('⏸️ ensureLocalPhotosExist уже выполняется, пропускаем', tag: 'PHOTO');
       return;
     }
 
@@ -220,8 +221,7 @@ class PhotoProvider with ChangeNotifier {
       final photosDir = await _getPhotosDirectory();
       int cachedCount = 0;
 
-      debugPrint(
-          '🔄 ensureLocalPhotosExist запущен для ${plants.length} растений',);
+      AppLogger.api('🔄 ensureLocalPhotosExist запущен для ${plants.length} растений', tag: 'PHOTO');
 
       for (final plant in plants) {
         for (var photo in plant.userPhotos) {
@@ -240,21 +240,19 @@ class PhotoProvider with ChangeNotifier {
             }
 
             if (!await _validateCloudUrl(photo)) {
-              debugPrint('⚠️ Cloud URL недоступен, пропускаем: $photo');
+              AppLogger.warning('⚠️ Cloud URL недоступен, пропускаем: $photo', tag: 'PHOTO');
               continue;
             }
 
             await _downloadPhotoWithRetry(photo, localPath);
             cachedCount++;
           } catch (e) {
-            debugPrint(
-                '⚠️ Не удалось закешировать облачное фото $photo: $e',);
+            AppLogger.warning('⚠️ Не удалось закешировать облачное фото $photo: $e', tag: 'PHOTO');
           }
         }
       }
 
-      debugPrint(
-          '✅ Prefetch завершён, новых закешированных фото: $cachedCount',);
+      AppLogger.api('✅ Prefetch завершён, новых закешированных фото: $cachedCount', tag: 'PHOTO');
       await _cleanupOldCache();
     } finally {
       _isPrefetchingPhotos = false;
@@ -273,8 +271,7 @@ class PhotoProvider with ChangeNotifier {
         }
       } catch (e) {
         if (attempt == 2) rethrow;
-        debugPrint(
-            '🔄 Попытка ${attempt + 1} для скачивания $url не удалась: $e',);
+        AppLogger.warning('🔄 Попытка ${attempt + 1} для скачивания $url не удалась: $e', tag: 'PHOTO');
         await Future.delayed(Duration(seconds: attempt + 1));
       }
     }
@@ -304,17 +301,16 @@ class PhotoProvider with ChangeNotifier {
           if (DateTime.now().difference(stat.modified).inDays > 30) {
             await file.delete();
             deletedCount++;
-            debugPrint('🗑️ Удален старый кэш: ${file.path}');
+            AppLogger.api('🗑️ Удален старый кэш: ${file.path}', tag: 'PHOTO');
           }
         }
       }
 
       if (deletedCount > 0) {
-        debugPrint(
-            '🧹 Очистка кэша завершена: удалено $deletedCount старых файлов',);
+        AppLogger.api('🧹 Очистка кэша завершена: удалено $deletedCount старых файлов', tag: 'PHOTO');
       }
     } catch (e) {
-      debugPrint('⚠️ Ошибка очистки кэша: $e');
+      AppLogger.warning('⚠️ Ошибка очистки кэша: $e', tag: 'PHOTO');
     }
   }
 

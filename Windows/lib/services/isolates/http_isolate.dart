@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
+
+import '../../core/logger/app_logger.dart';
 
 /// Isolate для полного pipeline: HTTP + парсинг + сериализация.
 ///
@@ -55,7 +56,7 @@ class HttpIsolate {
       if (result is Map<String, dynamic>) {
         if (result['success'] == true) {
           sw.stop();
-          debugPrint('[HttpIsolate] Completed in ${sw.elapsedMilliseconds}ms');
+          AppLogger.api('[HttpIsolate] Completed in ${sw.elapsedMilliseconds}ms', tag: 'HTTP_ISOLATE');
           return result['data'] as String?;
         } else {
           throw HttpIsolateException(
@@ -67,7 +68,7 @@ class HttpIsolate {
       }
     } catch (e) {
       sw.stop();
-      debugPrint('[HttpIsolate] Failed after ${sw.elapsedMilliseconds}ms: $e');
+      AppLogger.error('[HttpIsolate] Failed after ${sw.elapsedMilliseconds}ms: $e', tag: 'HTTP_ISOLATE');
       return null;
     } finally {
       receivePort.close();

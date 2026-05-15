@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../core/logger/app_logger.dart';
 import '../models/plant.dart';
 import '../presentation/providers/providers.dart';
 
@@ -85,10 +86,10 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
           customNumber: int.parse(_numberController.text),
           category: _category,
         );
-        debugPrint('Добавлено растение: ${newPlant.latinName}');
+        AppLogger.api('Добавлено растение: ${newPlant.latinName}', tag: 'ADD_PLANT');
         context.pop(newPlant);
       } catch (e) {
-        debugPrint('Ошибка в _saveForm: $e');
+        AppLogger.error('Ошибка в _saveForm: $e', tag: 'ADD_PLANT');
       }
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/logger/app_logger.dart';
 import '../presentation/providers/cloud_storage_provider.dart';
 import '../presentation/providers/providers.dart';
 
@@ -34,7 +35,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         context.go('/');
       }
     } catch (e) {
-      debugPrint('Ошибка при пропуске: $e');
+      AppLogger.error('Ошибка при пропуске: $e', tag: 'WELCOME');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка: $e')),
@@ -99,8 +100,8 @@ class WelcomeScreenState extends State<WelcomeScreen> {
         );
       }
     } catch (e, stack) {
-      debugPrint('❌ Критическая ошибка авторизации: $e');
-      debugPrint(stack.toString());
+      AppLogger.error('❌ Критическая ошибка авторизации: $e', tag: 'WELCOME');
+      AppLogger.error(stack.toString(), tag: 'WELCOME');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
@@ -115,7 +116,7 @@ class WelcomeScreenState extends State<WelcomeScreen> {
   Future<void> _syncAfterFirstConnect(
       PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider,) async {
     try {
-      debugPrint('📥 Загружаем данные из Яндекс.Диска...');
+      AppLogger.api('📥 Загружаем данные из Яндекс.Диска...', tag: 'WELCOME');
 
       await plantCrudProvider.loadPlants();
       await cloudProvider.fetchLastCloudUpdate();
@@ -123,13 +124,13 @@ class WelcomeScreenState extends State<WelcomeScreen> {
       if (cloudProvider.lastCloudUpdate != null) {
         await cloudProvider.loadDataFromCloud(plantCrudProvider);
         await plantCrudProvider.savePlants();
-        debugPrint('✅ Данные успешно загружены из облака');
+        AppLogger.api('✅ Данные успешно загружены из облака', tag: 'WELCOME');
       } else {
-        debugPrint('⚠️ В облаке пока нет данных, сохраняем локальные...');
+        AppLogger.warning('⚠️ В облаке пока нет данных, сохраняем локальные...', tag: 'WELCOME');
         await cloudProvider.syncData(plantCrudProvider);
       }
     } catch (e) {
-      debugPrint('❌ Ошибка при синхронизации после подключения: $e');
+      AppLogger.error('❌ Ошибка при синхронизации после подключения: $e', tag: 'WELCOME');
     }
   }
 

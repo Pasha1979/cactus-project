@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'core/logger/app_logger.dart';
 import 'core/config/feature_flags.dart';
+import 'core/config/app_constants.dart';
 import 'services/backup/auto_backup_service.dart';
 import 'presentation/providers/settings_provider.dart';
-import 'constants/app_constants.dart';
 import 'models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
@@ -39,7 +39,7 @@ void main() async {
     // Инициализация Feature Flags (фаза 4.1)
     await FeatureFlags.initialize();
   } catch (e) {
-    debugPrint('⚠️ Firebase не настроен: $e');
+    AppLogger.warning('⚠️ Firebase не настроен: $e', tag: 'MAIN');
   }
 
   // Инициализация автобэкапа (фаза 4.2)
@@ -54,7 +54,7 @@ void main() async {
   // Миграция данных из SharedPreferences в Hive (при первом запуске после обновления)
   final migrationSuccess = await DataMigrationManager.runMigrationIfNeeded();
   if (!migrationSuccess) {
-    debugPrint('⚠️ Миграция данных не удалась. Используем резервный режим.');
+    AppLogger.warning('⚠️ Миграция данных не удалась. Используем резервный режим.', tag: 'MAIN');
   }
 
   await _initNotifications();
@@ -206,32 +206,32 @@ class MyApp extends StatelessWidget {
       PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider,) async {
     await plantCrudProvider.loadPlants();
     if (!cloudProvider.isConnected) {
-      debugPrint('Нет подключения к облаку, синхронизация пропущена');
+      AppLogger.api('Нет подключения к облаку, синхронизация пропущена', tag: 'MAIN');
       return;
     }
     await cloudProvider.fetchLastCloudUpdate();
     final localUpdate = plantCrudProvider.lastLocalUpdate;
     final cloudUpdate = cloudProvider.lastCloudUpdate;
-    debugPrint('Локальное обновление: $localUpdate');
-    debugPrint('Облачное обновление: $cloudUpdate');
+    AppLogger.api('Локальное обновление: $localUpdate', tag: 'MAIN');
+    AppLogger.api('Облачное обновление: $cloudUpdate', tag: 'MAIN');
     if (localUpdate == null && cloudUpdate == null) {
-      debugPrint('Оба хранилища пусты, синхронизация не требуется');
+      AppLogger.api('Оба хранилища пусты, синхронизация не требуется', tag: 'MAIN');
       return;
     }
     if (plantCrudProvider.plants.isEmpty && cloudUpdate != null) {
-      debugPrint('Локальные данные пусты, загружаем из облака');
+      AppLogger.api('Локальные данные пусты, загружаем из облака', tag: 'MAIN');
       await cloudProvider.loadDataFromCloud(plantCrudProvider);
       await plantCrudProvider.savePlants();
     } else if (cloudUpdate == null ||
         (localUpdate != null && localUpdate.isAfter(cloudUpdate))) {
-      debugPrint('Локальные данные новее или облако пусто, синхронизируем в облако');
+      AppLogger.api('Локальные данные новее или облако пусто, синхронизируем в облако', tag: 'MAIN');
       await cloudProvider.syncData(plantCrudProvider);
     } else if (localUpdate == null || cloudUpdate.isAfter(localUpdate)) {
-      debugPrint('Облачные данные новее или локальные пусты, загружаем из облака');
+      AppLogger.api('Облачные данные новее или локальные пусты, загружаем из облака', tag: 'MAIN');
       await cloudProvider.loadDataFromCloud(plantCrudProvider);
       await plantCrudProvider.savePlants();
     } else {
-      debugPrint('Данные синхронизированы, ничего не требуется');
+      AppLogger.api('Данные синхронизированы, ничего не требуется', tag: 'MAIN');
     }
   }
 }

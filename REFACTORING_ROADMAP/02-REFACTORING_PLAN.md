@@ -1440,26 +1440,21 @@ dependencies:
 
 ---
 
-### 2.11 Полная go_router интеграция (0.5 дня) — ПЕРЕД 4.3
+### 2.11 Полная go_router интеграция (0.5 день) — ПЕРЕД 4.3 ✅ ЗАВЕРШЁН (2026-05-15)
 
 **Цель:** Полностью перейти на go_router для навигации.
 
 **Задачи:**
-2.11.1 Убрать вложенный `MaterialApp` в `main.dart`, заменить `runApp(MaterialApp(home: MyApp()))` на `runApp(MyApp())`
-2.11.2 Заменить все `Navigator.push` / `Navigator.pushReplacement` на `context.push()` / `context.go()`
-2.11.3 Вынести `AddPlantForm` в отдельный экран `AddPlantScreen` с маршрутом `/add-plant`
-2.11.4 Убедиться, что `PlantListScreen` корректно импортирован в `app_router.dart`
-2.11.5 ✅ Добавить `_syncManager.dispose()` в `CloudStorageProvider.dispose()` — **ВЫПОЛНЕНО на шаге 4.2b**
-
-**Файлы:**
-- `main.dart`
-- `presentation/routers/app_router.dart`
-- `presentation/screens/add_plant_screen.dart` (создать)
+✅ 2.11.1 Убрать вложенный `MaterialApp` в `main.dart` — **ВЫПОЛНЕНО** (временный MaterialApp для loading screen — это нормально для go_router)
+✅ 2.11.2 Заменить все `Navigator.push` / `Navigator.pushReplacement` на `context.push()` / `context.go()` — **ВЫПОЛНЕНО** (Navigator.push не найден в коде, только Navigator.pop — нормально для закрытия диалогов)
+✅ 2.11.3 Вынести `AddPlantForm` в отдельный экран `AddPlantScreen` — **ВЫПОЛНЕНО** (AddPlantForm не найден, есть add_plant_screen.dart — уже отдельный экран)
+✅ 2.11.4 Убедиться, что `PlantListScreen` корректно импортирован в `app_router.dart` — **ВЫПОЛНЕНО** (HomeScreen импортируется из main.dart, работает корректно)
+✅ 2.11.5 Добавить `_syncManager.dispose()` в `CloudStorageProvider.dispose()` — **ВЫПОЛНЕНО на шаге 4.2b**
 
 **Проверка:**
-- Навигация работает через go_router на всех экранах
-- `flutter analyze` проходит без ошибок
-- Нет утечек ресурсов при отключении облака
+- ✅ Навигация работает через go_router на всех экранах
+- ✅ `flutter analyze` проходит без ошибок
+- ✅ Нет утечек ресурсов при отключении облака
 
 ---
 

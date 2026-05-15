@@ -1,7 +1,8 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+
+import '../../core/logger/app_logger.dart';
 
 /// Сервис сжатия изображений перед сохранением в локальное хранилище.
 ///
@@ -24,7 +25,7 @@ class ImageProcessor {
   }) async {
     // Windows не поддерживается flutter_image_compress — fallback на копирование
     if (!_isCompressionSupported()) {
-      debugPrint('ℹ️ ImageProcessor: сжатие недоступно на этой платформе, копируем');
+      AppLogger.api('ℹ️ ImageProcessor: сжатие недоступно на этой платформе, копируем', tag: 'IMAGE_PROCESSOR');
       await File(sourcePath).copy(targetPath);
       return targetPath;
     }
@@ -43,21 +44,18 @@ class ImageProcessor {
       );
 
       if (result == null) {
-        debugPrint('⚠️ ImageProcessor: сжатие вернуло null, копируем оригинал');
+        AppLogger.warning('⚠️ ImageProcessor: сжатие вернуло null, копируем оригинал', tag: 'IMAGE_PROCESSOR');
         await sourceFile.copy(targetPath);
         return targetPath;
       }
 
       final resultSize = await File(result.path).length();
       final savedKb = ((sourceSize - resultSize) / 1024).round();
-      debugPrint(
-        '✅ ImageProcessor: ${(sourceSize / 1024).round()} КБ → '
-        '${(resultSize / 1024).round()} КБ (сэкономлено $savedKb КБ)',
-      );
+      AppLogger.api('✅ ImageProcessor: ${(sourceSize / 1024).round()} КБ → ${(resultSize / 1024).round()} КБ (сэкономлено $savedKb КБ)', tag: 'IMAGE_PROCESSOR');
 
       return result.path;
     } catch (e) {
-      debugPrint('⚠️ ImageProcessor: ошибка сжатия ($e), копируем оригинал');
+      AppLogger.warning('⚠️ ImageProcessor: ошибка сжатия ($e), копируем оригинал', tag: 'IMAGE_PROCESSOR');
       await File(sourcePath).copy(targetPath);
       return targetPath;
     }

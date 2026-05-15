@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/logger/app_logger.dart';
 
 /// Запись журнала зимовки
 class WinteringLogEntry {
@@ -68,10 +69,9 @@ class WinteringProvider with ChangeNotifier {
       }
 
       notifyListeners();
-      debugPrint('✅ WinteringProvider loaded: '
-          'start=$_startDate, end=$_endDate, temp=$_temperature, logs=${_logEntries.length}');
+      AppLogger.api('✅ WinteringProvider loaded: start=$_startDate, end=$_endDate, temp=$_temperature, logs=${_logEntries.length}', tag: 'WINTERING');
     } catch (e) {
-      debugPrint('❌ WinteringProvider load error: $e');
+      AppLogger.error('❌ WinteringProvider load error: $e', tag: 'WINTERING');
     }
   }
 
@@ -97,7 +97,7 @@ class WinteringProvider with ChangeNotifier {
         _logEntries.map((e) => jsonEncode(e.toJson())).toList(),
       );
     } catch (e) {
-      debugPrint('❌ WinteringProvider save error: $e');
+      AppLogger.error('❌ WinteringProvider save error: $e', tag: 'WINTERING');
     }
   }
 

@@ -5,6 +5,7 @@ class ApiConstants {
   
   // Базовый URL GBIF API
   static const String gbifBaseUrl = 'https://api.gbif.org/v1';
+  static const String gbifOccurrenceSearchUrl = 'https://api.gbif.org/v1/occurrence/search';
   
   // OAuth2 константы
   static const String oauth2AuthorizeUrl = 'https://oauth.yandex.com/authorize';
@@ -43,4 +44,25 @@ class ApiConstants {
 
   // OpenWeather API Key
   static const String openWeatherApiKey = '7fd64eefdd81d17943bbcd4e17a87e5d';
+  static const String openWeatherBaseUrl = 'https://api.openweathermap.org/data/2.5/weather';
+
+  // Translation API (Lingvanex/Backenster)
+  static const String translationApiUrl = 'https://api-b2b.backenster.com/b1/api/v3/translate/';
+  static const String translationApiToken = 'Bearer a_25rccaCYcBC9ARqMODx2BV2M0wNZgDCEl3jryYSgYZtF1a702PVi4sxqi2AmZWyCcw4x209VXnCYwesx';
+  static const String translationApiReferer = 'https://lingvanex.com/translate/';
+
+  // Llifle API
+  static const String llifleBaseUrl = 'https://llifle.com';
+  static const String llifleReferer = 'https://llifle.com/';
+  static const String llifleSearchUrl = 'https://llifle.com/Encyclopedia/CACTI/Species/all/1/100/?filter=';
+  static const String llifleSpeciesUrl = 'https://llifle.com/Encyclopedia/CACTI/Family/Cactaceae/';
+  static const String lliflePhotosUrl = 'https://llifle.com/photos/';
+
+  // App URLs
+  static const String privacyPolicyUrl = 'https://github.com/PaveUA/my-cactus/blob/main/PRIVACY.md';
+  static const String supportEmail = 'mycactus.support@gmail.com';
+
+  // OpenStreetMap
+  static const String openStreetMapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  static const String openStreetMapUrl = 'https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=15/{lat}/{lon}';
 }

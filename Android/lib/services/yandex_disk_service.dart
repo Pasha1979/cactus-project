@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 
+import '../../core/logger/app_logger.dart';
 import 'yandex_auth_service.dart';
 
 /// Сервис для низкоуровневых операций с Яндекс.Диск API
@@ -40,28 +40,28 @@ class YandexDiskService {
 
     final dio = _createDio();
     try {
-      debugPrint('Создание папки /MyCactus...');
+      AppLogger.api('Создание папки /MyCactus...', tag: 'YANDEX_DISK');
       final myCactusResponse =
           await dio.put('$_yandexApiBaseUrl/resources?path=/MyCactus');
-      debugPrint('Ответ создания /MyCactus: ${myCactusResponse.statusCode}');
+      AppLogger.api('Ответ создания /MyCactus: ${myCactusResponse.statusCode}', tag: 'YANDEX_DISK');
 
       final checkPhotosResponse = await dio.get(
         '$_yandexApiBaseUrl/resources?path=/MyCactus/photos',
       );
       if (checkPhotosResponse.statusCode != 200) {
-        debugPrint('Папка /MyCactus/photos не существует, создаем...');
+        AppLogger.api('Папка /MyCactus/photos не существует, создаем...', tag: 'YANDEX_DISK');
         final photosResponse = await dio.put(
           '$_yandexApiBaseUrl/resources?path=/MyCactus/photos',
         );
-        debugPrint('Ответ создания /MyCactus/photos: ${photosResponse.statusCode}');
+        AppLogger.api('Ответ создания /MyCactus/photos: ${photosResponse.statusCode}', tag: 'YANDEX_DISK');
       } else {
-        debugPrint('Папка /MyCactus/photos уже существует');
+        AppLogger.api('Папка /MyCactus/photos уже существует', tag: 'YANDEX_DISK');
       }
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 409) {
-        debugPrint('Папка уже существует, продолжаем...');
+        AppLogger.warning('Папка уже существует, продолжаем...', tag: 'YANDEX_DISK');
       } else {
-        debugPrint('Ошибка создания папок: $e');
+        AppLogger.error('Ошибка создания папок: $e', tag: 'YANDEX_DISK');
         throw Exception('Не удалось создать папки на Яндекс.Диске: $e');
       }
     }
@@ -90,7 +90,7 @@ class YandexDiskService {
       throw Exception('Ошибка загрузки в облако: ${putResponse.statusCode}');
     }
 
-    debugPrint('✅ plant_provider.json успешно загружен в облако');
+    AppLogger.api('✅ plant_provider.json успешно загружен в облако', tag: 'YANDEX_DISK');
   }
 
   /// Скачивает plant_provider.json из облака
@@ -140,7 +140,7 @@ class YandexDiskService {
       throw Exception(
           'Ошибка создания пустого plant_provider.json: ${putResponse.statusCode}',);
     }
-    debugPrint('Создан пустой файл plant_provider.json');
+    AppLogger.api('Создан пустой файл plant_provider.json', tag: 'YANDEX_DISK');
   }
 
   // ==================== ФОТО ====================
@@ -188,10 +188,10 @@ class YandexDiskService {
       );
       final fileUrl = resourceResponse.data['file'] as String?;
 
-      debugPrint('✅ Фото загружено в облако: $fileUrl');
+      AppLogger.api('✅ Фото загружено в облако: $fileUrl', tag: 'YANDEX_DISK');
       return fileUrl ?? '';
     } catch (e) {
-      debugPrint('❌ Ошибка загрузки фото $filePath: $e');
+      AppLogger.error('❌ Ошибка загрузки фото $filePath: $e', tag: 'YANDEX_DISK');
       rethrow;
     }
   }
@@ -224,13 +224,13 @@ class YandexDiskService {
             fileUrls.add(fileUrl);
           }
         } catch (e) {
-          debugPrint('Ошибка получения file URL для $cloudPath: $e');
+          AppLogger.error('Ошибка получения file URL для $cloudPath: $e', tag: 'YANDEX_DISK');
           continue;
         }
       }
       return fileUrls;
     } catch (e) {
-      debugPrint('Ошибка при загрузке списка файлов из облака: $e');
+      AppLogger.error('Ошибка при загрузке списка файлов из облака: $e', tag: 'YANDEX_DISK');
       return [];
     }
   }
@@ -247,12 +247,12 @@ class YandexDiskService {
       if (cloudPath != null) {
         await dio.delete(
             '$_yandexApiBaseUrl/resources?path=$cloudPath&permanently=true',);
-        debugPrint('✅ Файл удален с Яндекс.Диска: $cloudPath');
+        AppLogger.api('✅ Файл удален с Яндекс.Диска: $cloudPath', tag: 'YANDEX_DISK');
       } else {
-        debugPrint('⚠️ Не удалось извлечь путь из URL: $fileUrl');
+        AppLogger.warning('⚠️ Не удалось извлечь путь из URL: $fileUrl', tag: 'YANDEX_DISK');
       }
     } catch (e) {
-      debugPrint('❌ Ошибка удаления файла с диска: $e');
+      AppLogger.error('❌ Ошибка удаления файла с диска: $e', tag: 'YANDEX_DISK');
       rethrow;
     }
   }
@@ -282,10 +282,10 @@ class YandexDiskService {
       }
     } on DioException catch (e) {
       if (e.response?.statusCode != 404) {
-        debugPrint('⚠️ Ошибка запроса файла: $e');
+        AppLogger.warning('⚠️ Ошибка запроса файла: $e', tag: 'YANDEX_DISK');
       }
     } catch (e) {
-      debugPrint('⚠️ Неизвестная ошибка запроса файла: $e');
+        AppLogger.warning('⚠️ Неизвестная ошибка запроса файла: $e', tag: 'YANDEX_DISK');
     }
     return null;
   }
@@ -303,7 +303,7 @@ class YandexDiskService {
         return DateTime.tryParse(modified ?? '');
       }
     } catch (e) {
-      debugPrint('❌ Не удалось получить дату папки: $e');
+      AppLogger.error('❌ Не удалось получить дату папки: $e', tag: 'YANDEX_DISK');
     }
     return null;
   }
@@ -324,7 +324,7 @@ class YandexDiskService {
       await dio.put('$_yandexApiBaseUrl/resources?path=/MyCactus/backups');
     } on DioException catch (e) {
       if (e.response?.statusCode != 409) {
-        debugPrint('Ошибка создания /MyCactus/backups: $e');
+        AppLogger.error('Ошибка создания /MyCactus/backups: $e', tag: 'YANDEX_DISK');
       }
     }
 
@@ -345,7 +345,7 @@ class YandexDiskService {
       throw Exception('Ошибка загрузки версии бэкапа: ${putResponse.statusCode}');
     }
 
-    debugPrint('✅ Версионный бэкап загружен: $cloudPath');
+    AppLogger.api('✅ Версионный бэкап загружен: $cloudPath', tag: 'YANDEX_DISK');
     return cloudPath;
   }
 
@@ -383,7 +383,7 @@ class YandexDiskService {
           .toList();
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return [];
-      debugPrint('Ошибка получения списка бэкапов: $e');
+      AppLogger.error('Ошибка получения списка бэкапов: $e', tag: 'YANDEX_DISK');
       return [];
     }
   }
@@ -397,7 +397,7 @@ class YandexDiskService {
       await dio.delete(
         '$_yandexApiBaseUrl/resources?path=$cloudPath&permanently=true',
       );
-      debugPrint('🗑️ Удалён файл: $cloudPath');
+      AppLogger.api('🗑️ Удалён файл: $cloudPath', tag: 'YANDEX_DISK');
     } on DioException catch (e) {
       if (e.response?.statusCode != 404) {
         throw Exception('Ошибка удаления файла $cloudPath: $e');

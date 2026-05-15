@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../core/logger/app_logger.dart';
 import '../presentation/providers/plant_crud_provider.dart';
 import 'photo_sync_service.dart';
 import 'yandex_auth_service.dart';
@@ -44,7 +45,7 @@ class SyncManager {
   void cancelSync() {
     if (_isSyncing) {
       _cancelRequested = true;
-      debugPrint('⏹️ Запрошена отмена синхронизации');
+      AppLogger.api('⏹️ Запрошена отмена синхронизации', tag: 'SYNC');
     }
   }
 
@@ -73,17 +74,16 @@ class SyncManager {
       cloudDateFromServer =
           await _diskService.getFileModifiedDate('/MyCactus/plant_provider.json');
     } catch (e) {
-      debugPrint('⚠️ Ошибка запроса файла: $e');
+      AppLogger.warning('⚠️ Ошибка запроса файла: $e', tag: 'SYNC');
     }
 
     if (cloudDateFromServer != null) {
       if (_lastCloudUpdate == null ||
           cloudDateFromServer.isAfter(_lastCloudUpdate!)) {
         _lastCloudUpdate = cloudDateFromServer;
-        debugPrint('✅ Дата обновлена из ФАЙЛА: $_lastCloudUpdate');
+        AppLogger.api('✅ Дата обновлена из ФАЙЛА: $_lastCloudUpdate', tag: 'SYNC');
       } else {
-        debugPrint(
-            'ℹ️ Дата с сервера ($cloudDateFromServer) не новее текущей ($_lastCloudUpdate) — оставляем текущую',);
+        AppLogger.api('ℹ️ Дата с сервера ($cloudDateFromServer) не новее текущей ($_lastCloudUpdate) — оставляем текущую', tag: 'SYNC');
       }
     } else {
       // Fallback на папку
@@ -93,15 +93,15 @@ class SyncManager {
         if (folderDate != null &&
             (_lastCloudUpdate == null || folderDate.isAfter(_lastCloudUpdate!))) {
           _lastCloudUpdate = folderDate;
-          debugPrint('⚠️ Файл не дал дату, взята дата папки: $_lastCloudUpdate');
+          AppLogger.warning('⚠️ Файл не дал дату, взята дата папки: $_lastCloudUpdate', tag: 'SYNC');
         }
       } catch (e) {
-        debugPrint('❌ Не удалось получить дату папки: $e');
+        AppLogger.error('❌ Не удалось получить дату папки: $e', tag: 'SYNC');
       }
     }
 
     if (_lastCloudUpdate == null) {
-      debugPrint('⚠️ Не удалось получить дату ни файла, ни папки');
+      AppLogger.warning('⚠️ Не удалось получить дату ни файла, ни папки', tag: 'SYNC');
     }
   }
 
@@ -109,13 +109,13 @@ class SyncManager {
 
   Future<void> syncData(PlantCrudProvider plantCrudProvider) async {
     if (!_authService.isConnected) {
-      debugPrint('Синхронизация невозможна: нет подключения');
+      AppLogger.warning('Синхронизация невозможна: нет подключения', tag: 'SYNC');
       return;
     }
 
     // 2.9.1: Lock — предотвращаем параллельные вызовы syncData
     if (_isSyncing) {
-      debugPrint('⏸️ Синхронизация уже выполняется, пропускаем');
+      AppLogger.api('⏸️ Синхронизация уже выполняется, пропускаем', tag: 'SYNC');
       return;
     }
     _cancelRequested = false;
@@ -139,7 +139,7 @@ class SyncManager {
       if (cloudUpdate != null &&
           (localUpdate == null ||
               cloudUpdate.isAfter(localUpdate.add(timeTolerance)))) {
-        debugPrint('☁️ Облако новее → загружаем из облака');
+        AppLogger.api('☁️ Облако новее → загружаем из облака', tag: 'SYNC');
         syncProgress.value = 0.2;
         await plantCrudProvider.createLocalBackup();
         _checkCancelled();
@@ -149,12 +149,12 @@ class SyncManager {
         syncProgress.value = 0.5;
         await plantCrudProvider.savePlants();
         syncProgress.value = 1.0;
-        debugPrint('✅ Синхронизация успешно завершена (загрузка из облака)');
+        AppLogger.api('✅ Синхронизация успешно завершена (загрузка из облака)', tag: 'SYNC');
         return;
       }
 
       if (plantCrudProvider.plants.isNotEmpty) {
-        debugPrint('📤 Локальные данные новее → отправляем в облако');
+        AppLogger.api('📤 Локальные данные новее → отправляем в облако', tag: 'SYNC');
         syncProgress.value = 0.3;
         await _retryWithBackoff(
           () => _uploadToCloud(plantCrudProvider),
@@ -164,9 +164,9 @@ class SyncManager {
         syncProgress.value = 0.8;
         await fetchLastCloudUpdate();
         syncProgress.value = 1.0;
-        debugPrint('✅ Синхронизация успешно завершена (выгрузка в облако)');
+        AppLogger.api('✅ Синхронизация успешно завершена (выгрузка в облако)', tag: 'SYNC');
       } else if (cloudUpdate != null) {
-        debugPrint('📥 Локально пусто → загружаем из облака');
+        AppLogger.api('📥 Локально пусто → загружаем из облака', tag: 'SYNC');
         syncProgress.value = 0.2;
         await plantCrudProvider.createLocalBackup();
         _checkCancelled();
@@ -176,15 +176,15 @@ class SyncManager {
         syncProgress.value = 0.5;
         await plantCrudProvider.savePlants();
         syncProgress.value = 1.0;
-        debugPrint('✅ Синхронизация успешно завершена (загрузка из облака)');
+        AppLogger.api('✅ Синхронизация успешно завершена (загрузка из облака)', tag: 'SYNC');
       } else {
         syncProgress.value = 1.0;
-        debugPrint('✅ Синхронизация: нет данных для передачи');
+        AppLogger.api('✅ Синхронизация: нет данных для передачи', tag: 'SYNC');
       }
     } on _SyncCancelledException {
-      debugPrint('⏹️ Синхронизация отменена пользователем');
+      AppLogger.api('⏹️ Синхронизация отменена пользователем', tag: 'SYNC');
     } catch (e) {
-      debugPrint('❌ Ошибка синхронизации: $e');
+      AppLogger.error('❌ Ошибка синхронизации: $e', tag: 'SYNC');
     } finally {
       _isSyncing = false;
     }
@@ -205,11 +205,11 @@ class SyncManager {
         if (e is _SyncCancelledException) rethrow;
         final isLastAttempt = attempt == _maxSyncRetries - 1;
         if (isLastAttempt) {
-          debugPrint('❌ $operationName: исчерпаны все попытки ($_maxSyncRetries): $e');
+          AppLogger.error('❌ $operationName: исчерпаны все попытки ($_maxSyncRetries): $e', tag: 'SYNC');
           rethrow;
         }
         final delay = Duration(seconds: 1 << attempt); // 1с, 2с, 4с
-        debugPrint('⚠️ $operationName: попытка ${attempt + 1}/$_maxSyncRetries не удалась, повтор через ${delay.inSeconds}с: $e');
+        AppLogger.warning('⚠️ $operationName: попытка ${attempt + 1}/$_maxSyncRetries не удалась, повтор через ${delay.inSeconds}с: $e', tag: 'SYNC');
         await Future.delayed(delay);
       }
     }
@@ -248,11 +248,11 @@ class SyncManager {
 
       // 2.9.3: Валидация структуры входящих данных
       if (!_validateCloudData(data, plantCrudProvider)) {
-        debugPrint('⛔ Данные из облака не прошли валидацию — локальные данные сохранены');
+        AppLogger.warning('⛔ Данные из облака не прошли валидацию — локальные данные сохранены', tag: 'SYNC');
         return;
       }
 
-      debugPrint('📥 Загружено из облака: ${data['plants']?.length ?? 0} растений');
+      AppLogger.api('📥 Загружено из облака: ${data['plants']?.length ?? 0} растений', tag: 'SYNC');
 
       _checkCancelled();
       await plantCrudProvider.loadFromCloudJson(data);
@@ -266,12 +266,12 @@ class SyncManager {
       await plantCrudProvider.cleanupLocalPhotosAfterCloudLoad();
       await _photoSyncService.cleanDuplicatePhotos(plantCrudProvider);
 
-      debugPrint('✅ Данные загружены из облака + фото обработаны');
+      AppLogger.api('✅ Данные загружены из облака + фото обработаны', tag: 'SYNC');
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 404) {
         await _diskService.createEmptyPlantProviderFile();
       } else {
-        debugPrint('❌ Ошибка загрузки из облака: $e');
+        AppLogger.error('❌ Ошибка загрузки из облака: $e', tag: 'SYNC');
       }
     }
   }
@@ -287,26 +287,24 @@ class SyncManager {
     PlantCrudProvider plantCrudProvider,
   ) {
     if (!data.containsKey('plants')) {
-      debugPrint('⛔ Валидация: отсутствует ключ plants');
+      AppLogger.warning('⛔ Валидация: отсутствует ключ plants', tag: 'SYNC');
       return false;
     }
 
     final plantsList = data['plants'];
     if (plantsList is! List) {
-      debugPrint('⛔ Валидация: plants не является списком');
+      AppLogger.warning('⛔ Валидация: plants не является списком', tag: 'SYNC');
       return false;
     }
 
     if (plantsList.length > 10000) {
-      debugPrint('⛔ Валидация: слишком много растений (${plantsList.length} > 10000)');
+      AppLogger.warning('⛔ Валидация: слишком много растений (${plantsList.length} > 10000)', tag: 'SYNC');
       return false;
     }
 
     // 2.9.4: Не перезаписывать локальные данные пустым списком
     if (plantsList.isEmpty && plantCrudProvider.plants.isNotEmpty) {
-      debugPrint(
-          '⛔ Валидация: облако вернуло пустой список, '
-          'но локально есть ${plantCrudProvider.plants.length} растений — пропускаем',);
+      AppLogger.warning('⛔ Валидация: облако вернуло пустой список, но локально есть ${plantCrudProvider.plants.length} растений — пропускаем', tag: 'SYNC');
       return false;
     }
 
@@ -314,16 +312,16 @@ class SyncManager {
     for (int i = 0; i < plantsList.length; i++) {
       final plantData = plantsList[i];
       if (plantData is! Map<String, dynamic>) {
-        debugPrint('⛔ Валидация: элемент $i не является Map');
+        AppLogger.warning('⛔ Валидация: элемент $i не является Map', tag: 'SYNC');
         return false;
       }
       if (!_validatePlantJson(plantData)) {
-        debugPrint('⛔ Валидация: растение $i не прошло проверку полей');
+        AppLogger.warning('⛔ Валидация: растение $i не прошло проверку полей', tag: 'SYNC');
         return false;
       }
     }
 
-    debugPrint('✅ Валидация облачных данных прошла (${plantsList.length} растений)');
+    AppLogger.api('✅ Валидация облачных данных прошла (${plantsList.length} растений)', tag: 'SYNC');
     return true;
   }
 

@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart';
-
 import 'dart:convert';
 
+import '../../core/logger/app_logger.dart';
 import '../../domain/repositories/watering_repository.dart';
 import '../datasources/local/hive_database.dart';
 import '../datasources/local/plant_local_datasource.dart';
@@ -52,7 +51,7 @@ class WateringRepositoryImpl implements WateringRepository {
           .whereType<DateTime>()
           .toList();
     } catch (e) {
-      debugPrint('Ошибка чтения globalWateringDates: $e');
+      AppLogger.error('Ошибка чтения globalWateringDates: $e', tag: 'WATERING_REPO');
       return [];
     }
   }

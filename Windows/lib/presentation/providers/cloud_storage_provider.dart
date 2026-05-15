@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/logger/app_logger.dart';
 import '../routers/app_router.dart' show navigatorKey;
 import 'plant_crud_provider.dart';
 import '../../services/photo_sync_service.dart';
@@ -58,7 +59,7 @@ class CloudStorageProvider with ChangeNotifier {
         final plantCrudProvider =
             Provider.of<PlantCrudProvider>(context, listen: false);
         await _syncManager.syncData(plantCrudProvider);
-        debugPrint('🔄 Полная синхронизация после авторизации выполнена');
+        AppLogger.api('🔄 Полная синхронизация после авторизации выполнена', tag: 'CLOUD_STORAGE');
       }
     }
 

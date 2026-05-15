@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/config/api_config.dart';
 import '../../core/logger/app_logger.dart';
 import '../../core/config/feature_flags.dart';
 import '../../models/gbif_occurrence.dart';
@@ -17,7 +18,7 @@ import '../isolates/http_isolate.dart';
 /// - Парсинг ответа и извлечение фото, стран, синонимов
 class GbifService {
   static const String _tag = 'GBIF';
-  static const String _baseUrl = 'https://api.gbif.org/v1/occurrence/search';
+  static const String _baseUrl = ApiConstants.gbifOccurrenceSearchUrl;
   static const String _cachePrefix = 'gbif_data_';
   static const Duration _cacheTtl = Duration(days: 7);
   static const int _maxRetries = 3;

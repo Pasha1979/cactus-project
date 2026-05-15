@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../../core/logger/app_logger.dart';
 import '../../../models/gbif_occurrence.dart';
 import '../../../models/plant.dart';
 import '../../providers/providers.dart';
@@ -979,7 +980,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 .where((url) => url.startsWith('http'))
                 .toList() ?? [];
           } catch (e) {
-            debugPrint('Ошибка обработки GBIF фото: $e');
+            AppLogger.error('Ошибка обработки GBIF фото: $e', tag: 'PLANT_CARD');
           }
         }
 
@@ -1008,7 +1009,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 .cast<GbifOccurrence>()
                 .toList() ?? [];
           } catch (e) {
-            debugPrint('Ошибка обработки GBIF occurrences: $e');
+            AppLogger.error('Ошибка обработки GBIF occurrences: $e', tag: 'PLANT_CARD');
           }
         }
 

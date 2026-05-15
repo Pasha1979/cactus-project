@@ -1,10 +1,10 @@
 ﻿import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/logger/app_logger.dart';
 import '../../models/qr_code_file.dart';
 import '../datasources/local/hive_database.dart';
 import '../datasources/local/plant_index_manager.dart';
@@ -37,12 +37,12 @@ class DataMigrationManager {
       return true;
     }
 
-    debugPrint('🔄 Начинаем миграцию данных: v$currentDbVersion → v$currentVersion');
+    AppLogger.api('🔄 Начинаем миграцию данных: v$currentDbVersion → v$currentVersion', tag: 'MIGRATION');
 
     // Шаг 1: Создать бэкап перед миграцией
     final backupSuccess = await _createBackup(prefs);
     if (!backupSuccess) {
-      debugPrint('❌ Не удалось создать бэкап. Миграция отменена.');
+      AppLogger.error('❌ Не удалось создать бэкап. Миграция отменена.', tag: 'MIGRATION');
       return false;
     }
 
@@ -57,12 +57,12 @@ class DataMigrationManager {
 
       // Шаг 3: Обновить версию
       await prefs.setInt(_migrationVersionKey, currentVersion);
-      debugPrint('✅ Миграция завершена. Версия: $currentVersion');
+      AppLogger.api('✅ Миграция завершена. Версия: $currentVersion', tag: 'MIGRATION');
 
       return true;
     } catch (e, stack) {
-      debugPrint('❌ Ошибка миграции: $e');
-      debugPrint(stack.toString());
+      AppLogger.error('❌ Ошибка миграции: $e', tag: 'MIGRATION');
+      AppLogger.error(stack.toString(), tag: 'MIGRATION');
       return false;
     }
   }
@@ -83,10 +83,10 @@ class DataMigrationManager {
 
       final backupJson = jsonEncode(allData);
       await prefs.setString(_migrationBackupKey, backupJson);
-      debugPrint('💾 Бэкап создан: ${backupJson.length} символов');
+      AppLogger.api('💾 Бэкап создан: ${backupJson.length} символов', tag: 'MIGRATION');
       return true;
     } catch (e) {
-      debugPrint('❌ Ошибка создания бэкапа: $e');
+      AppLogger.error('❌ Ошибка создания бэкапа: $e', tag: 'MIGRATION');
       return false;
     }
   }
@@ -98,7 +98,7 @@ class DataMigrationManager {
       final backupJson = prefs.getString(_migrationBackupKey);
 
       if (backupJson == null) {
-        debugPrint('⚠️ Бэкап не найден. Откат невозможен.');
+        AppLogger.warning('⚠️ Бэкап не найден. Откат невозможен.', tag: 'MIGRATION');
         return false;
       }
 
@@ -125,18 +125,18 @@ class DataMigrationManager {
       // Сбрасываем версию миграции
       await prefs.remove(_migrationVersionKey);
 
-      debugPrint('✅ Откат выполнен. Данные восстановлены из бэкапа.');
+      AppLogger.api('✅ Откат выполнен. Данные восстановлены из бэкапа.', tag: 'MIGRATION');
       return true;
     } catch (e, stack) {
-      debugPrint('❌ Ошибка отката: $e');
-      debugPrint(stack.toString());
+      AppLogger.error('❌ Ошибка отката: $e', tag: 'MIGRATION');
+      AppLogger.error(stack.toString(), tag: 'MIGRATION');
       return false;
     }
   }
 
   /// V1: Миграция SharedPreferences to Hive
   static Future<void> _migrateV1SharedPrefsToHive(SharedPreferences prefs) async {
-    debugPrint('🔄 Миграция V1: SharedPreferences to Hive');
+    AppLogger.api('🔄 Миграция V1: SharedPreferences to Hive', tag: 'MIGRATION');
 
     await _migratePlants(prefs);
     await _migrateQRCodeFiles(prefs);
@@ -146,14 +146,14 @@ class DataMigrationManager {
     await _migrateAdultImages(prefs);
     await _migrateSearchHistory(prefs);
 
-    debugPrint('✅ Миграция V1 завершена');
+    AppLogger.api('✅ Миграция V1 завершена', tag: 'MIGRATION');
   }
 
   /// Миграция растений: `List<String>` JSON to Hive `PlantDto`
   static Future<void> _migratePlants(SharedPreferences prefs) async {
     final plantsJson = prefs.getStringList(PrefsKeys.plants);
     if (plantsJson == null || plantsJson.isEmpty) {
-      debugPrint('⚠️ Растения не найдены в SharedPreferences');
+      AppLogger.warning('⚠️ Растения не найдены в SharedPreferences', tag: 'MIGRATION');
       return;
     }
 
@@ -167,16 +167,16 @@ class DataMigrationManager {
         await box.put(dto.permanentId, dto);
         migratedCount++;
       } catch (e) {
-        debugPrint('⚠️ Ошибка миграции растения: $e');
+        AppLogger.warning('⚠️ Ошибка миграции растения: $e', tag: 'MIGRATION');
       }
     }
 
-    debugPrint('✅ Перенесено растений: $migratedCount/${plantsJson.length}');
+    AppLogger.api('✅ Перенесено растений: $migratedCount/${plantsJson.length}', tag: 'MIGRATION');
 
     // Перестроить индексы после массовой миграции
     final indexManager = PlantIndexManager(HiveDatabase.plantIndexBox);
     await indexManager.rebuildIndex(box);
-    debugPrint('✅ Индексы перестроены после миграции');
+    AppLogger.api('✅ Индексы перестроены после миграции', tag: 'MIGRATION');
   }
 
   /// Конвертирует Map from JSON в PlantDto
@@ -278,7 +278,7 @@ class DataMigrationManager {
   static Future<void> _migrateQRCodeFiles(SharedPreferences prefs) async {
     final qrJson = prefs.getString(PrefsKeys.qrCodeFiles);
     if (qrJson == null || qrJson.isEmpty) {
-      debugPrint('⚠️ QR-коды не найдены в SharedPreferences');
+      AppLogger.warning('⚠️ QR-коды не найдены в SharedPreferences', tag: 'MIGRATION');
       return;
     }
 
@@ -298,9 +298,9 @@ class DataMigrationManager {
         await box.put(dto.plantId, dto);
       }
 
-      debugPrint('✅ Перенесено QR-кодов: ${files.length}');
+      AppLogger.api('✅ Перенесено QR-кодов: ${files.length}', tag: 'MIGRATION');
     } catch (e) {
-      debugPrint('⚠️ Ошибка миграции QR-кодов: $e');
+      AppLogger.warning('⚠️ Ошибка миграции QR-кодов: $e', tag: 'MIGRATION');
     }
   }
 
@@ -308,7 +308,7 @@ class DataMigrationManager {
   static Future<void> _migrateScanHistory(SharedPreferences prefs) async {
     final historyJson = prefs.getString(PrefsKeys.qrScanHistory);
     if (historyJson == null || historyJson.isEmpty) {
-      debugPrint('⚠️ История сканирований не найдена');
+      AppLogger.warning('⚠️ История сканирований не найдена', tag: 'MIGRATION');
       return;
     }
 
@@ -320,9 +320,9 @@ class DataMigrationManager {
         await box.put(i.toString(), history[i]);
       }
 
-      debugPrint('✅ Перенесено записей истории: ${history.length}');
+      AppLogger.api('✅ Перенесено записей истории: ${history.length}', tag: 'MIGRATION');
     } catch (e) {
-      debugPrint('⚠️ Ошибка миграции истории: $e');
+      AppLogger.warning('⚠️ Ошибка миграции истории: $e', tag: 'MIGRATION');
     }
   }
 
@@ -352,9 +352,9 @@ class DataMigrationManager {
         await box.put('watering_$i', dates[i]);
       }
 
-      debugPrint('✅ Перенесено дат полива: ${dates.length}');
+      AppLogger.api('✅ Перенесено дат полива: ${dates.length}', tag: 'MIGRATION');
     } catch (e) {
-      debugPrint('⚠️ Ошибка миграции дат полива: $e');
+      AppLogger.warning('⚠️ Ошибка миграции дат полива: $e', tag: 'MIGRATION');
     }
   }
 
@@ -372,7 +372,7 @@ class DataMigrationManager {
     if (temp != null) await box.put('wintering_temp', temp);
     if (log != null) await box.put('wintering_log', log);
 
-    debugPrint('✅ Настройки зимовки перенесены');
+    AppLogger.api('✅ Настройки зимовки перенесены', tag: 'MIGRATION');
   }
 
   /// Миграция adult images
@@ -383,9 +383,9 @@ class DataMigrationManager {
     try {
       final box = await Hive.openBox<String>('settings_box');
       await box.put('adult_images', json);
-      debugPrint('✅ Adult images перенесены');
+      AppLogger.api('✅ Adult images перенесены', tag: 'MIGRATION');
     } catch (e) {
-      debugPrint('⚠️ Ошибка миграции adult images: $e');
+      AppLogger.warning('⚠️ Ошибка миграции adult images: $e', tag: 'MIGRATION');
     }
   }
 
@@ -396,6 +396,6 @@ class DataMigrationManager {
 
     final box = await Hive.openBox<String>('settings_box');
     await box.put('search_history', jsonEncode(history));
-    debugPrint('✅ История поиска перенесена');
+    AppLogger.api('✅ История поиска перенесена', tag: 'MIGRATION');
   }
 }

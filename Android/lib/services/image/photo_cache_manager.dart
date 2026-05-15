@@ -1,6 +1,7 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+
+import '../../core/logger/app_logger.dart';
 
 /// Централизованный кэш-менеджер для сетевых фото (GBIF, llifle, adult images).
 ///
@@ -39,7 +40,7 @@ class PhotoCacheManager {
       try {
         await _instance.downloadFile(url);
       } catch (e) {
-        debugPrint('Prefetch error for $url: $e');
+        AppLogger.error('Prefetch error for $url: $e', tag: 'PHOTO_CACHE');
       }
     }
   }

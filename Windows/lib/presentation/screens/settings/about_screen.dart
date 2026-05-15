@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/config/api_config.dart';
+
 /// Экран "О приложении".
 ///
 /// Показывает версию приложения, лицензии, ссылки.
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
-  static const String _privacyPolicyUrl =
-      'https://github.com/PaveUA/my-cactus/blob/main/PRIVACY.md';
-  static const String _supportEmail = 'mycactus.support@gmail.com';
+  static const String _privacyPolicyUrl = ApiConstants.privacyPolicyUrl;
+  static const String _supportEmail = ApiConstants.supportEmail;
 
   @override
   Widget build(BuildContext context) {

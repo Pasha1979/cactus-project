@@ -1,21 +1,23 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
+import '../logger/app_logger.dart';
+import '../config/api_config.dart';
 
 Future<String> translateText(String text,
     {String from = 'en', String to = 'ru',}) async {
   const int maxLength = 2000; // Ограничение для надежности
-  debugPrint('Начало перевода текста: "$text" (длина: ${text.length})');
-  debugPrint('Язык исходного текста: $from, язык перевода: $to');
+  AppLogger.api('Начало перевода текста: "$text" (длина: ${text.length})', tag: 'TRANSLATION');
+  AppLogger.api('Язык исходного текста: $from, язык перевода: $to', tag: 'TRANSLATION');
   if (text.length <= maxLength) {
     return _translateSingle(text, from, to);
   } else {
-    debugPrint('Текст слишком длинный, разбиваем на части...');
+    AppLogger.api('Текст слишком длинный, разбиваем на части...', tag: 'TRANSLATION');
     List<String> parts = _splitText(text, maxLength);
     List<String> translatedParts = [];
     for (String part in parts) {
-      debugPrint('Перевод части: "$part"');
+      AppLogger.api('Перевод части: "$part"', tag: 'TRANSLATION');
       String translatedPart = await _translateSingle(part, from, to);
       translatedParts.add(translatedPart);
       await Future.delayed(const Duration(seconds: 3)); // Задержка 3 секунды
@@ -25,9 +27,8 @@ Future<String> translateText(String text,
 }
 
 Future<String> _translateSingle(String text, String from, String to) async {
-  const url = 'https://api-b2b.backenster.com/b1/api/v3/translate/';
-  const token =
-      'Bearer a_25rccaCYcBC9ARqMODx2BV2M0wNZgDCEl3jryYSgYZtF1a702PVi4sxqi2AmZWyCcw4x209VXnCYwesx';
+  const url = ApiConstants.translationApiUrl;
+  const token = ApiConstants.translationApiToken;
 
   // Формируем тело запроса
   final requestBody = {
@@ -47,38 +48,38 @@ Future<String> _translateSingle(String text, String from, String to) async {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': token,
-        'Referer': 'https://lingvanex.com/translate/',
+        'Referer': ApiConstants.translationApiReferer,
         'Connection': 'keep-alive',
       },
       body: jsonEncode(requestBody),
     ).timeout(const Duration(seconds: 10));
 
-    debugPrint('Получен HTTP-ответ: статус ${response.statusCode}');
+    AppLogger.api('Получен HTTP-ответ: статус ${response.statusCode}', tag: 'TRANSLATION');
     if (response.statusCode != 200) {
-      debugPrint('Ошибка загрузки: ${response.statusCode}');
+      AppLogger.error('Ошибка загрузки: ${response.statusCode}', tag: 'TRANSLATION');
       throw Exception('Не удалось выполнить перевод: ${response.statusCode}');
     }
 
     // Парсим JSON-ответ
     final data = jsonDecode(response.body);
     if (data['result'] == null) {
-      debugPrint('Некорректный JSON-ответ: $data');
+      AppLogger.error('Некорректный JSON-ответ: $data', tag: 'TRANSLATION');
       throw Exception('Некорректный ответ от API');
     }
 
     // Извлекаем переведенный текст
     final translatedText = data['result'] as String;
     if (translatedText.isEmpty) {
-      debugPrint('Переведенный текст пустой');
+      AppLogger.warning('Переведенный текст пустой', tag: 'TRANSLATION');
       throw Exception('Переведенный текст пустой');
     }
 
-    debugPrint('Переведённый текст: "$translatedText"');
+    AppLogger.api('Переведённый текст: "$translatedText"', tag: 'TRANSLATION');
     return translatedText;
   } catch (e) {
-    debugPrint('Ошибка перевода через Lingvanex: $e');
+    AppLogger.error('Ошибка перевода через Lingvanex: $e', tag: 'TRANSLATION');
     // В случае ошибки возвращаем исходный текст
-    debugPrint('Не удалось перевести текст, возвращаем исходный: "$text"');
+    AppLogger.warning('Не удалось перевести текст, возвращаем исходный: "$text"', tag: 'TRANSLATION');
     return text;
   }
 }

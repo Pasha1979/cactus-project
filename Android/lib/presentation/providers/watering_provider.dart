@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/logger/app_logger.dart';
 import '../../core/ui/ui_state.dart';
 import '../../models/plant.dart';
 
@@ -33,9 +34,9 @@ class WateringProvider with ChangeNotifier {
       }
       _uiState = UiSuccess(List.unmodifiable(_globalWateringDates));
       notifyListeners();
-      debugPrint('✅ WateringProvider loaded: ${_globalWateringDates.length} dates');
+      AppLogger.api('✅ WateringProvider loaded: ${_globalWateringDates.length} dates', tag: 'WATERING');
     } catch (e) {
-      debugPrint('❌ WateringProvider load error: $e');
+      AppLogger.error('❌ WateringProvider load error: $e', tag: 'WATERING');
       _globalWateringDates = [];
       _uiState = UiError(
         'Ошибка загрузки данных полива: $e',
@@ -53,7 +54,7 @@ class WateringProvider with ChangeNotifier {
         _globalWateringDates.map((d) => d.toIso8601String()).toList(),
       );
     } catch (e) {
-      debugPrint('❌ WateringProvider save error: $e');
+      AppLogger.error('❌ WateringProvider save error: $e', tag: 'WATERING');
     }
   }
 

@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/logger/app_logger.dart';
 import '../presentation/providers/plant_crud_provider.dart';
 import 'yandex_auth_service.dart';
 import 'yandex_disk_service.dart';
@@ -24,7 +24,7 @@ class PhotoSyncService {
 
   Future<void> syncUserPhotos(PlantCrudProvider plantCrudProvider) async {
     if (!_authService.isConnected) {
-      debugPrint('Синхронизация фото невозможна: нет подключения');
+      AppLogger.warning('Синхронизация фото невозможна: нет подключения', tag: 'PHOTO_SYNC');
       return;
     }
 
@@ -53,13 +53,13 @@ class PhotoSyncService {
           final file = File(localPhoto);
           if (!await file.exists()) continue;
 
-          debugPrint('📤 Загружаем фото: $localPhoto');
+          AppLogger.api('📤 Загружаем фото: $localPhoto', tag: 'PHOTO_SYNC');
 
           try {
             final fileUrl = await _diskService.uploadPhoto(localPhoto);
 
             if (!await _validateCloudUrl(fileUrl)) {
-              debugPrint('❌ Cloud URL недоступен: $fileUrl');
+              AppLogger.error('❌ Cloud URL недоступен: $fileUrl', tag: 'PHOTO_SYNC');
               continue;
             }
 
@@ -67,10 +67,10 @@ class PhotoSyncService {
             if (index != -1) {
               updatedPhotos[index] = fileUrl;
               uploadedCount++;
-              debugPrint('✅ Фото заменено на cloud URL: $fileUrl');
+              AppLogger.api('✅ Фото заменено на cloud URL: $fileUrl', tag: 'PHOTO_SYNC');
             }
           } catch (e) {
-            debugPrint('❌ Ошибка загрузки $localPhoto: $e');
+            AppLogger.error('❌ Ошибка загрузки $localPhoto: $e', tag: 'PHOTO_SYNC');
           }
         }
 
@@ -83,38 +83,36 @@ class PhotoSyncService {
       await cleanDuplicatePhotos(plantCrudProvider);
       await _syncDeletedPhotos(plantCrudProvider);
 
-      debugPrint('✅ Синхронизация фото завершена. Загружено: $uploadedCount фото');
+      AppLogger.api('✅ Синхронизация фото завершена. Загружено: $uploadedCount фото', tag: 'PHOTO_SYNC');
     } catch (e) {
-      debugPrint('Ошибка синхронизации пользовательских фото: $e');
+      AppLogger.error('Ошибка синхронизации пользовательских фото: $e', tag: 'PHOTO_SYNC');
     }
   }
 
   // ==================== УДАЛЁННЫЕ ФОТО ====================
 
   Future<void> _syncDeletedPhotos(PlantCrudProvider plantCrudProvider) async {
-    debugPrint('🔄 Начинаем синхронизацию удаленных фото...');
+    AppLogger.api('🔄 Начинаем синхронизацию удаленных фото...', tag: 'PHOTO_SYNC');
 
     if (plantCrudProvider.deletedUserPhotos.isNotEmpty) {
-      debugPrint(
-          '🗑️ Удаляем свои фото с облака: ${plantCrudProvider.deletedUserPhotos.length}',);
+      AppLogger.api('🗑️ Удаляем свои фото с облака: ${plantCrudProvider.deletedUserPhotos.length}', tag: 'PHOTO_SYNC');
       for (var deletedUrl in plantCrudProvider.deletedUserPhotos) {
         try {
           await _diskService.deletePhoto(deletedUrl);
-          debugPrint('✅ Своё фото удалено с облака: $deletedUrl');
+          AppLogger.api('✅ Своё фото удалено с облака: $deletedUrl', tag: 'PHOTO_SYNC');
         } catch (e) {
-          debugPrint('❌ Ошибка удаления своего фото: $e');
+          AppLogger.error('❌ Ошибка удаления своего фото: $e', tag: 'PHOTO_SYNC');
         }
       }
     }
 
     // Llifle фото — только из локальных данных (внешние URL)
     if (plantCrudProvider.deletedLliflePhotos.isNotEmpty) {
-      debugPrint(
-          '🗑️ Убираем Llifle фото из данных: ${plantCrudProvider.deletedLliflePhotos.length}',);
+      AppLogger.api('🗑️ Убираем Llifle фото из данных: ${plantCrudProvider.deletedLliflePhotos.length}', tag: 'PHOTO_SYNC');
     }
 
     plantCrudProvider.clearDeletedPhotos();
-    debugPrint('✅ Синхронизация удаленных фото завершена');
+    AppLogger.api('✅ Синхронизация удаленных фото завершена', tag: 'PHOTO_SYNC');
   }
 
   // ==================== ДЕДУПЛИКАЦИЯ ====================
@@ -131,7 +129,7 @@ class PhotoSyncService {
         if (unique.add(dedupeKey)) {
           cleaned.add(photo);
         } else {
-          debugPrint('🗑️ Удалён дубликат: $photo');
+          AppLogger.api('🗑️ Удалён дубликат: $photo', tag: 'PHOTO_SYNC');
           changed = true;
         }
       }
@@ -145,7 +143,7 @@ class PhotoSyncService {
 
     if (changed) {
       await plantCrudProvider.savePlants();
-      debugPrint('✅ Дублей фото очищено');
+      AppLogger.api('✅ Дублей фото очищено', tag: 'PHOTO_SYNC');
     }
   }
 

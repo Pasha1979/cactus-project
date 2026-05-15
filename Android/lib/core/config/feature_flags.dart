@@ -1,6 +1,8 @@
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 
+import '../logger/app_logger.dart';
+
 /// Система Feature Flags для управления функциями без пересборки приложения.
 ///
 /// Позволяет включать/выключать функции удаленно через Firebase Remote Config
@@ -38,7 +40,7 @@ class FeatureFlags {
       await _remoteConfig!.setDefaults(_defaultValues);
       await _remoteConfig!.fetchAndActivate();
     } catch (e) {
-      debugPrint('⚠️ Не удалось инициализировать Remote Config: $e');
+      AppLogger.warning('⚠️ Не удалось инициализировать Remote Config: $e', tag: 'FEATURE_FLAGS');
       // При ошибке используем значения по умолчанию
     }
   }

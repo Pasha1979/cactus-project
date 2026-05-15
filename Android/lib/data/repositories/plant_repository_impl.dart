@@ -1,7 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
-
+import '../../core/logger/app_logger.dart';
 import '../../domain/repositories/plant_repository.dart';
 import '../../models/gbif_occurrence.dart';
 import '../../models/plant.dart';
@@ -187,7 +186,7 @@ class PlantRepositoryImpl implements PlantRepository {
       final map = jsonDecode(json) as Map<String, dynamic>;
       return fromJson(map);
     } catch (e) {
-      debugPrint('⚠️ Ошибка парсинга JSON, возвращаем null: $e');
+      AppLogger.warning('⚠️ Ошибка парсинга JSON, возвращаем null: $e', tag: 'PLANT_REPO');
       return null;
     }
   }
@@ -204,7 +203,7 @@ class PlantRepositoryImpl implements PlantRepository {
         final map = jsonDecode(json) as Map<String, dynamic>;
         result.add(fromJson(map));
       } catch (e) {
-        debugPrint('⚠️ Ошибка парсинга JSON, пропускаем: $e');
+        AppLogger.warning('⚠️ Ошибка парсинга JSON, пропускаем: $e', tag: 'PLANT_REPO');
       }
     }
     return result;

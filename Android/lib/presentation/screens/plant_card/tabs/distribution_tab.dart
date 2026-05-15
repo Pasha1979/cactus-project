@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/config/api_config.dart';
 import '../../../../models/gbif_occurrence.dart';
 import '../../../../models/plant.dart';
 import '../widgets/geography_section.dart';
@@ -314,7 +315,7 @@ class _DistributionTabState extends State<DistributionTab> {
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate: ApiConstants.openStreetMapTileUrl,
           userAgentPackageName: 'com.pavel.mycactus',
           maxZoom: 19,
         ),
@@ -553,7 +554,9 @@ class _DistributionTabState extends State<DistributionTab> {
   }
 
   void _openInExternalMap(double latitude, double longitude) {
-    final url = 'https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude#map=15/$latitude/$longitude';
+    final url = ApiConstants.openStreetMapUrl
+        .replaceAll('{lat}', latitude.toString())
+        .replaceAll('{lon}', longitude.toString());
     launchUrl(Uri.parse(url));
   }
 

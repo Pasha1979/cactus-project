@@ -1,5 +1,4 @@
-import 'package:flutter/foundation.dart';
-
+import '../../core/logger/app_logger.dart';
 import '../../core/network/network_info.dart';
 import '../../domain/repositories/sync_repository.dart';
 
@@ -18,8 +17,7 @@ class SyncRepositoryImpl implements SyncRepository {
   Future<void> syncWithCloud() async {
     /// Полная синхронизация идёт через CloudStorageProvider → SyncManager.
     /// Этот метод — no-op, чтобы не дублировать сложную логику.
-    debugPrint(
-        '⚠️ SyncRepositoryImpl.syncWithCloud: no-op — используйте CloudStorageProvider.syncData()',);
+    AppLogger.warning('⚠️ SyncRepositoryImpl.syncWithCloud: no-op — используйте CloudStorageProvider.syncData()', tag: 'SYNC_REPO');
   }
 
   @override

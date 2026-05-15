@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/logger/app_logger.dart';
 import '../../core/ui/ui_state.dart';
 import '../../domain/repositories/plant_repository.dart';
 import '../../injection_container.dart';
@@ -99,9 +100,9 @@ class PlantCrudProvider with ChangeNotifier {
       };
       final file = File(backupPath);
       await file.writeAsString(jsonEncode(backupData));
-      debugPrint('✅ Локальный бэкап создан: $backupPath');
+      AppLogger.api('✅ Локальный бэкап создан: $backupPath', tag: 'PLANT_CRUD');
     } catch (e) {
-      debugPrint('❌ Ошибка создания бэкапа: $e');
+      AppLogger.error('❌ Ошибка создания бэкапа: $e', tag: 'PLANT_CRUD');
     }
   }
 
@@ -146,7 +147,7 @@ class PlantCrudProvider with ChangeNotifier {
       try {
         await _repository.updatePlant(_plants[index]);
       } catch (e) {
-        debugPrint('Ошибка удаления фото: $e');
+        AppLogger.error('Ошибка удаления фото: $e', tag: 'PLANT_CRUD');
       }
     }
 
@@ -188,12 +189,12 @@ class PlantCrudProvider with ChangeNotifier {
           await entity.delete();
           deletedCount++;
         } catch (e) {
-          debugPrint('⚠️ Не удалось удалить старое фото: ${entity.path}');
+          AppLogger.warning('⚠️ Не удалось удалить старое фото: ${entity.path}', tag: 'PLANT_CRUD');
         }
       }
     }
     if (deletedCount > 0) {
-      debugPrint('🧹 Автоочистка: удалено $deletedCount старых фото');
+      AppLogger.api('🧹 Автоочистка: удалено $deletedCount старых фото', tag: 'PLANT_CRUD');
     }
   }
 
@@ -220,8 +221,7 @@ class PlantCrudProvider with ChangeNotifier {
 
   /// Загрузка из облачного JSON с полным слиянием данных
   Future<void> loadFromCloudJson(Map<String, dynamic> data) async {
-    debugPrint(
-        '🔄 loadFromCloudJson — загружаем ${data['plants']?.length ?? 0} растений из облака',);
+    AppLogger.api('🔄 loadFromCloudJson — загружаем ${data['plants']?.length ?? 0} растений из облака', tag: 'PLANT_CRUD');
 
     final plantsJson = data['plants'] as List<dynamic>? ?? [];
     final cloudPlants = <Plant>[];
@@ -231,7 +231,7 @@ class PlantCrudProvider with ChangeNotifier {
         final plant = Plant.fromJson(json as Map<String, dynamic>);
         cloudPlants.add(plant);
       } catch (e) {
-        debugPrint('❌ Ошибка загрузки растения из облака: $e');
+        AppLogger.error('❌ Ошибка загрузки растения из облака: $e', tag: 'PLANT_CRUD');
       }
     }
 
@@ -243,10 +243,10 @@ class PlantCrudProvider with ChangeNotifier {
       if (localIndex != -1) {
         final merged = _mergePlantData(_plants[localIndex], cloudPlant);
         mergedPlants.add(merged);
-        debugPrint('✅ Слияние: ${merged.latinName}');
+        AppLogger.api('✅ Слияние: ${merged.latinName}', tag: 'PLANT_CRUD');
       } else {
         mergedPlants.add(cloudPlant);
-        debugPrint('➕ Новое из облака: ${cloudPlant.latinName}');
+        AppLogger.api('➕ Новое из облака: ${cloudPlant.latinName}', tag: 'PLANT_CRUD');
       }
     }
 
@@ -254,7 +254,7 @@ class PlantCrudProvider with ChangeNotifier {
       final existsInCloud = cloudPlants.any((p) => p.permanentId == localPlant.permanentId);
       if (!existsInCloud) {
         mergedPlants.add(localPlant);
-        debugPrint('💾 Только локальное: ${localPlant.latinName}');
+        AppLogger.api('💾 Только локальное: ${localPlant.latinName}', tag: 'PLANT_CRUD');
       }
     }
 
@@ -264,7 +264,7 @@ class PlantCrudProvider with ChangeNotifier {
       try {
         await _repository.updatePlant(plant);
       } catch (e) {
-        debugPrint('❌ Ошибка сохранения растения в Hive после merge: $e');
+        AppLogger.error('❌ Ошибка сохранения растения в Hive после merge: $e', tag: 'PLANT_CRUD');
       }
     }
 
@@ -298,7 +298,7 @@ class PlantCrudProvider with ChangeNotifier {
     // Сохраняем legacy-поля в SharedPreferences
     await _saveLegacyData();
 
-    debugPrint('✅ Загружено и сохранено ${_plants.length} растений из облака');
+    AppLogger.api('✅ Загружено и сохранено ${_plants.length} растений из облака', tag: 'PLANT_CRUD');
 
     await sl<PhotoProvider>().ensureLocalPhotosExist(_plants);
     cleanupLocalPhotosAfterCloudLoad();
@@ -366,12 +366,9 @@ class PlantCrudProvider with ChangeNotifier {
         _winteringLogEntries = [];
       }
 
-      debugPrint('✅ Legacy-данные загружены: '
-          'поливов=${_globalWateringDates.length}, '
-          'adultImages=${_adultImages.length}, '
-          'зимовка=$_winteringStartDate–$_winteringEndDate');
+      AppLogger.api('✅ Legacy-данные загружены: поливов=${_globalWateringDates.length}, adultImages=${_adultImages.length}, зимовка=$_winteringStartDate–$_winteringEndDate', tag: 'PLANT_CRUD');
     } catch (e) {
-      debugPrint('❌ Ошибка загрузки legacy-данных: $e');
+      AppLogger.error('❌ Ошибка загрузки legacy-данных: $e', tag: 'PLANT_CRUD');
       _globalWateringDates = [];
       _adultImages = {};
       _winteringStartDate = null;
@@ -415,9 +412,9 @@ class PlantCrudProvider with ChangeNotifier {
         _winteringLogEntries.map((e) => jsonEncode(e.toJson())).toList(),
       );
 
-      debugPrint('✅ Legacy-данные сохранены');
+      AppLogger.api('✅ Legacy-данные сохранены', tag: 'PLANT_CRUD');
     } catch (e) {
-      debugPrint('❌ Ошибка сохранения legacy-данных: $e');
+      AppLogger.error('❌ Ошибка сохранения legacy-данных: $e', tag: 'PLANT_CRUD');
     }
   }
 
@@ -431,7 +428,7 @@ class PlantCrudProvider with ChangeNotifier {
       await _loadLegacyData();
       _plantsState = UiSuccess(List.unmodifiable(_plants));
     } catch (e) {
-      debugPrint('Ошибка загрузки растений: $e');
+      AppLogger.error('Ошибка загрузки растений: $e', tag: 'PLANT_CRUD');
       _plants = [];
       _plantsState = UiError(
         'Ошибка загрузки растений: $e',
@@ -450,7 +447,7 @@ class PlantCrudProvider with ChangeNotifier {
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
     } catch (e) {
-      debugPrint('Ошибка добавления растения: $e');
+      AppLogger.error('Ошибка добавления растения: $e', tag: 'PLANT_CRUD');
     }
   }
 
@@ -465,7 +462,7 @@ class PlantCrudProvider with ChangeNotifier {
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
     } catch (e) {
-      debugPrint('Ошибка обновления растения: $e');
+      AppLogger.error('Ошибка обновления растения: $e', tag: 'PLANT_CRUD');
     }
   }
 
@@ -477,7 +474,7 @@ class PlantCrudProvider with ChangeNotifier {
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
     } catch (e) {
-      debugPrint('Ошибка удаления растения: $e');
+      AppLogger.error('Ошибка удаления растения: $e', tag: 'PLANT_CRUD');
     }
   }
 
@@ -564,7 +561,7 @@ class PlantCrudProvider with ChangeNotifier {
       await _saveLegacyData();
       _plantsState = UiSuccess(List.unmodifiable(_plants));
     } catch (e) {
-      debugPrint('Ошибка сохранения данных: $e');
+      AppLogger.error('Ошибка сохранения данных: $e', tag: 'PLANT_CRUD');
       _plantsState = UiError(
         'Ошибка сохранения данных: $e',
         onRetry: savePlants,
@@ -588,7 +585,7 @@ class PlantCrudProvider with ChangeNotifier {
         try {
           await _repository.updatePlant(updated);
         } catch (e) {
-          debugPrint('Ошибка очистки уведомления: $e');
+          AppLogger.error('Ошибка очистки уведомления: $e', tag: 'PLANT_CRUD');
         }
       }
     }
@@ -613,7 +610,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(updated);
     } catch (e) {
-      debugPrint('Ошибка создания QR-кода: $e');
+      AppLogger.error('Ошибка создания QR-кода: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -635,7 +632,7 @@ class PlantCrudProvider with ChangeNotifier {
         try {
           await _repository.updatePlant(updated);
         } catch (e) {
-          debugPrint('Ошибка обновления QR-кода: $e');
+          AppLogger.error('Ошибка обновления QR-кода: $e', tag: 'PLANT_CRUD');
         }
       }
     }
@@ -722,7 +719,7 @@ class PlantCrudProvider with ChangeNotifier {
       try {
         await _repository.updatePlant(updated);
       } catch (e) {
-        debugPrint('Ошибка обновления plannedFertilizationDate: $e');
+        AppLogger.error('Ошибка обновления plannedFertilizationDate: $e', tag: 'PLANT_CRUD');
       }
     }
     notifyListeners();
@@ -792,7 +789,7 @@ class PlantCrudProvider with ChangeNotifier {
         try {
           await _repository.updatePlant(updated);
         } catch (e) {
-          debugPrint('Ошибка очистки поливов: $e');
+          AppLogger.error('Ошибка очистки поливов: $e', tag: 'PLANT_CRUD');
         }
       }
     }
@@ -815,7 +812,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(updated);
     } catch (e) {
-      debugPrint('Ошибка добавления даты полива: $e');
+      AppLogger.error('Ошибка добавления даты полива: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -835,7 +832,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(updated);
     } catch (e) {
-      debugPrint('Ошибка добавления Llifle фото: $e');
+      AppLogger.error('Ошибка добавления Llifle фото: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -857,7 +854,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(updated);
     } catch (e) {
-      debugPrint('Ошибка добавления события цветения: $e');
+      AppLogger.error('Ошибка добавления события цветения: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -874,7 +871,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(updated);
     } catch (e) {
-      debugPrint('Ошибка очистки данных о цветении: $e');
+      AppLogger.error('Ошибка очистки данных о цветении: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -901,7 +898,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(updated);
     } catch (e) {
-      debugPrint('Ошибка отметки удобрения: $e');
+      AppLogger.error('Ошибка отметки удобрения: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -1000,7 +997,7 @@ class PlantCrudProvider with ChangeNotifier {
       await _repository.updatePlant(updated);
       notifyListeners();
     } catch (e) {
-      debugPrint('Ошибка добавления фото: $e');
+      AppLogger.error('Ошибка добавления фото: $e', tag: 'PLANT_CRUD');
       rethrow;
     }
   }
@@ -1138,7 +1135,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(updated);
     } catch (e) {
-      debugPrint('Ошибка удаления даты полива: $e');
+      AppLogger.error('Ошибка удаления даты полива: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -1158,7 +1155,7 @@ class PlantCrudProvider with ChangeNotifier {
       await _repository.updatePlant(updated);
       await _deletePhotoFromStorage(photoPath);
     } catch (e) {
-      debugPrint('Ошибка удаления фото: $e');
+      AppLogger.error('Ошибка удаления фото: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -1177,7 +1174,7 @@ class PlantCrudProvider with ChangeNotifier {
     try {
       await _repository.updatePlant(updated);
     } catch (e) {
-      debugPrint('Ошибка удаления Llifle фото: $e');
+      AppLogger.error('Ошибка удаления Llifle фото: $e', tag: 'PLANT_CRUD');
     }
     notifyListeners();
   }
@@ -1240,14 +1237,14 @@ class PlantCrudProvider with ChangeNotifier {
               label: 'Открыть',
               onPressed: () async {
                 // Показываем путь пользователю
-                debugPrint('CSV сохранён: $filePath');
+                AppLogger.api('CSV сохранён: $filePath', tag: 'PLANT_CRUD');
               },
             ),
           ),
         );
       }
     } catch (e) {
-      debugPrint('❌ Ошибка экспорта CSV: $e');
+      AppLogger.error('❌ Ошибка экспорта CSV: $e', tag: 'PLANT_CRUD');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка экспорта: $e')),
@@ -1287,8 +1284,7 @@ class PlantCrudProvider with ChangeNotifier {
     final base = useCloudAsBase ? cloud : local;
     final other = useCloudAsBase ? local : cloud;
 
-    debugPrint(
-        '🔄 Слияние ${base.latinName}: ${useCloudAsBase ? "облако > локальное" : "локальное > облако"}',);
+    AppLogger.api('🔄 Слияние ${base.latinName}: ${useCloudAsBase ? "облако > локальное" : "локальное > облако"}', tag: 'PLANT_CRUD');
 
     final mergedPhotos = _mergePhotoLists(base.userPhotos, other.userPhotos, _deletedUserPhotos);
     final mergedLliflePhotos = _mergePhotoLists(base.lliflePhotoUrls, other.lliflePhotoUrls, _deletedLliflePhotos);

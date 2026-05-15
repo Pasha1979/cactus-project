@@ -5,6 +5,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/config/api_config.dart';
 import '../../core/logger/app_logger.dart';
 import '../isolates/http_isolate.dart';
 import 'gbif_service.dart';
@@ -69,12 +70,11 @@ class LlifleService {
           '(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
       'Accept':
           'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Referer': 'https://llifle.com/',
+      'Referer': ApiConstants.llifleReferer,
       'Accept-Language': 'en-US,en;q=0.9',
     };
 
-    final filterUrl =
-        'https://llifle.com/Encyclopedia/CACTI/Species/all/1/100/?filter=$searchName';
+    final filterUrl = '${ApiConstants.llifleSearchUrl}$searchName';
     AppLogger.api('Поиск данных с фильтром: $filterUrl', tag: _tag);
 
     int retries = 0;
@@ -213,8 +213,7 @@ class LlifleService {
     required String filterUrl,
     required SharedPreferences prefs,
   }) async {
-    final speciesUrl =
-        'https://llifle.com/Encyclopedia/CACTI/Family/Cactaceae/$speciesId/';
+    final speciesUrl = '${ApiConstants.llifleSpeciesUrl}$speciesId/';
     AppLogger.api('Загрузка страницы вида через HttpIsolate (Вариант Б): $speciesUrl', tag: _tag);
 
     // Вариант Б: HTTP + парсинг + jsonEncode — всё в isolate
@@ -236,10 +235,10 @@ class LlifleService {
     for (final rawUrl in rawPhotoUrls) {
       var photoUrl = rawUrl.toString();
       if (!photoUrl.startsWith('http')) {
-        photoUrl = 'https://llifle.com$photoUrl';
+        photoUrl = '${ApiConstants.llifleBaseUrl}$photoUrl';
       }
       photoUrl = photoUrl.replaceAll(
-          'https://llifle.comphotos/', 'https://llifle.com/photos/',);
+          '${ApiConstants.llifleBaseUrl}photos/', ApiConstants.lliflePhotosUrl,);
       photoUrl = photoUrl.replaceAll('+', '_');
       photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
 

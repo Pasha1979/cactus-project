@@ -10,6 +10,7 @@ import '../presentation/providers/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api/llifle_service.dart';
 import '../core/utils/translation_utils.dart';
+import '../core/logger/app_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class EditPlantScreen extends StatefulWidget {
@@ -83,7 +84,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     _loadCountryMapping().then((_) {
       _buildEnglishToRussianMapping();
       if (_editedPlant.country != null && _editedPlant.country!.isNotEmpty) {
-        debugPrint('Инициализация флага для: ${_editedPlant.country}');
+        AppLogger.api('Инициализация флага для: ${_editedPlant.country}', tag: 'EDIT_PLANT');
         _fetchFlag(_editedPlant.country!);
       }
     });
@@ -112,16 +113,16 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
           if (key is String && value is String) {
             _countryMapping[key] = value;
           } else {
-            debugPrint('Некорректная пара в JSON: $key: $value');
+            AppLogger.warning('Некорректная пара в JSON: $key: $value', tag: 'EDIT_PLANT');
           }
         });
-        debugPrint('Country mapping загружен: ${_countryMapping.length} стран');
-        debugPrint('Доступные страны: ${_countryMapping.keys.toList()}');
+        AppLogger.api('Country mapping загружен: ${_countryMapping.length} стран', tag: 'EDIT_PLANT');
+        AppLogger.api('Доступные страны: ${_countryMapping.keys.toList()}', tag: 'EDIT_PLANT');
       } else {
         throw Exception('JSON не является объектом Map');
       }
     } catch (e) {
-      debugPrint('Ошибка загрузки country_mapping.json: $e');
+      AppLogger.error('Ошибка загрузки country_mapping.json: $e', tag: 'EDIT_PLANT');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка загрузки списка стран: $e')),
@@ -182,11 +183,11 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
   void _fetchFlag(String countryName) async {
     if (countryName.isEmpty) return;
 
-    debugPrint('Запрос флага для страны: "$countryName"');
+    AppLogger.api('Запрос флага для страны: "$countryName"', tag: 'EDIT_PLANT');
     setState(() => _isLoadingFlag = true);
 
     final englishName = _translateRussianToEnglish(countryName);
-    debugPrint('Отправка запроса с английским названием: "$englishName"');
+    AppLogger.api('Отправка запроса с английским названием: "$englishName"', tag: 'EDIT_PLANT');
 
     try {
       final response = await http.get(
@@ -202,7 +203,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final flagUrl = data[0]['flags']['png'];
-        debugPrint('Флаг найден: $flagUrl');
+        AppLogger.api('Флаг найден: $flagUrl', tag: 'EDIT_PLANT');
         setState(() {
           _flagUrl = flagUrl;
           _editedPlant = _editedPlant.copyWith(
@@ -212,7 +213,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
           _countryController.text = countryName;
         });
       } else {
-        debugPrint('Ошибка API: ${response.statusCode}, тело: ${response.body}');
+        AppLogger.error('Ошибка API: ${response.statusCode}, тело: ${response.body}', tag: 'EDIT_PLANT');
         setState(() {
           _flagUrl = null;
           _editedPlant =
@@ -223,7 +224,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Исключение при загрузке флага: $e');
+      AppLogger.error('Исключение при загрузке флага: $e', tag: 'EDIT_PLANT');
       if (mounted) {
         setState(() {
           _flagUrl = null;
@@ -1140,12 +1141,11 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     final lowerCaseName = russianCountryName.trim().toLowerCase();
     for (var entry in _countryMapping.entries) {
       if (entry.key.toLowerCase() == lowerCaseName) {
-        debugPrint('Перевод: "$russianCountryName" -> "${entry.value}"');
+        AppLogger.api('Перевод: "$russianCountryName" -> "${entry.value}"', tag: 'EDIT_PLANT');
         return entry.value;
       }
     }
-    debugPrint(
-        'Перевод не найден для: "$russianCountryName". Доступные страны: ${_countryMapping.keys.toList()}',);
+    AppLogger.warning('Перевод не найден для: "$russianCountryName". Доступные страны: ${_countryMapping.keys.toList()}', tag: 'EDIT_PLANT');
     return russianCountryName;
   }
 
