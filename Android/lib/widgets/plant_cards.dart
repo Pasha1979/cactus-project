@@ -439,7 +439,6 @@ class PlantCards extends StatelessWidget {
 }
 
 class _PlantCardItem extends StatelessWidget {
-
   const _PlantCardItem({
     required this.plant,
     required this.index,
@@ -451,6 +450,13 @@ class _PlantCardItem extends StatelessWidget {
     required this.onShowStatusDialog,
     required this.getPhotoUrl,
   });
+
+  static const _indexTextStyle = TextStyle(
+    color: CactusColors.primaryGreen,
+    fontWeight: FontWeight.bold,
+  );
+  static const _editIcon = Icon(Icons.edit, color: CactusColors.primaryGreen);
+  static const _deleteIcon = Icon(Icons.delete, color: Colors.red);
   final Plant plant;
   final int index;
   final Function(Plant) onEdit;
@@ -513,10 +519,7 @@ class _PlantCardItem extends StatelessWidget {
                 backgroundColor: CactusColors.sandLight,
                 child: Text(
                   '${index + 1}',
-                  style: const TextStyle(
-                    color: CactusColors.primaryGreen,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: _indexTextStyle,
                 ),
               ),
               const SizedBox(width: 12),
@@ -636,13 +639,12 @@ class _PlantCardItem extends StatelessWidget {
               const SizedBox(width: 8),
 
               IconButton(
-                icon: const Icon(Icons.edit,
-                    color: CactusColors.primaryGreen,),
+                icon: _editIcon,
                 onPressed: () => onEdit(plant),
                 tooltip: 'Редактировать',
               ),
               IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
+                icon: _deleteIcon,
                 onPressed: () => onDelete(plant.permanentId),
                 tooltip: 'Удалить',
               ),
