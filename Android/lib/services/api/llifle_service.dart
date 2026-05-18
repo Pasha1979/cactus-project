@@ -228,35 +228,12 @@ class LlifleService {
     }
 
     final rawData = jsonDecode(serialized) as Map<String, dynamic>;
-    final rawPhotoUrls = rawData['photoUrls'] as List<dynamic>? ?? [];
+    final photoUrls = (rawData['photoUrls'] as List<dynamic>? ?? [])
+        .map((u) => u.toString())
+        .toSet()
+        .toList();
 
-    // URL processing — в main thread (лёгкая операция)
-    final photoUrls = <String>{};
-    for (final rawUrl in rawPhotoUrls) {
-      var photoUrl = rawUrl.toString();
-      if (!photoUrl.startsWith('http')) {
-        photoUrl = '${ApiConstants.llifleBaseUrl}$photoUrl';
-      }
-      photoUrl = photoUrl.replaceAll(
-          '${ApiConstants.llifleBaseUrl}photos/', ApiConstants.lliflePhotosUrl,);
-      photoUrl = photoUrl.replaceAll('+', '_');
-      photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
-
-      // Thumbnails: дополнительная замена
-      if (rawUrl.toString().contains('/thumbnails/')) {
-        photoUrl = photoUrl.replaceAll('/thumbnails/', '/photos/');
-      }
-
-      if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
-        AppLogger.api('Добавлен URL: $photoUrl', tag: _tag);
-        photoUrls.add(Uri.encodeFull(photoUrl));
-      } else {
-        AppLogger.warning('Пропущен некорректный URL: $photoUrl', tag: _tag);
-      }
-    }
-
-    final photoUrlList = photoUrls.toList();
-    AppLogger.api('Найдено фото: $photoUrlList', tag: _tag);
+    AppLogger.api('Найдено фото: $photoUrls', tag: _tag);
 
     // Данные вида — уже извлечены в isolate
     final habitat = rawData['habitat'] as String? ?? '';
@@ -277,7 +254,7 @@ class LlifleService {
 
     final plantData = {
       'speciesId': speciesId,
-      'photoUrls': photoUrlList,
+      'photoUrls': photoUrls,
       'lliflePhotosChecked': true,
       'habitat': habitat,
       'description': description,

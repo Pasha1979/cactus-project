@@ -1,6 +1,7 @@
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:flutter/foundation.dart';
+// Firebase отключено для Windows из-за проблем с CMake
+// import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+// import 'package:firebase_analytics/firebase_analytics.dart';
+// import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
 /// Глобальный экземпляр logger
@@ -139,43 +140,43 @@ class AppLogger {
     final fullMessage = '${tag != null ? '[$tag] ' : ''}$message';
     _addToBuffer('[${_timestamp()}] [ERROR] $fullMessage${error != null ? ' | $error' : ''}');
     logger.e(fullMessage, error: error, stackTrace: stackTrace);
-    
-    // Отправляем в Crashlytics (только в release режиме)
-    if (!kDebugMode) {
-      FirebaseCrashlytics.instance.recordError(
-        error ?? Exception(message),
-        stackTrace,
-        reason: fullMessage,
-        information: tag != null ? [tag] : [],
-      );
-    }
+
+    // Отправляем в Crashlytics (только в release режиме) - отключено для Windows
+    // if (!kDebugMode) {
+    //   FirebaseCrashlytics.instance.recordError(
+    //     error ?? Exception(message),
+    //     stackTrace,
+    //     reason: fullMessage,
+    //     information: tag != null ? [tag] : [],
+    //   );
+    // }
   }
 
-  /// Отправка custom event в Analytics
+  /// Отправка custom event в Analytics - отключено для Windows
   static void logEvent(String name, {Map<String, dynamic>? parameters}) {
-    if (!kDebugMode) {
-      FirebaseAnalytics.instance.logEvent(
-        name: name,
-        parameters: parameters,
-      );
-    }
+    // if (!kDebugMode) {
+    //   FirebaseAnalytics.instance.logEvent(
+    //     name: name,
+    //     parameters: parameters,
+    //   );
+    // }
   }
 
-  /// Инициализация Firebase Crashlytics
+  /// Инициализация Firebase Crashlytics - отключено для Windows
   static Future<void> initializeCrashlytics() async {
     // Включаем автоматический сбор крашей
-    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+    // await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
     
     // Перехватываем все непойманные ошибки Flutter
-    FlutterError.onError = (errorDetails) {
-      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-    };
+    // FlutterError.onError = (errorDetails) {
+    //   FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    // };
     
     // Перехватываем ошибки в зонах (async)
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
+    // PlatformDispatcher.instance.onError = (error, stack) {
+    //   FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    //   return true;
+    // };
   }
 }
 

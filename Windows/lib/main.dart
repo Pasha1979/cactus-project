@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
+// Firebase отключено для Windows из-за проблем с CMake
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'core/logger/app_logger.dart';
-import 'core/config/feature_flags.dart';
+// Firebase отключено для Windows из-за проблем с CMake
+// import 'core/config/feature_flags.dart';
 import 'core/config/app_constants.dart';
 import 'services/backup/auto_backup_service.dart';
 import 'presentation/providers/settings_provider.dart';
-import 'firebase_options.dart';
+// Firebase отключено для Windows из-за проблем с CMake
+// import 'firebase_options.dart';
 import 'models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
@@ -33,17 +36,17 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Инициализация Firebase (фаза 3.4)
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    await AppLogger.initializeCrashlytics();
-    // Инициализация Feature Flags (фаза 4.1)
-    await FeatureFlags.initialize();
-  } catch (e) {
-    AppLogger.warning('⚠️ Firebase не настроен: $e', tag: 'MAIN');
-  }
+  // Инициализация Firebase (фаза 3.4) - отключено для Windows из-за проблем с CMake
+  // try {
+  //   await Firebase.initializeApp(
+  //     options: DefaultFirebaseOptions.currentPlatform,
+  //   );
+  //   await AppLogger.initializeCrashlytics();
+  //   // Инициализация Feature Flags (фаза 4.1)
+  //   await FeatureFlags.initialize();
+  // } catch (e) {
+  //   AppLogger.warning('⚠️ Firebase не настроен: $e', tag: 'MAIN');
+  // }
 
   // Инициализация автобэкапа (фаза 4.2)
   await AutoBackupService.initialize();

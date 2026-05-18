@@ -56,12 +56,12 @@ dependencies:
   logger: ^2.0.0+1  # Структурированное логирование
   flutter_image_compress: ^2.4.0
   flutter_cache_manager: ^3.4.1
-  # Фаза 3.4: Crash Reporting и Analytics
-  firebase_core: ^2.24.2
-  firebase_crashlytics: ^3.4.9
-  firebase_analytics: ^10.8.0
-  # Фаза 4.1: Feature Flags
-  firebase_remote_config: ^4.3.2
+  # Фаза 3.4: Crash Reporting и Analytics - отключено для Windows из-за проблем с CMake
+  # firebase_core: ^2.24.2
+  # firebase_crashlytics: ^3.4.9
+  # firebase_analytics: ^10.8.0
+  # Фаза 4.1: Feature Flags - отключено для Windows из-за проблем с CMake
+  # firebase_remote_config: ^4.3.2
   # Шаг 5.2: Реализация TODO из настроек
   share_plus: ^10.0.0  # Для отправки логов и файлов
 

@@ -1,7 +1,8 @@
-import 'package:firebase_remote_config/firebase_remote_config.dart';
-import 'package:flutter/foundation.dart';
+// Firebase отключено для Windows из-за проблем с CMake
+// import 'package:firebase_remote_config/firebase_remote_config.dart';
+// import 'package:flutter/foundation.dart';
 
-import '../logger/app_logger.dart';
+// import '../logger/app_logger.dart';
 
 /// Система Feature Flags для управления функциями без пересборки приложения.
 ///
@@ -15,7 +16,8 @@ import '../logger/app_logger.dart';
 /// }
 /// ```
 class FeatureFlags {
-  static FirebaseRemoteConfig? _remoteConfig;
+  // Firebase отключено для Windows из-за проблем с CMake
+  // static FirebaseRemoteConfig? _remoteConfig;
   static final Map<FeatureFlag, bool> _localOverrides = {};
 
   /// Инициализация Feature Flags
@@ -23,26 +25,10 @@ class FeatureFlags {
   /// Вызывается в main.dart после инициализации Firebase.
   /// В debug режиме использует локальные значения.
   /// В release режиме загружает из Firebase Remote Config.
+  /// Для Windows Firebase отключен, используем только локальные значения.
   static Future<void> initialize() async {
-    if (kDebugMode) {
-      // В debug используем локальные значения по умолчанию
-      return;
-    }
-
-    try {
-      _remoteConfig = FirebaseRemoteConfig.instance;
-
-      await _remoteConfig!.setConfigSettings(RemoteConfigSettings(
-        fetchTimeout: const Duration(minutes: 1),
-        minimumFetchInterval: const Duration(hours: 1),
-      ),);
-
-      await _remoteConfig!.setDefaults(_defaultValues);
-      await _remoteConfig!.fetchAndActivate();
-    } catch (e) {
-      AppLogger.warning('⚠️ Не удалось инициализировать Remote Config: $e', tag: 'FEATURE_FLAGS');
-      // При ошибке используем значения по умолчанию
-    }
+    // Для Windows Firebase отключен, используем только локальные значения
+    return;
   }
 
   /// Проверить, включен ли флаг
@@ -52,16 +38,7 @@ class FeatureFlags {
       return _localOverrides[flag]!;
     }
 
-    // В debug режиме используем значения по умолчанию
-    if (kDebugMode) {
-      return flag.defaultValue;
-    }
-
-    // В release режиме используем Remote Config
-    if (_remoteConfig != null) {
-      return _remoteConfig!.getBool(flag.key);
-    }
-
+    // Для Windows Firebase отключен, используем только локальные значения
     return flag.defaultValue;
   }
 
@@ -91,18 +68,10 @@ class FeatureFlags {
     _localOverrides.clear();
   }
 
-  /// Принудительное обновление из Remote Config
+  /// Принудительное обновление из Remote Config - отключено для Windows
   static Future<void> forceRefresh() async {
-    if (_remoteConfig != null && !kDebugMode) {
-      await _remoteConfig!.fetchAndActivate();
-    }
-  }
-
-  /// Значения по умолчанию для Remote Config
-  static Map<String, dynamic> get _defaultValues {
-    return {
-      for (var flag in FeatureFlag.values) flag.key: flag.defaultValue,
-    };
+    // Для Windows Firebase отключен
+    return;
   }
 }
 

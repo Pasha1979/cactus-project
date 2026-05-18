@@ -237,17 +237,46 @@ Map<String, dynamic> _parseLlifleDocument(dynamic document) {
         break;
       }
     }
+  } else {
+    // Fallback: попробовать без expandable
+    final fallbackElement = document.querySelector(
+      'p.Description_Sheet_Origin_and_Habitat',
+    );
+    if (fallbackElement != null) {
+      habitat = fallbackElement.text.trim();
+      const countries = [
+        'Mexico', 'United States', 'Argentina', 'Bolivia', 'Chile', 'Peru',
+        'Brazil', 'Paraguay', 'Uruguay', 'Colombia', 'Ecuador', 'Venezuela',
+        'Spain', 'South Africa', 'Namibia', 'Madagascar', 'Australia',
+        'Guatemala', 'Honduras', 'Costa Rica',
+      ];
+      for (final c in countries) {
+        if (habitat.toLowerCase().contains(c.toLowerCase())) {
+          country = c;
+          break;
+        }
+      }
+    }
   }
 
   final careElement = document.querySelector(
     'p.expandable.Description_Sheet_Cultivation_and_Propagation',
   );
   final careTips = careElement?.text.trim() ?? '';
+  
+  // Fallback для careTips
+  String finalCareTips = careTips;
+  if (finalCareTips.isEmpty) {
+    final fallbackCareElement = document.querySelector(
+      'p.Description_Sheet_Cultivation_and_Propagation',
+    );
+    finalCareTips = fallbackCareElement?.text.trim() ?? '';
+  }
 
   final descElement = document.querySelector(
     'p.expandable.Description_Sheet_Description',
   );
-  final description = descElement?.text.trim() ?? '';
+  final description = descElement?.text.trim() ?? _parseDescription(document);
 
   final synonymsElement = document.querySelector('#short_synonyms_list ul');
   String synonyms = '';
@@ -255,10 +284,25 @@ Map<String, dynamic> _parseLlifleDocument(dynamic document) {
     synonyms = synonymsElement.text.trim().replaceAll(RegExp(r'\s+'), ' ');
   }
 
+  // Дополнительные fallback для надежности (как в стабильной версии)
+  if (habitat.isEmpty) {
+    habitat = _parseHabitat(document);
+  }
+  if (finalCareTips.isEmpty) {
+    finalCareTips = _parseCareTips(document);
+  }
+
   final photoUrls = <String>[];
   final mainPhoto = document.querySelector('#main_photo_container img');
   if (mainPhoto != null && mainPhoto.attributes['src'] != null) {
-    photoUrls.add(mainPhoto.attributes['src']!);
+    var src = mainPhoto.attributes['src']!;
+    src = src.startsWith('http') ? src : 'https://llifle.com$src';
+    src = src.replaceAll('https://llifle.comphotos/', 'https://llifle.com/photos/');
+    src = src.replaceAll('+', '_');
+    src = src.replaceAll('_m.jpg', '_l.jpg');
+    if (src.contains('llifle.com') && src.endsWith('.jpg')) {
+      photoUrls.add(Uri.encodeFull(src));
+    }
   }
 
   final secondaryPhotos = document.querySelectorAll(
@@ -266,7 +310,15 @@ Map<String, dynamic> _parseLlifleDocument(dynamic document) {
   );
   for (final img in secondaryPhotos) {
     final src = img.attributes['src'];
-    if (src != null) photoUrls.add(src);
+    if (src != null) {
+      var photoUrl = src.startsWith('http') ? src : 'https://llifle.com$src';
+      photoUrl = photoUrl.replaceAll('https://llifle.comphotos/', 'https://llifle.com/photos/');
+      photoUrl = photoUrl.replaceAll('+', '_');
+      photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
+      if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
+        photoUrls.add(Uri.encodeFull(photoUrl));
+      }
+    }
   }
 
   final thumbnails = document.querySelectorAll(
@@ -274,7 +326,16 @@ Map<String, dynamic> _parseLlifleDocument(dynamic document) {
   );
   for (final img in thumbnails) {
     final src = img.attributes['src'];
-    if (src != null) photoUrls.add(src);
+    if (src != null) {
+      var photoUrl = src.startsWith('http') ? src : 'https://llifle.com$src';
+      photoUrl = photoUrl.replaceAll('/thumbnails/', '/photos/');
+      photoUrl = photoUrl.replaceAll('https://llifle.comphotos/', 'https://llifle.com/photos/');
+      photoUrl = photoUrl.replaceAll('+', '_');
+      photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
+      if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
+        photoUrls.add(photoUrl); // Без избыточного кодирования
+      }
+    }
   }
 
   final albumLinks = document.querySelectorAll(
@@ -283,18 +344,60 @@ Map<String, dynamic> _parseLlifleDocument(dynamic document) {
   for (final link in albumLinks) {
     final rel = link.attributes['rel'];
     if (rel != null && rel.startsWith('/screenshots/')) {
-      photoUrls.add(rel);
+      var photoUrl = 'https://llifle.com$rel';
+      photoUrl = photoUrl.replaceAll('https://llifle.comphotos/', 'https://llifle.com/photos/');
+      photoUrl = photoUrl.replaceAll('+', '_');
+      photoUrl = photoUrl.replaceAll('_m.jpg', '_l.jpg');
+      if (photoUrl.contains('llifle.com') && photoUrl.endsWith('.jpg')) {
+        photoUrls.add(photoUrl); // Без избыточного кодирования
+      }
     }
   }
 
   return {
     'habitat': habitat,
     'country': country,
-    'careTips': careTips,
+    'careTips': finalCareTips,
     'description': description,
     'synonyms': synonyms,
     'photoUrls': photoUrls,
   };
+}
+
+String _parseDescription(dynamic document) {
+  try {
+    final element = document.querySelector('p.Description_Sheet_Description');
+    if (element != null) {
+      return element.text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+    }
+    return '';
+  } catch (e) {
+    return '';
+  }
+}
+
+String _parseHabitat(dynamic document) {
+  try {
+    final element = document.querySelector('p.Description_Sheet_Origin_and_Habitat');
+    if (element != null) {
+      return element.text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+    }
+    return '';
+  } catch (e) {
+    return '';
+  }
+}
+
+String _parseCareTips(dynamic document) {
+  try {
+    final element = document.querySelector('p.Description_Sheet_Cultivation_and_Propagation');
+    if (element != null) {
+      return element.text.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+    }
+    return '';
+  } catch (e) {
+    return '';
+  }
 }
 
 // ==================== Exceptions ====================
