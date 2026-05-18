@@ -120,7 +120,7 @@
 **Цель:** Подготовка к будущим фичам
 
 **Улучшения:**
-1. Feature flags
+1. Feature flags ✅ ВЫПОЛНЕНО
 2. Система прав доступа (multi-user)
 
 **Приоритет:** 🔵 Будущее
@@ -1509,6 +1509,428 @@ dependencies:
 **Действие после завершения:**
 Если ВСЕ проверки пройдены - разблокировать доступ к ROADMAP для дальнейшего улучшения приложения.
 Если есть проблемы - сначала исправить их, затем повторить проверку.
+
+---
+
+## ФАЗА 4.5: АРХИТЕКТУРНОЕ ОЧИЩЕНИЕ (P0.5) - 5-7 дней
+
+**Цель:** Устранить архитектурные проблемы, выявленные в глубоком анализе кода после завершения Фазы 4.
+
+**Приоритет:** 🔴 Критический (должен быть выполнен ДО адаптации ROADMAP)
+
+**Улучшения:**
+1. Удаление legacy полей из PlantCrudProvider
+2. Полный отказ от SharedPreferences
+3. Рефакторинг SyncManager
+4. Deep linking в роутере
+5. Внедрение ErrorHandler повсеместно
+6. Автоматизация маппинга DTO↔Entity
+7. Внедрение UseCase слоя
+8. Валидация на уровне домена
+9. Реализация ErrorBoundary
+10. Разделение Plant на Entity и DTO
+
+---
+
+### 4.5.1 Удаление legacy полей из PlantCrudProvider (1-2 дня)
+
+**Цель:** Удалить legacy поля, которые нарушают SRP и создают путаницу с данными из специализированных провайдеров.
+
+**Задачи:**
+4.5.1.1 Аудит legacy полей в PlantCrudProvider:
+   - _globalWateringDates (дублирует WateringProvider)
+   - _winteringStartDate, _winteringEndDate, _winteringTemperature (дублирует WinteringProvider)
+   - _winteringLogEntries (дублирует WinteringProvider)
+   - _adultImages (дублирует PhotoProvider)
+   - _deletedUserPhotos, _deletedLliflePhotos (должны быть в PhotoProvider)
+   - _hasUnsavedChanges (должен быть в отдельном сервисе)
+
+4.5.1.2 Создать SettingsRepository для хранения _hasUnsavedChanges в Hive
+4.5.1.3 Переместить удаленные фото в PhotoProvider (_deletedUserPhotos, _deletedLliflePhotos)
+4.5.1.4 Удалить legacy геттеры из PlantCrudProvider
+4.5.1.5 Удалить legacy сеттеры из PlantCrudProvider
+4.5.1.6 Удалить методы loadLegacyData() и saveLegacyData()
+4.5.1.7 Обновить CloudStorageProvider для работы напрямую с провайдерами
+4.5.1.8 Обновить SyncManager для работы напрямую с провайдерами
+4.5.1.9 Тестирование синхронизации без legacy полей
+4.5.1.10 flutter analyze на обоих проектах
+
+**Файлы:**
+- `presentation/providers/plant_crud_provider.dart`
+- `presentation/providers/watering_provider.dart`
+- `presentation/providers/wintering_provider.dart`
+- `presentation/providers/photo_provider.dart`
+- `domain/repositories/settings_repository.dart` (новый)
+- `services/sync_manager.dart`
+- `presentation/providers/cloud_storage_provider.dart`
+
+**Проверка:**
+- Все legacy поля удалены
+- Данные хранятся только в специализированных провайдерах
+- Синхронизация работает корректно
+- flutter analyze чистый
+
+---
+
+### 4.5.2 Полный отказ от SharedPreferences (2-3 дня)
+
+**Цель:** Устранить дублирование данных (Hive + SharedPreferences) и упростить архитектуру.
+
+**Задачи:**
+4.5.2.1 Аудит всех использований SharedPreferences (50+ файлов):
+   - Провайдеры: SettingsProvider, WateringProvider, WinteringProvider, WeatherProvider, QrCodeProvider
+   - Сервисы: yandex_auth_service, auto_backup_service, weather_service, gbif_service, llifle_service
+   - Экраны: welcome_screen, statistics_screen, edit_plant_screen, system_settings_screen
+   - Роутер: app_router.dart
+   - main.dart
+
+4.5.2.2 Перенести настройки из SettingsProvider в Hive:
+   - Создать SettingsDto с @HiveType
+   - Создать SettingsLocalDataSource
+   - Создать SettingsRepository
+   - Мигрировать все настройки из SharedPreferences в Hive
+
+4.5.2.3 Перенести кэш из сервисов в Hive:
+   - weather_service: кэш погоды → Hive box
+   - gbif_service: кэш GBIF → уже в Hive (gbif_cache_box)
+   - llifle_service: кэш Llifle → Hive box
+
+4.5.2.4 Удалить SharedPreferences из провайдеров:
+   - SettingsProvider → использовать SettingsRepository
+   - WateringProvider → использовать WateringRepository
+   - WinteringProvider → использовать WinteringRepository
+   - WeatherProvider → использовать WeatherRepository
+   - QrCodeProvider → использовать QrCodeRepository
+
+4.5.2.5 Удалить SharedPreferences из сервисов:
+   - yandex_auth_service: токены уже в FlutterSecureStorage (оставить)
+   - auto_backup_service: настройки → SettingsRepository
+   - weather_service: кэш → Hive
+   - gbif_service: кэш → Hive
+   - llifle_service: кэш → Hive
+
+4.5.2.6 Удалить SharedPreferences из роутера:
+   - app_router.dart: has_seen_welcome → Hive
+   - welcome_screen.dart: has_seen_welcome → Hive
+
+4.5.2.7 Удалить SharedPreferences из main.dart:
+   - Миграция данных уже выполнена (data_migration_manager.dart)
+
+4.5.2.8 Удалить shared_preferences из pubspec.yaml (опционально, оставить для совместимости)
+
+4.5.2.9 Тестирование на обоих платформах
+
+4.5.2.10 flutter analyze на обоих проектах
+
+**Файлы:**
+- `data/models/settings_dto.dart` (новый)
+- `data/datasources/local/settings_local_datasource.dart` (новый)
+- `domain/repositories/settings_repository.dart` (обновить)
+- `data/repositories/settings_repository_impl.dart` (обновить)
+- `presentation/providers/settings_provider.dart`
+- `presentation/providers/watering_provider.dart`
+- `presentation/providers/wintering_provider.dart`
+- `presentation/providers/weather_provider.dart`
+- `presentation/providers/qr_code_provider.dart`
+- `services/yandex_auth_service.dart`
+- `services/auto_backup_service.dart`
+- `services/weather_service.dart`
+- `services/gbif_service.dart`
+- `services/llifle_service.dart`
+- `presentation/routers/app_router.dart`
+- `screens/welcome_screen.dart`
+- `main.dart`
+
+**Проверка:**
+- SharedPreferences больше не используется (кроме FlutterSecureStorage для токенов)
+- Все данные хранятся в Hive
+- flutter analyze чистый
+- Приложение работает на обеих платформах
+
+---
+
+### 4.5.3 Рефакторинг SyncManager (1-2 дня)
+
+**Цель:** Устранить нарушение архитектуры (services не должны зависеть от presentation).
+
+**Задачи:**
+4.5.3.1 Создать интерфейс ISyncManager в domain/usecases/
+4.5.3.2 Переместить SyncManager из services/ в domain/usecases/
+4.5.3.3 Изменить зависимость от PlantCrudProvider на PlantRepository
+4.5.3.4 Изменить зависимость от PhotoSyncService на PhotoRepository
+4.5.3.5 Обновить CloudStorageProvider для работы с ISyncManager
+4.5.3.6 Обновить SyncProvider для работы с ISyncManager
+4.5.3.7 Тестирование синхронизации
+4.5.3.8 flutter analyze на обоих проектах
+
+**Файлы:**
+- `domain/usecases/i_sync_manager.dart` (новый интерфейс)
+- `domain/usecases/sync_manager.dart` (перемещен из services/)
+- `presentation/providers/cloud_storage_provider.dart`
+- `presentation/providers/sync_provider.dart`
+
+**Проверка:**
+- SyncManager больше не зависит от PlantCrudProvider
+- SyncManager находится в domain/usecases/
+- Синхронизация работает корректно
+- flutter analyze чистый
+
+---
+
+### 4.5.4 Deep linking в роутере (1 день)
+
+**Цель:** Поддержка opening plants/qr codes из external links и notifications.
+
+**Задачи:**
+4.5.4.1 Заменить state.extra на path parameters для /plant/:id
+4.5.4.2 Заменить state.extra на path parameters для /plant/:id/edit
+4.5.4.3 Заменить state.extra на path parameters для /plant-statistics
+4.5.4.4 Заменить state.extra на path parameters для /print/settings
+4.5.4.5 Обновить экраны для загрузки Plant по ID из Provider:
+   - PlantCardScreen
+   - EditPlantScreen
+   - PlantStatisticsScreen
+   - PrintSettingsScreen
+4.5.4.6 Обновить PlantListScreen для загрузки списка по ID (если нужно)
+4.5.4.7 Тестирование deep linking:
+   - Открытие растения по ссылке
+   - Открытие редактирования по ссылке
+   - Открытие статистики по ссылке
+4.5.4.8 flutter analyze на обоих проектах
+
+**Файлы:**
+- `presentation/routers/app_router.dart`
+- `presentation/screens/plant_card/plant_card_screen.dart`
+- `screens/edit_plant_screen.dart`
+- `screens/plant_statistics_screen.dart`
+- `screens/print_settings_screen.dart`
+
+**Проверка:**
+- Deep linking работает для всех маршрутов
+- Экраны загружают данные по ID
+- flutter analyze чистый
+
+---
+
+### 4.5.5 Внедрение ErrorHandler повсеместно (1 день)
+
+**Цель:** Централизовать обработку ошибок для единообразия и упрощения отладки.
+
+**Задачи:**
+4.5.5.1 Аудит всех try-catch блоков в коде
+4.5.5.2 Заменить прямое логирование на ErrorHandler в провайдерах:
+   - PlantCrudProvider
+   - WateringProvider
+   - WinteringProvider
+   - PhotoProvider
+   - CloudStorageProvider
+4.5.5.3 Заменить прямое логирование на ErrorHandler в сервисах:
+   - yandex_auth_service
+   - yandex_disk_service
+   - sync_manager
+   - gbif_service
+   - llifle_service
+   - weather_service
+4.5.5.4 Заменить прямое логирование на ErrorHandler в репозиториях
+4.5.5.5 Добавить ErrorHandler в injection_container.dart
+4.5.5.6 Обернуть MaterialApp в ErrorBoundary
+4.5.5.7 Тестирование обработки ошибок
+4.5.5.8 flutter analyze на обоих проектах
+
+**Файлы:**
+- `core/error/error_handler.dart` (уже есть)
+- `core/error/error_boundary.dart` (уже есть)
+- `presentation/providers/*.dart` (все провайдеры)
+- `services/*.dart` (все сервисы)
+- `data/repositories/*.dart` (все репозитории)
+- `injection_container.dart`
+- `main.dart`
+
+**Проверка:**
+- Все ошибки обрабатываются через ErrorHandler
+- ErrorBoundary перехватывает UI ошибки
+- flutter analyze чистый
+
+---
+
+### 4.5.6 Автоматизация маппинга DTO↔Entity (1 день)
+
+**Цель:** Устранить 100+ строк ручного маппинга, уменьшить риск ошибок.
+
+**Задачи:**
+4.5.6.1 Добавить json_serializable в pubspec.yaml
+4.5.6.2 Добавить build_runner для генерации
+4.5.6.3 Создать extension методы для маппинга:
+   - PlantDto.toEntity()
+   - Plant.toDto()
+   - Аналогично для других DTO
+4.5.6.4 Заменить ручной маппинг в PlantRepositoryImpl на extension методы
+4.5.6.5 Запустить build_runner для генерации кода
+4.5.6.6 Тестирование маппинга
+4.5.6.7 flutter analyze на обоих проектах
+
+**Файлы:**
+- `pubspec.yaml` (оба проекта)
+- `data/models/plant_dto.dart`
+- `data/models/qr_code_dto.dart`
+- `data/models/note_dto.dart`
+- `data/models/wintering_log_entry_dto.dart`
+- `data/models/gbif_occurrence_dto.dart`
+- `data/repositories/plant_repository_impl.dart`
+
+**Зависимости:**
+```yaml
+dependencies:
+  json_serializable: ^6.7.1
+
+dev_dependencies:
+  json_serializable: ^6.7.1
+  build_runner: ^2.4.8
+```
+
+**Проверка:**
+- build_runner прошел без ошибок
+- Маппинг работает корректно
+- flutter analyze чистый
+
+---
+
+### 4.5.7 Внедрение UseCase слоя (2 дня)
+
+**Цель:** Выделить бизнес-логику из провайдеров в отдельный слой для тестируемости.
+
+**Задачи:**
+4.5.7.1 Создать базовый класс UseCase в domain/usecases/
+4.5.7.2 Создать UseCases для основных операций:
+   - AddPlantUseCase
+   - UpdatePlantUseCase
+   - DeletePlantUseCase
+   - SearchPlantsUseCase
+   - SyncDataUseCase
+   - AddPhotoUseCase
+   - MarkWateringUseCase
+4.5.7.3 Переместить бизнес-логику из провайдеров в UseCases
+4.5.7.4 Обновить провайдеры для использования UseCases
+4.5.7.5 Интегрировать UseCases в injection_container.dart
+4.5.7.6 Тестирование UseCases
+4.5.7.7 flutter analyze на обоих проектах
+
+**Файлы:**
+- `domain/usecases/base_use_case.dart` (новый)
+- `domain/usecases/add_plant_use_case.dart` (новый)
+- `domain/usecases/update_plant_use_case.dart` (новый)
+- `domain/usecases/delete_plant_use_case.dart` (новый)
+- `domain/usecases/search_plants_use_case.dart` (новый)
+- `domain/usecases/sync_data_use_case.dart` (новый)
+- `domain/usecases/add_photo_use_case.dart` (новый)
+- `domain/usecases/mark_watering_use_case.dart` (новый)
+- `presentation/providers/plant_crud_provider.dart`
+- `presentation/providers/cloud_storage_provider.dart`
+- `injection_container.dart`
+
+**Проверка:**
+- Бизнес-логика в UseCases
+- Провайдеры только управляют состоянием
+- flutter analyze чистый
+
+---
+
+### 4.5.8 Валидация на уровне домена (1 день)
+
+**Цель:** Обеспечить целостность данных на уровне домена, предотвратить сохранение некорректных данных.
+
+**Задачи:**
+4.5.8.1 Добавить метод validate() в Plant модель
+4.5.8.2 Добавить валидацию полей:
+   - latinName: не пустой, только буквы
+   - year: валидный год (не в будущем)
+   - status: валидный статус
+   - category: валидная категория
+   - displayId: уникальный (проверка через репозиторий)
+4.5.8.3 Создать ValidationException для ошибок валидации
+4.5.8.4 Вызывать validate() в PlantRepository.addPlant()
+4.5.8.5 Вызывать validate() в PlantRepository.updatePlant()
+4.5.8.6 Отображать ошибки валидации в UI
+4.5.8.7 Тестирование валидации
+4.5.8.8 flutter analyze на обоих проектах
+
+**Файлы:**
+- `models/plant.dart`
+- `core/error/exceptions.dart` (ValidationException уже есть)
+- `data/repositories/plant_repository_impl.dart`
+- `screens/add_plant_screen.dart`
+- `screens/edit_plant_screen.dart`
+
+**Проверка:**
+- Валидация работает на уровне домена
+- Некорректные данные не сохраняются
+- Ошибки валидации отображаются в UI
+- flutter analyze чистый
+
+---
+
+### 4.5.9 Реализация ErrorBoundary (0.5 дня)
+
+**Цель:** Перехватывать все UI ошибки и показывать пользователю понятные сообщения.
+
+**Задачи:**
+4.5.9.1 Обернуть MaterialApp в ErrorBoundary
+4.5.9.2 Настроить ErrorBoundary для отображения дружелюбного сообщения
+4.5.9.3 Добавить кнопку "Отправить логи" в ErrorBoundary
+4.5.9.4 Тестирование ErrorBoundary (искусственная ошибка)
+4.5.9.5 flutter analyze на обоих проектах
+
+**Файлы:**
+- `main.dart`
+- `core/error/error_boundary.dart` (уже есть)
+
+**Проверка:**
+- ErrorBoundary перехватывает UI ошибки
+- Пользователь видит понятное сообщение
+- flutter analyze чистый
+
+---
+
+### 4.5.10 Разделение Plant на Entity и DTO (1-2 дня)
+
+**Цель:** Улучшить чистоту архитектуры, разделить доменную сущность и данные для сериализации.
+
+**Задачи:**
+4.5.10.1 Создать domain/models/plant_entity.dart
+4.5.10.2 Перенести бизнес-логику из Plant в PlantEntity
+4.5.10.3 Оставить Plant как DTO для JSON
+4.5.10.4 Обновить PlantRepository для работы с PlantEntity
+4.5.10.5 Обновить PlantRepositoryImpl для маппинга PlantEntity ↔ Plant
+4.5.10.6 Обновить провайдеры для работы с PlantEntity
+4.5.10.7 Обновить UI для работы с PlantEntity
+4.5.10.8 Тестирование
+4.5.10.9 flutter analyze на обоих проектах
+
+**Файлы:**
+- `domain/models/plant_entity.dart` (новый)
+- `models/plant.dart` (становится DTO)
+- `domain/repositories/plant_repository.dart`
+- `data/repositories/plant_repository_impl.dart`
+- `presentation/providers/plant_crud_provider.dart`
+- Все экраны, использующие Plant
+
+**Проверка:**
+- PlantEntity содержит бизнес-логику
+- Plant используется только для JSON
+- flutter analyze чистый
+
+---
+
+**Критерии завершения Фазы 4.5:**
+- ВСЕ 10 улучшений выполнены
+- flutter analyze чистый на обоих проектах
+- Приложение работает на обеих платформах
+- Архитектура соответствует Clean Architecture
+- Нет нарушений SRP
+- Нет дублирования данных
+
+**Действие после завершения:**
+Перейти к шагу 5.1 Адаптация ROADMAP.
 
 ---
 

@@ -16,6 +16,7 @@ import '../../models/plant.dart';
 import '../../models/qr_code.dart';
 import 'photo_provider.dart';
 import 'wintering_provider.dart' show WinteringLogEntry;
+import '../../services/image/image_processor.dart';
 
 /// Провайдер для CRUD операций с растениями
 ///
@@ -1009,8 +1010,10 @@ class PlantCrudProvider with ChangeNotifier {
     if (!await sourceFile.exists()) {
       throw Exception('Исходный файл не существует: $originalPath');
     }
-    await sourceFile.copy(newPath);
-    return newPath;
+    return ImageProcessor.compressAndSave(
+      sourcePath: originalPath,
+      targetPath: newPath,
+    );
   }
 
   /// Преобразовать растение в партию (витрину) с сеянцами
