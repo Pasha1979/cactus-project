@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -895,7 +896,30 @@ class _PlantCardScreenState extends State<PlantCardScreen>
           imageQuality: 85,
         );
         if (image != null) {
-          await provider.addUserPhoto(plant.permanentId, image.path);
+          // Обрезка фото перед сохранением
+          final croppedFile = await ImageCropper().cropImage(
+            sourcePath: image.path,
+            compressQuality: 85,
+            compressFormat: ImageCompressFormat.jpg,
+            uiSettings: [
+              AndroidUiSettings(
+                toolbarTitle: 'Обрезать фото',
+                toolbarColor: Colors.green,
+                toolbarWidgetColor: Colors.white,
+                initAspectRatio: CropAspectRatioPreset.original,
+                lockAspectRatio: false,
+              ),
+              IOSUiSettings(
+                title: 'Обрезать фото',
+                cancelButtonTitle: 'Отмена',
+                doneButtonTitle: 'Готово',
+              ),
+            ],
+          );
+
+          // Сохраняем обрезанное фото или оригинал если отмена
+          final pathToSave = croppedFile?.path ?? image.path;
+          await provider.addUserPhoto(plant.permanentId, pathToSave);
         }
       }
       if (!mounted) return;

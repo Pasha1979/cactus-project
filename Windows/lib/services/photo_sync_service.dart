@@ -60,6 +60,8 @@ class PhotoSyncService {
 
             if (!await _validateCloudUrl(fileUrl)) {
               AppLogger.error('❌ Cloud URL недоступен: $fileUrl', tag: 'PHOTO_SYNC');
+              // Удаляем локальный путь - он не работает на другой платформе
+              updatedPhotos.remove(localPhoto);
               continue;
             }
 
@@ -71,6 +73,8 @@ class PhotoSyncService {
             }
           } catch (e) {
             AppLogger.error('❌ Ошибка загрузки $localPhoto: $e', tag: 'PHOTO_SYNC');
+            // Удаляем локальный путь - он не работает на другой платформе
+            updatedPhotos.remove(localPhoto);
           }
         }
 

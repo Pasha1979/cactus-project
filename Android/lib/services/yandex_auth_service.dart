@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:oauth2/oauth2.dart' as oauth2;
@@ -21,8 +22,30 @@ import '../core/logger/app_logger.dart';
 class YandexAuthService {
 
   YandexAuthService({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+      : _storage = storage ?? const FlutterSecureStorage() {
+    _initDeepLinkHandler();
+  }
   final FlutterSecureStorage _storage;
+
+  void _initDeepLinkHandler() {
+    if (!Platform.isAndroid) return;
+
+    const channel = MethodChannel('deep_link');
+    channel.setMethodCallHandler((call) async {
+      if (call.method == 'deepLink') {
+        final url = call.arguments as String;
+        AppLogger.api('📨 Получен deep link из MainActivity: $url', tag: 'YANDEX_AUTH');
+
+        if (_currentGrant != null && url.contains('code=')) {
+          final uri = Uri.parse(url);
+          final code = uri.queryParameters['code'];
+          if (code != null) {
+            await handleYandexCallback(_currentGrant!, code);
+          }
+        }
+      }
+    });
+  }
 
   oauth2.Client? _yandexClient;
   oauth2.AuthorizationCodeGrant? _currentGrant;

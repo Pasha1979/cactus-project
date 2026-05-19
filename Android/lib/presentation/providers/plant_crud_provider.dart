@@ -1306,6 +1306,10 @@ class PlantCrudProvider with ChangeNotifier {
       wateringDates: _mergeWateringDates(base.wateringDates, other.wateringDates),
       customWateringDates: _mergeCustomWateringDates(base.customWateringDates, other.customWateringDates),
       hasUnreadNotification: base.hasUnreadNotification,
+      // Поля партий для корректной синхронизации
+      displayId: base.displayId,
+      childrenIds: base.childrenIds,
+      parentId: base.parentId,
     );
   }
 

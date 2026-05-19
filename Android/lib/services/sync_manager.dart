@@ -224,14 +224,14 @@ class SyncManager {
     // Перезагружаем legacy-данные из SharedPreferences
     await plantCrudProvider.reloadLegacyData();
 
+    // Синхронизируем фото ПЕРЕД загрузкой JSON - заменяем локальные пути на cloud URL
+    await _photoSyncService.syncUserPhotos(plantCrudProvider);
+
     final plantProviderData =
         utf8.encode(jsonEncode(plantCrudProvider.toJson()));
 
     await _diskService.uploadJsonFile(plantProviderData);
     _lastCloudUpdate = now;
-
-    // Синхронизируем фото после загрузки JSON
-    await _photoSyncService.syncUserPhotos(plantCrudProvider);
   }
 
   /// Сброс состояния при отключении

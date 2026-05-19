@@ -57,8 +57,9 @@ class PlantLocalDataSource {
 
   /// Найти растения по статусу — использует индекс (O(1) + O(k)).
   Future<List<PlantDto>> getPlantsByStatus(String status) async {
-    if (_indexManager != null) {
-      final ids = _indexManager!.getIdsByField('status', status);
+    final manager = _indexManager;
+    if (manager != null) {
+      final ids = manager.getIdsByField('status', status);
       return ids.map((id) => _plantBox.get(id)).whereType<PlantDto>().toList();
     }
     // Fallback без индекса
@@ -67,8 +68,9 @@ class PlantLocalDataSource {
 
   /// Найти растения по категории — использует индекс (O(1) + O(k)).
   Future<List<PlantDto>> getPlantsByCategory(String category) async {
-    if (_indexManager != null) {
-      final ids = _indexManager!.getIdsByField('category', category);
+    final manager = _indexManager;
+    if (manager != null) {
+      final ids = manager.getIdsByField('category', category);
       return ids.map((id) => _plantBox.get(id)).whereType<PlantDto>().toList();
     }
     return _plantBox.values
