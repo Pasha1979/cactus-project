@@ -1223,48 +1223,91 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _showStatusDialog(BuildContext context) {
-    const validStatuses = [
-      'sown',
-      'growing',
-      'in_collection',
-      'dead',
-      'failed',
-    ];
+    final provider = context.read<PlantCrudProvider>();
+    final selectedPlants = provider.plants
+        .where((p) => provider.selectedIds.contains(p.permanentId))
+        .toList();
+    final count = selectedPlants.length;
+
+    final statusCounts = <String, int>{};
+    for (final plant in selectedPlants) {
+      statusCounts[plant.status] = (statusCounts[plant.status] ?? 0) + 1;
+    }
+
+    final uniqueStatuses = statusCounts.keys.toSet();
+    final initialStatus = uniqueStatuses.length == 1 ? uniqueStatuses.first : null;
+
+    const statusLabels = <String, String>{
+      'sown': 'Посев',
+      'growing': 'Растение',
+      'in_collection': 'В коллекции',
+      'dead': 'Погиб',
+      'failed': 'Не взошел',
+    };
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Изменить статус'),
-        content: DropdownButtonFormField<String>(
-          initialValue: PlantStatus.inCollection.toString(),
-          items: validStatuses
-              .map((status) => DropdownMenuItem<String>(
-                    value: status.toString(),
-                    child: Text(
-                      status == PlantStatus.sown
-                          ? 'Посев'
-                          : status == PlantStatus.growing
-                              ? 'Растение'
-                              : status == PlantStatus.inCollection
-                                  ? 'В коллекции'
-                                  : status == PlantStatus.dead
-                                      ? 'Погиб'
-                                      : 'Не взошел',
-                    ),
-                  ),)
-              .toList(),
-          onChanged: (value) {
-            if (value != null) {
-              context.read<PlantCrudProvider>().updateMultipleStatus(value);
-              Navigator.pop(context);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'),),
-        ],
-      ),
+      builder: (ctx) {
+        String? selected = initialStatus;
+        return StatefulBuilder(
+          builder: (ctx, setStateLocal) => AlertDialog(
+            title: Text('Изменить статус ($count растений)'),
+            content: RadioGroup<String>(
+              groupValue: selected,
+              onChanged: (value) => setStateLocal(() => selected = value),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: statusLabels.entries.map((entry) {
+                  final plantCount = statusCounts[entry.key] ?? 0;
+                  return RadioListTile<String>(
+                    value: entry.key,
+                    activeColor: Colors.green,
+                    title: Text(entry.value),
+                    secondary: plantCount > 0
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2,),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$plantCount',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.green,),
+                            ),
+                          )
+                        : null,
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: selected != null
+                      ? Colors.green
+                      : Colors.grey.shade300,
+                ),
+                onPressed: selected == null
+                    ? null
+                    : () {
+                        context
+                            .read<PlantCrudProvider>()
+                            .updateMultipleStatus(selected!);
+                        Navigator.pop(ctx);
+                      },
+                child: const Text('Применить',
+                    style: TextStyle(color: Colors.white),),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

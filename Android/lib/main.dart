@@ -11,11 +11,7 @@ import 'models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/routers/app_router.dart';
-import 'dart:io';
-import 'package:excel/excel.dart' as excel;
-import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'screens/welcome_screen.dart';
 import 'widgets/plant_cards.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -23,6 +19,8 @@ import 'theme/cactus_theme.dart';
 import 'data/datasources/local/hive_database.dart';
 import 'data/migrations/data_migration_manager.dart';
 import 'injection_container.dart' as di;
+import 'utils/responsive_helper.dart';
+import 'screens/statistics_screen.dart';
 
 enum GroupAction { changeStatus, delete }
 
@@ -251,6 +249,7 @@ class HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _addController;
   String _currentFilter = 'all';
+  String? _selectedSowingYear;
   bool _isSownExpanded = false;
   String _sortColumn = 'latinName';
   bool _isAscending = true;
@@ -259,6 +258,11 @@ class HomeScreenState extends State<HomeScreen>
   String _searchQuery = '';
   String? _cachedSeasonalTip;
   int? _cachedSeasonalTipHash;
+  bool _tipDismissed = false;
+
+  // История поиска (последние 5 запросов)
+  List<String> _searchHistory = [];
+  static const String _searchHistoryKey = 'search_history';
 
   @override
   void initState() {
@@ -267,6 +271,7 @@ class HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
+    _loadSearchHistory();
     // Defer loadPlants to avoid setState during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PlantCrudProvider>().loadPlants();
@@ -287,13 +292,68 @@ class HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  // Компактный чип статистики для Android
+  Widget _buildStatChip({
+    required IconData icon,
+    required String title,
+    required int count,
+    required Color color,
+    String? onTapFilter,
+  }) {
+    final isActive = _currentFilter == onTapFilter;
+    return GestureDetector(
+      onTap: onTapFilter != null
+          ? () => setState(() => _currentFilter = onTapFilter)
+          : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? color : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive ? color : color.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                color: isActive ? Colors.white : color,
+                size: 14,),
+            const SizedBox(width: 4),
+            Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isActive ? Colors.white : color,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                color: isActive
+                    ? Colors.white.withValues(alpha: 0.9)
+                    : color.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Оставляем для Windows/tablet layout
   Widget _buildStatCard({
     required IconData icon,
     required String title,
     required int count,
     required Color color,
-    String?
-        onTapFilter, // Новый param: onTapFilter для setState _currentFilter (e.g., 'in_collection' for tap).
+    String? onTapFilter,
   }) {
     return InkWell(
       onTap: onTapFilter != null
@@ -324,6 +384,89 @@ class HomeScreenState extends State<HomeScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Компактная строка чипов для мобильных
+  Widget _buildStatsChips() {
+    final provider = context.watch<PlantCrudProvider>();
+    final plants = provider.plants;
+    final mainPlants = plants.where((p) => p.parentId == null).toList();
+    final total = mainPlants.length;
+    final seedlingsCount = plants.where((p) => p.parentId != null).length;
+    final batchesCount = plants.where((p) => p.isBatch).length;
+    final inCollectionCount = mainPlants
+        .where((p) => p.status == PlantStatus.inCollection)
+        .length;
+    final sownInCollection = mainPlants
+        .where((p) =>
+            p.category == PlantCategory.sown &&
+            p.status == PlantStatus.inCollection,)
+        .length;
+    final purchasedInCollection = mainPlants
+        .where((p) =>
+            p.category == PlantCategory.purchased &&
+            p.status == PlantStatus.inCollection,)
+        .length;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        children: [
+          _buildStatChip(
+            icon: Icons.all_inclusive,
+            title: 'Все',
+            count: total,
+            color: Colors.grey.shade600,
+            onTapFilter: 'all',
+          ),
+          const SizedBox(width: 6),
+          _buildStatChip(
+            icon: Icons.collections,
+            title: 'Коллекция',
+            count: inCollectionCount,
+            color: Colors.green,
+            onTapFilter: 'in_collection',
+          ),
+          const SizedBox(width: 6),
+          _buildStatChip(
+            icon: Icons.spa,
+            title: 'Семена',
+            count: sownInCollection,
+            color: Colors.orange,
+            onTapFilter: 'sown_in_collection',
+          ),
+          const SizedBox(width: 6),
+          _buildStatChip(
+            icon: Icons.shopping_cart,
+            title: 'Покупка',
+            count: purchasedInCollection,
+            color: Colors.blue,
+            onTapFilter: 'purchased_in_collection',
+          ),
+          if (seedlingsCount > 0) ...[
+            const SizedBox(width: 6),
+            _buildStatChip(
+              icon: Icons.spa,
+              title: 'Сеянцы',
+              count: seedlingsCount,
+              color: Colors.teal,
+              onTapFilter: null,
+            ),
+          ],
+          if (batchesCount > 0) ...[
+            const SizedBox(width: 6),
+            _buildStatChip(
+              icon: Icons.group,
+              title: 'Партий',
+              count: batchesCount,
+              color: Colors.indigo,
+              onTapFilter: null,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -732,299 +875,234 @@ class HomeScreenState extends State<HomeScreen>
       return _isAscending ? compareResult : -compareResult;
     });
 
+    final isMobile = Responsive.isMobile(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) await _handleExit(context);
       },
       child: Scaffold(
-        body: Row(
-          children: [
-            _buildNavigationRail(),
-            Expanded(
-              child: Column(
-                children: [
-                  AppBar(
-                    foregroundColor: Colors
-                        .green,
-                    title: _isSearching
-                        ? TextField(
-                            controller: _searchController,
-                            decoration: const InputDecoration(
-                              hintText: 'Поиск по названию или ID...',
-                              border: InputBorder.none,
-                              prefixIcon:
-                                  Icon(Icons.search, color: Colors.green),
+        appBar: AppBar(
+          foregroundColor: Colors.green,
+          title: _isSearching
+              ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Поиск по названию, ID или году...',
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.grey),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.green, width: 1.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.green, width: 1.5),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.green, width: 2.0),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                  onSubmitted: (value) {
+                    _addToSearchHistory(value);
+                  },
+                )
+              : const Text('Моя коллекция кактусов'),
+          actions: [
+            // Кнопка поиска
+            IconButton(
+              icon: Icon(_isSearching ? Icons.close : Icons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _searchQuery = '';
+                    _searchController.clear();
+                  } else {
+                    _searchController.clear();
+                    _searchQuery = '';
+                  }
+                });
+              },
+            ),
+            // Кнопка Сохранить (договорённость)
+            IconButton(
+              icon: const Icon(Icons.save),
+              tooltip: 'Сохранить изменения',
+              onPressed: () => provider.savePlants(),
+            ),
+            // Кнопка подключения Яндекс.Диска
+            IconButton(
+              icon: const Icon(Icons.cloud_upload),
+              tooltip: 'Подключить Яндекс.Диск',
+              onPressed: () async {
+                final cloudProvider = context.read<CloudStorageProvider>();
+                if (cloudProvider.isConnected) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Яндекс.Диск уже подключён'),),
+                  );
+                  return;
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Открываем страницу авторизации...'),),
+                );
+                await cloudProvider.connectToYandexDisk(context);
+              },
+            ),
+            // Кнопка погоды
+            if (!_isSearching)
+              IconButton(
+                icon: const Icon(Icons.cloud),
+                onPressed: () => _connectWeather(context),
+              ),
+            Consumer<PlantCrudProvider>(
+              builder: (context, p, child) {
+                if (p.selectedIds.isEmpty) return const SizedBox.shrink();
+                return PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: 'Действия с выбранными (${p.selectedIds.length})',
+                  onSelected: (value) async {
+                    if (value == 'clear') {
+                      p.clearSelections();
+                    } else if (value == 'changeStatus') {
+                      _showStatusDialog(context);
+                    } else if (value == 'delete') {
+                      _confirmMassDelete(context);
+                    } else if (value == 'cleanup_old') {
+                      await p.cleanupUnusedPhotosForSelected(
+                          Set<String>.from(p.selectedIds), context,);
+                    } else if (value == 'delete_all_photos') {
+                      await p.deleteAllPhotosForSelected(
+                          Set<String>.from(p.selectedIds), context,);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => [
+                    const PopupMenuItem<String>(
+                      value: 'clear',
+                      child: Row(children: [
+                        Icon(Icons.close, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Очистить выбор'),
+                      ],),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem<String>(
+                      value: 'changeStatus',
+                      child: Row(children: [
+                        Icon(Icons.update, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text('Изменить статус'),
+                      ],),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Row(children: [
+                        Icon(Icons.delete, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Удалить выбранные'),
+                      ],),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem<String>(
+                      value: 'cleanup_old',
+                      child: Row(children: [
+                        Icon(Icons.delete_forever, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text('Удалить старые фото'),
+                      ],),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'delete_all_photos',
+                      child: Row(children: [
+                        Icon(Icons.delete_sweep, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Удалить все фото'),
+                      ],),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+        drawer: isMobile ? _buildDrawer() : null,
+        bottomNavigationBar: isMobile ? _buildBottomNavigationBar() : null,
+        floatingActionButton: provider.selectedIds.isEmpty
+            ? AnimatedBuilder(
+                animation: _addController,
+                builder: (context, _) => FloatingActionButton.extended(
+                  onPressed: _openAddForm,
+                  label: const Text('Добавить'),
+                  icon: const Icon(Icons.add),
+                  backgroundColor: Colors.green,
+                ),
+              )
+            : null,
+        body: isMobile
+            ? SafeArea(
+                child: Column(
+                  children: [
+                    // Компактный сезонный совет
+                    if (!_tipDismissed)
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6,),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: Colors.green.shade200, width: 1,),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lightbulb_outline,
+                                color: Colors.green, size: 14,),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _getSeasonalTip(),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.black87,),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            onChanged: (value) =>
-                                setState(() => _searchQuery = value),
-                          )
-                        : provider.selectedIds.isEmpty
-                            ? const Text('Мои кактусы')
-                            : Text('Выбрано: ${provider.selectedIds.length}'),
-                    actions: [
-                      ElevatedButton.icon(
-                        onPressed: () => _connectWeather(context),
-                        icon: const Icon(Icons.location_on),
-                        label: const Text('Подключить погоду'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(
-                          height:
-                              16,), // Отступ перед 'Импорт из Excel' — баланс.
-                      IconButton(
-                        icon: const Icon(Icons.import_export),
-                        tooltip: 'Импорт из Excel',
-                        onPressed: () => _importPlants(context),
-                      ),
-                      if (provider.selectedIds.isNotEmpty) ...[
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          tooltip: 'Очистить выбор',
-                          onPressed: () => provider.clearSelections(),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.download),
-                          tooltip: 'Экспорт в CSV',
-                          onPressed: () =>
-                              provider.exportSelectedToCSV(context),
-                        ),
-                      ],
-                      IconButton(
-                        icon: const Icon(Icons.save),
-                        tooltip: 'Сохранить изменения',
-                        onPressed: () => provider.savePlants(),
-                      ),
-                      IconButton(
-                        icon: Icon(_isSearching ? Icons.close : Icons.search),
-                        tooltip: _isSearching ? 'Закрыть поиск' : 'Поиск',
-                        onPressed: () => setState(() {
-                          _isSearching = !_isSearching;
-                          if (!_isSearching) {
-                            _searchQuery = '';
-                            _searchController.clear();
-                          }
-                        }),
-                      ),
-                      if (!context.watch<CloudStorageProvider>().isConnected)
-                        IconButton(
-                          icon: const Icon(Icons.cloud),
-                          tooltip: 'Подключить Яндекс.Диск',
-                          onPressed: () async {
-                            await context
-                                .read<CloudStorageProvider>()
-                                .connectToYandexDisk(context);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Попытка подключения завершена'),),
-                              );
-                            }
-                          },
-                        ),
-                      if (context.watch<CloudStorageProvider>().isConnected)
-                        IconButton(
-                          icon: const Icon(Icons.cloud_off),
-                          tooltip: 'Отключить облачное хранилище',
-                          onPressed: () async {
-                            await context
-                                .read<CloudStorageProvider>()
-                                .disconnect();
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Облачное хранилище отключено'),),
-                              );
-                            }
-                          },
-                        ),
-                      if (context.watch<CloudStorageProvider>().isConnected)
-                        Builder(builder: (context) {
-                          final cloudProvider = context.watch<CloudStorageProvider>();
-                          final syncing = cloudProvider.isSyncing;
-                          return IconButton(
-                            icon: syncing
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,),)
-                                : const Icon(Icons.sync),
-                            tooltip: syncing
-                                ? 'Синхронизация...'
-                                : 'Синхронизировать с облаком',
-                            onPressed: syncing
-                                ? null
-                                : () async {
-                                    final plantCrudProvider =
-                                        context.read<PlantCrudProvider>();
-                                    final scaffoldMessenger =
-                                        ScaffoldMessenger.of(context);
-                                    scaffoldMessenger.showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              '🔄 Синхронизация началась...',),),
-                                    );
-                                    try {
-                                      await cloudProvider
-                                          .syncData(plantCrudProvider);
-                                      if (!mounted) return;
-                                      scaffoldMessenger.showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              '✅ Синхронизация успешно завершена',),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (!mounted) return;
-                                      scaffoldMessenger.showSnackBar(
-                                        SnackBar(
-                                          content: Text('❌ Ошибка: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  },
-                          );
-                        },)
-                      ,
-                      // Кнопка настроек
-                      IconButton(
-                        icon: const Icon(Icons.settings),
-                        tooltip: 'Настройки',
-                        onPressed: () => context.push('/settings'),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.logout, color: Colors.red),
-                        tooltip: 'Выйти из аккаунта',
-                        onPressed: () async {
-                          final cloudProvider =
-                              context.read<CloudStorageProvider>();
-                          if (cloudProvider.isConnected) {
-                            await cloudProvider.disconnect();
-                          }
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool(
-                              'has_seen_welcome', false,); // Сбрасываем флаг
-                          if (context.mounted) {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                  builder: (context) => const WelcomeScreen(),),
-                            );
-                          }
-                        },
-                      ),
-                      if (provider.selectedIds.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: AnimatedBuilder(
-                            animation: _addController,
-                            builder: (context, _) =>
-                                FloatingActionButton.extended(
-                              onPressed: _openAddForm,
-                              label: const Text('Добавить'),
-                              icon: const Icon(Icons.add),
-                              backgroundColor: Colors.green,
-                            ),
-                          ),
-                        ),
-                      if (provider.selectedIds.isNotEmpty)
-                        PopupMenuButton<String>(
-                          tooltip: 'Действия с выбранными',
-                          itemBuilder: (ctx) => [
-                            const PopupMenuItem(
-                              value: 'changeStatus',
-                              child: Row(children: [
-                                Icon(Icons.update, color: Colors.blue),
-                                SizedBox(width: 8),
-                                Text('Изменить статус'),
-                              ],),
-                            ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Row(children: [
-                                Icon(Icons.delete, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Удалить'),
-                              ],),
-                            ),
-                            const PopupMenuItem(
-                              value: 'cleanupPhotos',
-                              child: Row(children: [
-                                Icon(Icons.delete_forever,
-                                    color: Colors.orange,),
-                                SizedBox(width: 8),
-                                Text('Очистить старые фото'),
-                              ],),
-                            ),
-                            const PopupMenuItem(
-                              value: 'deleteAllPhotos',
-                              child: Row(children: [
-                                Icon(Icons.delete_sweep, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Удалить все фото'),
-                              ],),
+                            GestureDetector(
+                              onTap: () =>
+                                  setState(() => _tipDismissed = true),
+                              child: const Icon(Icons.close,
+                                  size: 14, color: Colors.grey,),
                             ),
                           ],
-                          onSelected: (value) async {
-                            final provider = context.read<PlantCrudProvider>();
-
-                            if (value == 'changeStatus') {
-                              _showStatusDialog(context);
-                            } else if (value == 'delete') {
-                              _confirmMassDelete(context);
-                            } else if (value == 'cleanupPhotos') {
-                              await provider.cleanupUnusedPhotosForSelected(
-                                provider.selectedIds,
-                                context,
-                              );
-                            } else if (value == 'deleteAllPhotos') {
-                              await provider.deleteAllPhotosForSelected(
-                                provider.selectedIds,
-                                context,
-                              );
-                            }
-                          },
                         ),
-                    ],
-                    elevation: 0,
-                    backgroundColor: Colors
-                        .green.shade50, // Сохранено: Светлый фон — не меняется.
-                  ),
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),),
-                    color: Colors.green.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Icon(Icons.lightbulb, color: Colors.green, size: 28),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _getSeasonalTip(),
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w500,),
-                            ),
-                          ),
-                        ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(
-                      height:
-                          16,), // Отступ перед статистикой, чтобы карточки не сливались.
-                  _buildStatsRow(),
+                    const SizedBox(height: 4),
+                    _buildStatsChips(),
                   Expanded(
                     child: PlantCards(
                       plants: filteredPlants
@@ -1034,7 +1112,8 @@ class HomeScreenState extends State<HomeScreen>
                                   .contains(_searchQuery.toLowerCase()) ||
                               p.displayId
                                   .toLowerCase()
-                                  .contains(_searchQuery.toLowerCase()),)
+                                  .contains(_searchQuery.toLowerCase()),
+                          )
                           .toList(),
                       sortColumn: _sortColumn,
                       isAscending: _isAscending,
@@ -1053,94 +1132,70 @@ class HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
+            )
+        : Row(
+            children: [
+              _buildNavigationRail(),
+              Expanded(
+                child: Column(
+                  children: [
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),),
+                      color: Colors.green.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lightbulb, color: Colors.green, size: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _getSeasonalTip(),
+                                style: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w500,),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildStatsRow(),
+                    Expanded(
+                      child: PlantCards(
+                        plants: filteredPlants
+                            .where((p) =>
+                                p.latinName
+                                    .toLowerCase()
+                                    .contains(_searchQuery.toLowerCase()) ||
+                                p.displayId
+                                    .toLowerCase()
+                                    .contains(_searchQuery.toLowerCase()),)
+                            .toList(),
+                        sortColumn: _sortColumn,
+                        isAscending: _isAscending,
+                        onSort: (column) => setState(() {
+                          if (_sortColumn == column) {
+                            _isAscending = !_isAscending;
+                          } else {
+                            _sortColumn = column;
+                            _isAscending = true;
+                          }
+                        }),
+                        onEdit: _openEditForm,
+                        onUpdate: (id, plant) => provider.updatePlant(id, plant),
+                        onDelete: (id) => provider.deletePlant(id),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
       ),
     );
-  }
-
-  Future<void> _importPlants(BuildContext context) async {
-    try {
-      FilePickerResult? result = await FilePicker.platform
-          .pickFiles(type: FileType.custom, allowedExtensions: ['xlsx']);
-      if (result == null || !context.mounted) {
-        return;
-      }
-
-      final file = File(result.files.single.path!);
-      final bytes = file.readAsBytesSync();
-      final excelInstance = excel.Excel.decodeBytes(bytes);
-      final sheet = excelInstance.tables.keys.first;
-      final table = excelInstance.tables[sheet]!;
-      final provider = Provider.of<PlantCrudProvider>(context, listen: false);
-      int added = 0;
-      int skipped = 0;
-
-      for (var row in table.rows.skip(1)) {
-        final name = row[0]?.value?.toString() ?? '';
-        final origin = row[1]?.value?.toString() ?? '';
-        final seedsStr = row[2]?.value?.toString() ?? '0';
-        final germinatedStr = row[3]?.value?.toString() ?? '0';
-        final seedNumberStr = row[4]?.value?.toString() ?? '';
-        if (name.isEmpty) {
-          continue;
-        }
-
-        String category;
-        int? year;
-        if (origin.toLowerCase().contains('куплен')) {
-          category = 'purchased';
-          year = int.tryParse(origin.split(' ').last) ?? DateTime.now().year;
-        } else if (origin.toLowerCase().contains('посев')) {
-          category = 'sown';
-          year = int.tryParse(origin.split(' ').last);
-        } else {
-          skipped++;
-          continue;
-        }
-        if (year == null) {
-          skipped++;
-          continue;
-        }
-
-        final seeds = int.tryParse(seedsStr) ?? 0;
-        final germinated = int.tryParse(germinatedStr) ?? 0;
-        final seedNumber = int.tryParse(seedNumberStr);
-        int customNumber = seedNumber != null &&
-                provider.isCustomNumberUnique(year, seedNumber, category)
-            ? seedNumber
-            : provider.getNextCustomNumber(year, category);
-
-        // Проверка на дубликат по имени и году
-        if (provider.plants.any((p) => p.latinName == name && p.year == year)) {
-          skipped++;
-          continue;
-        }
-
-        final newPlant = Plant(
-          latinName: name,
-          status: 'in_collection',
-          year: year,
-          customNumber: customNumber,
-          category: category,
-          seedsCount: seeds,
-          germinatedCount: germinated,
-        );
-        provider.addPlant(newPlant);
-        added++;
-      }
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Импорт: Добавлено $added, пропущено $skipped'),),);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Ошибка импорта: $e')));
-      }
-    }
   }
 
   Future<void> _handleExit(BuildContext parentContext) async {
@@ -1193,23 +1248,23 @@ class HomeScreenState extends State<HomeScreen>
   void _confirmMassDelete(BuildContext context) {
     final provider = context.read<PlantCrudProvider>();
     final count = provider.selectedIds.length;
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Удалить выбранное'),
-        content: Text('Удалить $count растений?'),
+        content: Text('Удалить $count растений? Это действие нельзя отменить.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Отмена'),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               provider.deleteMultiplePlants();
-              Navigator.pop(ctx); // используем ctx из диалога
+              Navigator.pop(ctx);
             },
-            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+            child: const Text('Удалить', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1217,48 +1272,93 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _showStatusDialog(BuildContext context) {
-    const validStatuses = [
-      'sown',
-      'growing',
-      'in_collection',
-      'dead',
-      'failed',
-    ];
+    final provider = context.read<PlantCrudProvider>();
+    final selectedPlants = provider.plants
+        .where((p) => provider.selectedIds.contains(p.permanentId))
+        .toList();
+    final count = selectedPlants.length;
+
+    // Считаем сколько растений имеют каждый статус
+    final statusCounts = <String, int>{};
+    for (final plant in selectedPlants) {
+      statusCounts[plant.status] = (statusCounts[plant.status] ?? 0) + 1;
+    }
+
+    // Если все одинаковые — предвыбираем, иначе null
+    final uniqueStatuses = statusCounts.keys.toSet();
+    final initialStatus = uniqueStatuses.length == 1 ? uniqueStatuses.first : null;
+
+    const statusLabels = <String, String>{
+      'sown': 'Посев',
+      'growing': 'Растение',
+      'in_collection': 'В коллекции',
+      'dead': 'Погиб',
+      'failed': 'Не взошел',
+    };
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Изменить статус'),
-        content: DropdownButtonFormField<String>(
-          initialValue: PlantStatus.inCollection.toString(),
-          items: validStatuses
-              .map((status) => DropdownMenuItem<String>(
-                    value: status.toString(),
-                    child: Text(
-                      status == PlantStatus.sown
-                          ? 'Посев'
-                          : status == PlantStatus.growing
-                              ? 'Растение'
-                              : status == PlantStatus.inCollection
-                                  ? 'В коллекции'
-                                  : status == PlantStatus.dead
-                                      ? 'Погиб'
-                                      : 'Не взошел',
-                    ),
-                  ),)
-              .toList(),
-          onChanged: (value) {
-            if (value != null) {
-              context.read<PlantCrudProvider>().updateMultipleStatus(value);
-              Navigator.pop(context);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'),),
-        ],
-      ),
+      builder: (ctx) {
+        String? selected = initialStatus;
+        return StatefulBuilder(
+          builder: (ctx, setStateLocal) => AlertDialog(
+            title: Text('Изменить статус ($count растений)'),
+            content: RadioGroup<String>(
+              groupValue: selected,
+              onChanged: (value) => setStateLocal(() => selected = value),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: statusLabels.entries.map((entry) {
+                  final plantCount = statusCounts[entry.key] ?? 0;
+                  return RadioListTile<String>(
+                    value: entry.key,
+                    activeColor: Colors.green,
+                    title: Text(entry.value),
+                    secondary: plantCount > 0
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2,),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$plantCount',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.green,),
+                            ),
+                          )
+                        : null,
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: selected != null
+                      ? Colors.green
+                      : Colors.grey.shade300,
+                ),
+                onPressed: selected == null
+                    ? null
+                    : () {
+                        context
+                            .read<PlantCrudProvider>()
+                            .updateMultipleStatus(selected!);
+                        Navigator.pop(ctx);
+                      },
+                child: const Text('Применить',
+                    style: TextStyle(color: Colors.white),),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1349,6 +1449,324 @@ class HomeScreenState extends State<HomeScreen>
         backgroundColor: Colors.green,
       ),
     );
+  }
+
+  // Drawer для мобильных устройств
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(color: Colors.green),
+            child: Text('Меню',
+                style: TextStyle(color: Colors.white, fontSize: 24),),
+          ),
+
+          // Настройки
+          ListTile(
+            leading: const Icon(Icons.settings, color: Colors.blue),
+            title: const Text('Настройки'),
+            onTap: () {
+              Navigator.pop(context);
+              context.push('/settings');
+            },
+          ),
+
+          const Divider(),
+
+          // Управление посевами
+          ListTile(
+            leading: const Icon(Icons.agriculture),
+            title: const Text('Управление посевами'),
+            onTap: () {
+              Navigator.pop(context);
+              _navigateToSowingManagement();
+            },
+          ),
+
+          // Фильтр по году посева
+          ListTile(
+            leading: const Icon(Icons.filter_list),
+            title: const Text('Фильтр по году посева'),
+            subtitle: _selectedSowingYear != null
+                ? Text('Выбран: $_selectedSowingYear', style: const TextStyle(color: Colors.green))
+                : null,
+            onTap: () {
+              Navigator.pop(context);
+              _showSowingYearFilter();
+            },
+          ),
+
+          // Управление коллекцией
+          ListTile(
+            leading: const Icon(Icons.event),
+            title: const Text('Управление коллекцией'),
+            onTap: () {
+              Navigator.pop(context);
+              _navigateToCollectionManagement();
+            },
+          ),
+
+          // Управление QR
+          ListTile(
+            leading: const Icon(Icons.qr_code),
+            title: const Text('QR-коды'),
+            subtitle: const Text('Управление, печать, файлы'),
+            onTap: () {
+              Navigator.pop(context);
+              context.push('/qr');
+            },
+          ),
+
+          // Статистика
+          ListTile(
+            leading: const Icon(Icons.show_chart),
+            title: const Text('Статистика'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (ctx) => const StatisticsScreen()),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // Принудительно обновить из облака
+          ListTile(
+            leading: const Icon(Icons.cloud_download, color: Colors.blue),
+            title: const Text('Принудительно обновить из облака'),
+            subtitle: const Text('Скачать свежие данные с Яндекс.Диска'),
+            onTap: () async {
+              Navigator.pop(context);
+
+              final cloudProvider = context.read<CloudStorageProvider>();
+              final plantProvider = context.read<PlantCrudProvider>();
+
+              if (!cloudProvider.isConnected) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Сначала подключите Яндекс.Диск'),
+                  ),
+                );
+                return;
+              }
+
+              try {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('⏳ Загружаем данные из облака...'),
+                  ),
+                );
+
+                await cloudProvider.fetchLastCloudUpdate();
+                await cloudProvider.loadDataFromCloud(plantProvider);
+                await plantProvider.savePlants();
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Данные успешно загружены из Яндекс.Диска!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Ошибка загрузки: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Нижняя навигация для мобильных устройств
+  Widget _buildBottomNavigationBar() {
+    final cloudProvider = context.read<CloudStorageProvider>();
+
+    return BottomNavigationBar(
+      currentIndex: 0,
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: Colors.green,
+      unselectedItemColor: Colors.grey,
+      onTap: (index) async {
+        if (index == 0) {
+          // Растут
+          setState(() {
+            _currentFilter = 'growing';
+            _selectedSowingYear = null;
+          });
+        } else if (index == 1) {
+          // Сканер QR
+          context.push('/qr/scan');
+        } else if (index == 2) {
+          // Синхронизировать
+          if (!cloudProvider.isConnected) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Сначала подключите Яндекс.Диск'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            return;
+          }
+
+          final plantProvider = context.read<PlantCrudProvider>();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('🔄 Синхронизация началась...')),
+          );
+
+          try {
+            await cloudProvider.syncData(plantProvider);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✅ Синхронизация успешно завершена'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('❌ Ошибка: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        } else if (index == 3) {
+          // Выход
+          await _handleExit(context);
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.grass),
+          label: 'Растут',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.qr_code_scanner),
+          label: 'Сканер',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.sync),
+          label: 'Синхр.',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.exit_to_app),
+          label: 'Выход',
+        ),
+      ],
+    );
+  }
+
+  // Диалог фильтра по году посева
+  void _showSowingYearFilter() {
+    final provider = context.read<PlantCrudProvider>();
+    final years = provider.plants
+        .where((p) => p.category == 'sown')
+        .map((p) => p.year.toString())
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a)); // от новых к старым
+
+    if (years.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Нет посевов для фильтрации')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Выберите год посева'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: years.length,
+            itemBuilder: (ctx, index) {
+              final year = years[index];
+              final count = provider.plants
+                  .where(
+                      (p) => p.category == 'sown' && p.year.toString() == year,)
+                  .length;
+              return ListTile(
+                title: Text(year),
+                trailing: Text(
+                  '$count шт.',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _selectedSowingYear = year;
+                    _currentFilter = 'year_$year';
+                  });
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _selectedSowingYear = null);
+            },
+            child: const Text('Сбросить фильтр'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Загрузка истории поиска
+  Future<void> _loadSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = prefs.getStringList(_searchHistoryKey) ?? [];
+    setState(() {
+      _searchHistory = history;
+    });
+  }
+
+  // Сохранение истории поиска (максимум 5 последних)
+  Future<void> _saveSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_searchHistoryKey, _searchHistory);
+  }
+
+  // Добавление запроса в историю
+  void _addToSearchHistory(String query) {
+    if (query.trim().isEmpty) return;
+
+    setState(() {
+      _searchHistory.remove(query); // убираем дубликат, если был
+      _searchHistory.insert(0, query);
+
+      if (_searchHistory.length > 5) {
+        _searchHistory.removeLast();
+      }
+    });
+
+    _saveSearchHistory();
   }
 }
 

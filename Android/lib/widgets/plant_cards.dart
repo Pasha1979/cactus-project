@@ -451,12 +451,6 @@ class _PlantCardItem extends StatelessWidget {
     required this.getPhotoUrl,
   });
 
-  static const _indexTextStyle = TextStyle(
-    color: CactusColors.primaryGreen,
-    fontWeight: FontWeight.bold,
-  );
-  static const _editIcon = Icon(Icons.edit, color: CactusColors.primaryGreen);
-  static const _deleteIcon = Icon(Icons.delete, color: Colors.red);
   final Plant plant;
   final int index;
   final Function(Plant) onEdit;
@@ -489,6 +483,8 @@ class _PlantCardItem extends StatelessWidget {
     final statusColor = _statusColor(plant.status);
     final photoUrl = getPhotoUrl(plant, provider);
 
+    final ageText = plant.age > 0 ? '${plant.age} л.' : '';
+
     return GestureDetector(
       onTap: () => context.push(
         '/plant/${plant.permanentId}',
@@ -496,90 +492,36 @@ class _PlantCardItem extends StatelessWidget {
       ),
       onLongPress: () => onShowQuickView(context, plant),
       child: Card(
-        color: isSelected ? CactusColors.sandBeige : Colors.white,
-        elevation: 3,
+        color: isSelected ? Colors.green.shade50 : Colors.white,
+        elevation: plant.isBatch ? 2.5 : 1.5,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+          side: plant.isBatch
+              ? BorderSide(color: Colors.indigo.shade300, width: 1.5)
+              : BorderSide.none,
         ),
+        margin: const EdgeInsets.only(bottom: 8),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Чекбокс
               Checkbox(
                 value: isSelected,
                 onChanged: (value) => context
                     .read<PlantCrudProvider>()
                     .toggleSelection(plant.permanentId),
                 activeColor: CactusColors.primaryGreen,
-              ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: CactusColors.sandLight,
-                child: Text(
-                  '${index + 1}',
-                  style: _indexTextStyle,
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Основная информация
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      plant.latinName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          plant.category == 'purchased'
-                              ? Icons.local_offer
-                              : Icons.eco,
-                          size: 16,
-                          color: plant.category == 'purchased'
-                              ? Colors.blue
-                              : CactusColors.primaryGreen,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${plant.category == 'purchased' ? 'Куплено' : 'Посев'} ${plant.year}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: plant.category == 'purchased'
-                                ? Colors.blue
-                                : CactusColors.primaryGreen,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'ID: ${plant.displayId}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
+                visualDensity: VisualDensity.compact,
               ),
 
-              const SizedBox(width: 16),
-
-              // Главное фото
-              if (!isSelected)
-                SizedBox(
-                  width: 80,
-                  height: 60,
+              // Фото слева 68×68
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 68,
+                  height: 68,
                   child: photoUrl != null
                       ? GestureDetector(
                           onTap: () => onShowFullPhoto(
@@ -587,27 +529,22 @@ class _PlantCardItem extends StatelessWidget {
                             photoUrl,
                             photoUrl.startsWith('http'),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: photoUrl.startsWith('http')
-                                ? CachedNetworkImage(
-                                    imageUrl: photoUrl,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) =>
-                                        const CircularProgressIndicator(
-                                            strokeWidth: 2,),
-                                    errorWidget: (_, __, ___) => const Icon(
-                                        Icons.error,
-                                        color: Colors.red,),
-                                  )
-                                : Image.file(
-                                    File(photoUrl),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.error,
-                                        color: Colors.red,),
-                                  ),
-                          ),
+                          child: photoUrl.startsWith('http')
+                              ? CachedNetworkImage(
+                                  imageUrl: photoUrl,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) =>
+                                      const CircularProgressIndicator(
+                                          strokeWidth: 2,),
+                                  errorWidget: (_, __, ___) => const Icon(
+                                      Icons.error, color: Colors.red,),
+                                )
+                              : Image.file(
+                                  File(photoUrl),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.error, color: Colors.red,),
+                                ),
                         )
                       : Container(
                           color: Colors.grey.shade200,
@@ -615,38 +552,104 @@ class _PlantCardItem extends StatelessWidget {
                               size: 32, color: Colors.grey,),
                         ),
                 ),
+              ),
 
               const SizedBox(width: 12),
 
-              // Статус
-              GestureDetector(
-                onTap: () => onShowStatusDialog(context, plant),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4,),
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    plant.statusText,
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.white,),
-                  ),
+              // Основная информация
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Название + badge партии
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            plant.latinName,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (plant.isBatch) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2,),
+                            decoration: BoxDecoration(
+                              color: Colors.indigo.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                  color: Colors.indigo.shade200,),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.group,
+                                    size: 12,
+                                    color: Colors.indigo.shade600,),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${plant.childrenIds.length}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.indigo.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    // ID • год • категория • возраст
+                    Text(
+                      [
+                        plant.displayId,
+                        '${plant.year}',
+                        plant.category == 'purchased' ? 'Куплено' : 'Посев',
+                        if (ageText.isNotEmpty) ageText,
+                      ].join(' • '),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
 
               const SizedBox(width: 8),
 
-              IconButton(
-                icon: _editIcon,
-                onPressed: () => onEdit(plant),
-                tooltip: 'Редактировать',
-              ),
-              IconButton(
-                icon: _deleteIcon,
-                onPressed: () => onDelete(plant.permanentId),
-                tooltip: 'Удалить',
+              // Статус-бейджик с tap для смены
+              GestureDetector(
+                onTap: () => onShowStatusDialog(context, plant),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5,),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: statusColor.withValues(alpha: 0.4),),
+                  ),
+                  child: Text(
+                    plant.statusText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

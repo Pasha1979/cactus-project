@@ -497,9 +497,12 @@ class _PlantCardItem extends StatelessWidget {
       onLongPress: () => onShowQuickView(context, plant),
       child: Card(
         color: isSelected ? CactusColors.sandBeige : Colors.white,
-        elevation: 3,
+        elevation: plant.isBatch ? 4 : 3,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+          side: plant.isBatch
+              ? BorderSide(color: Colors.indigo.shade300, width: 1.5)
+              : BorderSide.none,
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -529,13 +532,50 @@ class _PlantCardItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      plant.latinName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                    // Название + badge партии
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            plant.latinName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (plant.isBatch) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3,),
+                            decoration: BoxDecoration(
+                              color: Colors.indigo.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                  color: Colors.indigo.shade200,),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.group,
+                                    size: 13,
+                                    color: Colors.indigo.shade600,),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${plant.childrenIds.length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.indigo.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Row(

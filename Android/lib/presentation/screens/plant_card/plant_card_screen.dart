@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -138,6 +139,7 @@ class _PlantCardScreenState extends State<PlantCardScreen>
                 labelColor: Colors.green.shade700,
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: Colors.green,
+                isScrollable: MediaQuery.of(context).size.width < 600,
                 onTap: (index) {
                   setState(() {
                     _currentTabIndex = index;
@@ -844,19 +846,60 @@ class _PlantCardScreenState extends State<PlantCardScreen>
   Future<void> _uploadUserPhoto(BuildContext context, Plant plant) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final provider = context.read<PlantCrudProvider>();
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.green),
+              title: const Text('Сфотографировать'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.blue),
+              title: const Text('Выбрать из галереи'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_open, color: Colors.orange),
+              title: const Text('Выбрать несколько файлов'),
+              onTap: () => Navigator.pop(ctx, null),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: true,
-      );
-      if (result != null && result.files.isNotEmpty) {
-        for (var file in result.files) {
-          final path = file.path!;
-          await provider.addUserPhoto(plant.permanentId, path);
+      if (source == null) {
+        // FilePicker — множественный выбор
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: true,
+        );
+        if (result != null && result.files.isNotEmpty) {
+          for (var file in result.files) {
+            await provider.addUserPhoto(plant.permanentId, file.path!);
+          }
         }
-        if (!mounted) return;
-        setState(() {});
+      } else {
+        // ImagePicker — камера или одиночный выбор из галереи
+        final picker = ImagePicker();
+        final image = await picker.pickImage(
+          source: source,
+          imageQuality: 85,
+        );
+        if (image != null) {
+          await provider.addUserPhoto(plant.permanentId, image.path);
+        }
       }
+      if (!mounted) return;
+      setState(() {});
     } catch (e) {
       if (mounted) {
         scaffoldMessenger.showSnackBar(
