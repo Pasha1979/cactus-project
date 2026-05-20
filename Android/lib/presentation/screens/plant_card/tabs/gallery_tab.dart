@@ -76,160 +76,163 @@ class _GalleryTabState extends State<GalleryTab> {
     final displayedPhotos = _getDisplayedPhotos();
     final photoCount = displayedPhotos.length;
 
-    return Stack(
-      children: [
-        Column(
-          children: [
-            // Счётчик
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-              child: Text(
-                'Фото: $photoCount',
-                style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey,),
+    return SafeArea(
+      child: Stack(
+        children: [
+          Column(
+            children: [
+              // Счётчик
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+                child: Text(
+                  'Фото: $photoCount',
+                  style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,),
+                ),
               ),
-            ),
 
-            // Фильтры
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildFilterChip(Icons.photo_library, 'Все', 'all'),
-                  const SizedBox(width: 10),
-                  _buildFilterChip(Icons.camera_alt, 'Мои', 'my'),
-                  const SizedBox(width: 10),
-                  _buildFilterChip(Icons.cloud, 'С Llifle', 'llifle'),
-                  const SizedBox(width: 10),
-                  _buildFilterChip(Icons.photo_camera, 'GBIF', 'gbif'),
-                ],
+              // Фильтры
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildFilterChip(Icons.photo_library, 'Все', 'all'),
+                    const SizedBox(width: 10),
+                    _buildFilterChip(Icons.camera_alt, 'Мои', 'my'),
+                    const SizedBox(width: 10),
+                    _buildFilterChip(Icons.cloud, 'С Llifle', 'llifle'),
+                    const SizedBox(width: 10),
+                    _buildFilterChip(Icons.photo_camera, 'GBIF', 'gbif'),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Галерея
-            Expanded(
-              child: displayedPhotos.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.photo_library_outlined,
-                              size: 80, color: Colors.grey,),
-                          SizedBox(height: 16),
-                          Text('В этом фильтре нет фото',
-                              style: TextStyle(
-                                  fontSize: 18, color: Colors.grey,),),
-                        ],
-                      ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.0,
+              // Галерея
+              Expanded(
+                child: displayedPhotos.isEmpty
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.photo_library_outlined,
+                                size: 80, color: Colors.grey,),
+                            SizedBox(height: 16),
+                            Text('В этом фильтре нет фото',
+                                style: TextStyle(
+                                    fontSize: 18, color: Colors.grey,),),
+                          ],
                         ),
-                        itemCount: displayedPhotos.length,
-                        itemBuilder: (context, index) {
-                          final photo = displayedPhotos[index];
-                          final isNetwork = photo.startsWith('http');
-                          final isMainPhoto = plant.userPhotos.isNotEmpty &&
-                              plant.userPhotos.first == photo;
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: GridView.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1.0,
+                          ),
+                          itemCount: displayedPhotos.length,
+                          itemBuilder: (context, index) {
+                            final photo = displayedPhotos[index];
+                            final isNetwork = photo.startsWith('http');
+                            final isMainPhoto = plant.userPhotos.isNotEmpty &&
+                                plant.userPhotos.first == photo;
 
-                          return RepaintBoundary(
-                            child: GestureDetector(
-                            onTap: () {
-                              if (isNetwork &&
-                                  photo.startsWith('https://')) {
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) async {
-                                  final provider =
-                                      context.read<PlantCrudProvider>();
-                                  await provider.ensureLocalPhotosExist();
-                                });
-                              }
-                              widget.onShowFullPhoto(
-                                  context, plant, photo, isNetwork,);
-                            },
-                            onLongPress: () =>
-                                widget.onShowPhotoOptions(context, plant, photo),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  isNetwork
-                                      ? CachedNetworkImage(
-                                          imageUrl: photo,
-                                          fit: BoxFit.cover,
-                                          placeholder: (_, __) => const Center(
-                                              child:
-                                                  CircularProgressIndicator(),),
-                                          errorWidget: (_, __, ___) =>
-                                              const Icon(Icons.broken_image,
-                                                  color: Colors.red,
-                                                  size: 48,),
-                                        )
-                                      : Image.file(
-                                          File(photo),
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) =>
-                                              const Icon(Icons.broken_image,
-                                                  color: Colors.red,
-                                                  size: 48,),
-                                        ),
-                                  if (isMainPhoto)
-                                    const Positioned(
-                                      top: 12,
-                                      right: 12,
-                                      child: Icon(Icons.star,
-                                          color: Colors.amber, size: 32,),
-                                    ),
-                                ],
+                            return RepaintBoundary(
+                              child: GestureDetector(
+                              onTap: () {
+                                if (isNetwork &&
+                                    photo.startsWith('https://')) {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) async {
+                                    final provider =
+                                        context.read<PlantCrudProvider>();
+                                    await provider.ensureLocalPhotosExist();
+                                  });
+                                }
+                                widget.onShowFullPhoto(
+                                    context, plant, photo, isNetwork,);
+                              },
+                              onLongPress: () =>
+                                  widget.onShowPhotoOptions(context, plant, photo),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    isNetwork
+                                        ? CachedNetworkImage(
+                                            imageUrl: photo,
+                                            fit: BoxFit.cover,
+                                            placeholder: (_, __) => const Center(
+                                                child:
+                                                    CircularProgressIndicator(),),
+                                            errorWidget: (_, __, ___) =>
+                                                const Icon(Icons.broken_image,
+                                                    color: Colors.red,
+                                                    size: 48,),
+                                          )
+                                        : Image.file(
+                                            File(photo),
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(Icons.broken_image,
+                                                    color: Colors.red,
+                                                    size: 48,),
+                                          ),
+                                    if (isMainPhoto)
+                                      const Positioned(
+                                        top: 12,
+                                        right: 12,
+                                        child: Icon(Icons.star,
+                                            color: Colors.amber, size: 32,),
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ),);
-                        },
+                            ),);
+                          },
+                        ),
                       ),
-                    ),
+              ),
+            ],
+          ),
+
+          // FAB кнопки
+          Positioned(
+            bottom: 30,
+            right: 30,
+            child: FloatingActionButton(
+              heroTag: 'fab_add_photo_${plant.permanentId}',
+              onPressed: () => widget.onUploadPhoto(context, plant),
+              tooltip: 'Добавить своё фото',
+              backgroundColor: Colors.green,
+              elevation: 6,
+              child: const Icon(Icons.add_a_photo),
             ),
-          ],
-        ),
-
-        // FAB кнопки
-        Positioned(
-          bottom: 30,
-          right: 30,
-          child: FloatingActionButton(
-            heroTag: 'fab_add_photo_${plant.permanentId}',
-            onPressed: () => widget.onUploadPhoto(context, plant),
-            tooltip: 'Добавить своё фото',
-            backgroundColor: Colors.green,
-            elevation: 6,
-            child: const Icon(Icons.add_a_photo),
           ),
-        ),
 
-        Positioned(
-          bottom: 30,
-          left: 140,
-          child: FloatingActionButton.small(
-            heroTag: 'fab_llifle_${plant.permanentId}',
-            onPressed: () => widget.onRefreshLlifle(context, plant),
-            tooltip: 'Загрузить ещё фото с Llifle',
-            backgroundColor: Colors.orange,
-            child: const Icon(Icons.cloud_download),
+          Positioned(
+            bottom: 30,
+            left: 140,
+            child: FloatingActionButton(
+              heroTag: 'fab_llifle_${plant.permanentId}',
+              onPressed: () => widget.onRefreshLlifle(context, plant),
+              tooltip: 'Загрузить ещё фото с Llifle',
+              backgroundColor: Colors.orange,
+              elevation: 6,
+              child: const Icon(Icons.cloud_download),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
