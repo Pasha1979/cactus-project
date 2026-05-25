@@ -239,11 +239,6 @@ class PhotoProvider with ChangeNotifier {
               continue;
             }
 
-            if (!await _validateCloudUrl(photo)) {
-              AppLogger.warning('⚠️ Cloud URL недоступен, пропускаем: $photo', tag: 'PHOTO');
-              continue;
-            }
-
             await _downloadPhotoWithRetry(photo, localPath);
             cachedCount++;
           } catch (e) {
@@ -274,15 +269,6 @@ class PhotoProvider with ChangeNotifier {
         AppLogger.warning('🔄 Попытка ${attempt + 1} для скачивания $url не удалась: $e', tag: 'PHOTO');
         await Future.delayed(Duration(seconds: attempt + 1));
       }
-    }
-  }
-
-  Future<bool> _validateCloudUrl(String url) async {
-    try {
-      final response = await http.head(Uri.parse(url));
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
     }
   }
 

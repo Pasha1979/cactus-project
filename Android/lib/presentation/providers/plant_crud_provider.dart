@@ -37,6 +37,10 @@ class PlantCrudProvider with ChangeNotifier {
   final Set<String> _deletedLliflePhotos = {};
   Map<String, String?> _adultImages = {};
   bool _hasUnsavedChanges = false;
+  // Список ID удалённых растений для синхронизации между платформами
+  final Set<String> _deletedPlantIds = {};
+  // Список URL удалённых фото для синхронизации между платформами
+  final Set<String> _deletedPhotoUrls = {};
 
   // Legacy-поля для обратной совместимости облачной синхронизации
   // (хранятся здесь для toJson/loadFromCloudJson, UI использует специализированные провайдеры)
@@ -211,6 +215,8 @@ class PlantCrudProvider with ChangeNotifier {
   /// поля из разных провайдеров для обратной совместимости)
   Map<String, dynamic> toJson() => {
         'plants': _plants.map((p) => p.toJson()).toList(),
+        'deletedPlantIds': _deletedPlantIds.toList(),
+        'deletedPhotoUrls': _deletedPhotoUrls.toList(),
         'lastLocalUpdate': _lastLocalUpdate?.toIso8601String(),
         'globalWateringDates': _globalWateringDates.map((d) => d.toIso8601String()).toList(),
         'adultImages': _adultImages,
@@ -225,6 +231,12 @@ class PlantCrudProvider with ChangeNotifier {
     AppLogger.api('🔄 loadFromCloudJson — загружаем ${data['plants']?.length ?? 0} растений из облака', tag: 'PLANT_CRUD');
 
     final plantsJson = data['plants'] as List<dynamic>? ?? [];
+    final deletedPlantIds = (data['deletedPlantIds'] as List<dynamic>? ?? [])
+        .map((e) => e as String)
+        .toSet();
+    final deletedPhotoUrls = (data['deletedPhotoUrls'] as List<dynamic>? ?? [])
+        .map((e) => e as String)
+        .toSet();
     final cloudPlants = <Plant>[];
 
     for (var json in plantsJson) {
@@ -240,22 +252,53 @@ class PlantCrudProvider with ChangeNotifier {
     final mergedPlants = <Plant>[];
 
     for (var cloudPlant in cloudPlants) {
-      final localIndex = _plants.indexWhere((p) => p.permanentId == cloudPlant.permanentId);
+      // Удаляем фото из списков на основе deletedPhotoUrls
+      final cleanedUserPhotos = cloudPlant.userPhotos
+          .where((photo) => !deletedPhotoUrls.contains(photo))
+          .toList();
+      final cleanedLliflePhotos = cloudPlant.lliflePhotoUrls
+          .where((photo) => !deletedPhotoUrls.contains(photo))
+          .toList();
+      final cleanedCloudPlant = cloudPlant.copyWith(
+        userPhotos: cleanedUserPhotos,
+        lliflePhotoUrls: cleanedLliflePhotos,
+      );
+
+      final localIndex = _plants.indexWhere((p) => p.permanentId == cleanedCloudPlant.permanentId);
       if (localIndex != -1) {
-        final merged = _mergePlantData(_plants[localIndex], cloudPlant);
+        // Растение есть локально - сливаем
+        final merged = _mergePlantData(_plants[localIndex], cleanedCloudPlant);
         mergedPlants.add(merged);
         AppLogger.api('✅ Слияние: ${merged.latinName}', tag: 'PLANT_CRUD');
       } else {
-        mergedPlants.add(cloudPlant);
-        AppLogger.api('➕ Новое из облака: ${cloudPlant.latinName}', tag: 'PLANT_CRUD');
+        // Новое растение из облака
+        mergedPlants.add(cleanedCloudPlant);
+        AppLogger.api('➕ Новое из облака: ${cleanedCloudPlant.latinName}', tag: 'PLANT_CRUD');
       }
     }
 
+    // Добавляем локальные растения, которых нет в облаке
     for (var localPlant in _plants) {
       final existsInCloud = cloudPlants.any((p) => p.permanentId == localPlant.permanentId);
       if (!existsInCloud) {
-        mergedPlants.add(localPlant);
-        AppLogger.api('💾 Только локальное: ${localPlant.latinName}', tag: 'PLANT_CRUD');
+        // Если растение в списке удалённых из облака, пропускаем его
+        if (deletedPlantIds.contains(localPlant.permanentId)) {
+          AppLogger.api('🗑️ Удалено на другой платформе: ${localPlant.latinName}', tag: 'PLANT_CRUD');
+          continue;
+        }
+        // Удаляем фото из списков на основе deletedPhotoUrls
+        final cleanedUserPhotos = localPlant.userPhotos
+            .where((photo) => !deletedPhotoUrls.contains(photo))
+            .toList();
+        final cleanedLliflePhotos = localPlant.lliflePhotoUrls
+            .where((photo) => !deletedPhotoUrls.contains(photo))
+            .toList();
+        final cleanedLocalPlant = localPlant.copyWith(
+          userPhotos: cleanedUserPhotos,
+          lliflePhotoUrls: cleanedLliflePhotos,
+        );
+        mergedPlants.add(cleanedLocalPlant);
+        AppLogger.api('💾 Только локальное: ${cleanedLocalPlant.latinName}', tag: 'PLANT_CRUD');
       }
     }
 
@@ -295,6 +338,10 @@ class PlantCrudProvider with ChangeNotifier {
             ?.map((e) => WinteringLogEntry.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [];
+
+    // Очищаем списки удалённых после синхронизации
+    _deletedPlantIds.clear();
+    _deletedPhotoUrls.clear();
 
     // Сохраняем legacy-поля в SharedPreferences
     await _saveLegacyData();
@@ -457,8 +504,10 @@ class PlantCrudProvider with ChangeNotifier {
     if (index == -1) return;
 
     try {
-      await _repository.updatePlant(updatedPlant);
-      _plants[index] = updatedPlant;
+      // Автоматически обновляем lastModified при каждом обновлении
+      final plantWithTime = updatedPlant.copyWith(lastModified: DateTime.now());
+      await _repository.updatePlant(plantWithTime);
+      _plants[index] = plantWithTime;
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
     } catch (e) {
@@ -468,10 +517,22 @@ class PlantCrudProvider with ChangeNotifier {
 
   Future<void> deletePlant(String id) async {
     try {
+      final plantIndex = _plants.indexWhere((p) => p.permanentId == id);
+      if (plantIndex == -1) {
+        AppLogger.warning('⚠️ Растение не найдено для удаления: $id', tag: 'PLANT_CRUD');
+        return;
+      }
+
+      final plant = _plants[plantIndex];
+      // Добавляем ID в список удалённых для синхронизации
+      _deletedPlantIds.add(id);
+      // Физическое удаление из списка и из базы
       await _repository.deletePlant(id);
-      _plants.removeWhere((p) => p.permanentId == id);
+      _plants.removeAt(plantIndex);
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
+
+      AppLogger.api('🗑️ Растение удалено: ${plant.latinName}', tag: 'PLANT_CRUD');
     } catch (e) {
       AppLogger.error('Ошибка удаления растения: $e', tag: 'PLANT_CRUD');
     }
@@ -1147,6 +1208,8 @@ class PlantCrudProvider with ChangeNotifier {
     if (index == -1) return;
     final updatedPhotos = List<String>.from(_plants[index].userPhotos)
       ..remove(photoPath);
+    // Добавляем фото в список удалённых для синхронизации
+    _deletedPhotoUrls.add(photoPath);
     final updated = _plants[index].copyWith(
       userPhotos: updatedPhotos,
       lastModified: DateTime.now(),
@@ -1287,55 +1350,64 @@ class PlantCrudProvider with ChangeNotifier {
 
     AppLogger.api('🔄 Слияние ${base.latinName}: ${useCloudAsBase ? "облако > локальное" : "локальное > облако"}', tag: 'PLANT_CRUD');
 
-    final mergedPhotos = _mergePhotoLists(base.userPhotos, other.userPhotos, _deletedUserPhotos);
-    final mergedLliflePhotos = _mergePhotoLists(base.lliflePhotoUrls, other.lliflePhotoUrls, _deletedLliflePhotos);
+    final mergedPhotos = _mergePhotoLists(base.userPhotos, other.userPhotos);
+    final mergedLliflePhotos = _mergePhotoLists(base.lliflePhotoUrls, other.lliflePhotoUrls);
 
     return base.copyWith(
+      // Фото - объединяем уникальные из обеих версий
       userPhotos: mergedPhotos,
       lliflePhotoUrls: mergedLliflePhotos,
       lastModified: DateTime.now(),
+      // Текстовые поля - берём из base (более новой версии)
+      latinName: base.latinName,
+      country: base.country,
+      habitat: base.habitat,
+      description: base.description,
+      synonyms: base.synonyms,
+      careTips: base.careTips,
+      floweringPeriod: base.floweringPeriod,
+      countryFlag: base.countryFlag,
+      fieldNumber: base.fieldNumber,
+      seller: base.seller,
+      harvestYear: base.harvestYear,
+      // Поля статусов - берём из base (более новой версии)
       status: base.status,
       category: base.category,
+      hasUnreadNotification: base.hasUnreadNotification,
+      // Числовые поля - берём из base (более новой версии)
+      seedsCount: base.seedsCount,
+      germinatedCount: base.germinatedCount,
+      // Списки и даты - слияние
       notes: _mergeNotes(base.notes, other.notes),
-      lastFertilization: base.lastFertilization,
-      plannedFertilizationDate: base.plannedFertilizationDate,
+      lastFertilization: _mergeDateTime(base.lastFertilization, other.lastFertilization),
+      plannedFertilizationDate: _mergeDateTime(base.plannedFertilizationDate, other.plannedFertilizationDate),
       floweringHistory: _mergeFloweringHistory(base.floweringHistory, other.floweringHistory),
       germinationHistory: _mergeGerminationHistory(base.germinationHistory, other.germinationHistory),
-      lastRepotting: base.lastRepotting,
-      plannedTransplantDate: base.plannedTransplantDate,
+      lastRepotting: _mergeDateTime(base.lastRepotting, other.lastRepotting),
+      plannedTransplantDate: _mergeDateTime(base.plannedTransplantDate, other.plannedTransplantDate),
       wateringDates: _mergeWateringDates(base.wateringDates, other.wateringDates),
       customWateringDates: _mergeCustomWateringDates(base.customWateringDates, other.customWateringDates),
-      hasUnreadNotification: base.hasUnreadNotification,
-      // Поля партий для корректной синхронизации
+      // Поля партий - берём из base (более новой версии)
       displayId: base.displayId,
       childrenIds: base.childrenIds,
       parentId: base.parentId,
+      aliveCount: base.aliveCount,
+      isBatch: base.isBatch,
+      // GBIF поля - берём из base (более новой версии)
+      gbifPhotoUrls: base.gbifPhotoUrls,
+      gbifOccurrences: base.gbifOccurrences,
+      lastGbifUpdate: base.lastGbifUpdate,
+      // QR код - берём из base (более новой версии)
+      qrCode: base.qrCode,
     );
   }
 
-  List<String> _mergePhotoLists(List<String> base, List<String> other, Set<String> deletedPhotos) {
+  List<String> _mergePhotoLists(List<String> base, List<String> other) {
     final allPhotos = <String>{};
     final orderedPhotos = <String>[];
 
-    final filteredBase = base.where((photo) {
-      final dedupeKey = _photoDedupKey(photo);
-      return !deletedPhotos.contains(dedupeKey);
-    }).toList();
-
-    final filteredOther = other.where((photo) {
-      final dedupeKey = _photoDedupKey(photo);
-      return !deletedPhotos.contains(dedupeKey);
-    }).toList();
-
-    for (final photo in filteredBase) {
-      final dedupeKey = _photoDedupKey(photo);
-      if (!allPhotos.contains(dedupeKey)) {
-        allPhotos.add(dedupeKey);
-        orderedPhotos.add(photo);
-      }
-    }
-
-    for (final photo in filteredOther) {
+    // Объединяем уникальные фото из обеих версий
+    for (final photo in [...base, ...other]) {
       final dedupeKey = _photoDedupKey(photo);
       if (!allPhotos.contains(dedupeKey)) {
         allPhotos.add(dedupeKey);
@@ -1418,5 +1490,11 @@ class PlantCrudProvider with ChangeNotifier {
       }
     }
     return allRecords..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  DateTime? _mergeDateTime(DateTime? base, DateTime? other) {
+    if (base == null) return other;
+    if (other == null) return base;
+    return base.isAfter(other) ? base : other;
   }
 }

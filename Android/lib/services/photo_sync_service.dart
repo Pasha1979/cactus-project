@@ -58,13 +58,8 @@ class PhotoSyncService {
           try {
             final fileUrl = await _diskService.uploadPhoto(localPhoto);
 
-            if (!await _validateCloudUrl(fileUrl)) {
-              AppLogger.error('❌ Cloud URL недоступен: $fileUrl', tag: 'PHOTO_SYNC');
-              // Удаляем локальный путь - он не работает на другой платформе
-              updatedPhotos.remove(localPhoto);
-              continue;
-            }
-
+            // Заменяем локальный путь на cloud URL сразу после успешной загрузки
+            // Не валидируем сразу - Яндекс.Диск URL нужно время на propagation
             final index = updatedPhotos.indexOf(localPhoto);
             if (index != -1) {
               updatedPhotos[index] = fileUrl;
@@ -73,8 +68,7 @@ class PhotoSyncService {
             }
           } catch (e) {
             AppLogger.error('❌ Ошибка загрузки $localPhoto: $e', tag: 'PHOTO_SYNC');
-            // Удаляем локальный путь - он не работает на другой платформе
-            updatedPhotos.remove(localPhoto);
+            // Сохраняем локальный фото как fallback - не удаляем его
           }
         }
 
@@ -85,6 +79,7 @@ class PhotoSyncService {
       }
 
       await cleanDuplicatePhotos(plantCrudProvider);
+      await cleanBrokenCloudUrls(plantCrudProvider);
       await _syncDeletedPhotos(plantCrudProvider);
 
       AppLogger.api('✅ Синхронизация фото завершена. Загружено: $uploadedCount фото', tag: 'PHOTO_SYNC');
@@ -161,14 +156,59 @@ class PhotoSyncService {
     return photo;
   }
 
-  // ==================== ВАЛИДАЦИЯ ====================
+  // ==================== ОЧИСТКА НЕДОСТУПНЫХ URL ====================
 
-  Future<bool> _validateCloudUrl(String url) async {
-    try {
-      final response = await http.head(Uri.parse(url));
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
+  /// Очищает недоступные облачные URL из данных растений
+  Future<void> cleanBrokenCloudUrls(PlantCrudProvider plantCrudProvider) async {
+    bool changed = false;
+
+    for (var plant in List.from(plantCrudProvider.plants)) {
+      final cleaned = <String>[];
+
+      for (var photo in plant.userPhotos) {
+        if (photo.startsWith('https://') || photo.startsWith('http://')) {
+          // Валидируем cloud URL с retry
+          if (await _validateCloudUrlWithRetry(photo)) {
+            cleaned.add(photo);
+          } else {
+            AppLogger.api('🗑️ Удалён недоступный cloud URL: $photo', tag: 'PHOTO_SYNC');
+            changed = true;
+          }
+        } else {
+          // Сохраняем локальные фото
+          cleaned.add(photo);
+        }
+      }
+
+      if (cleaned.length != plant.userPhotos.length) {
+        final updatedPlant = plant.copyWith(userPhotos: cleaned);
+        plantCrudProvider.updatePlant(plant.permanentId, updatedPlant);
+      }
     }
+
+    if (changed) {
+      await plantCrudProvider.savePlants();
+      AppLogger.api('✅ Недоступные cloud URL очищены', tag: 'PHOTO_SYNC');
+    }
+  }
+
+  /// Валидирует cloud URL с несколькими попытками и задержкой
+  Future<bool> _validateCloudUrlWithRetry(String url) async {
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        // Добавляем задержку для первой попытки, чтобы дать URL время на propagation
+        if (attempt > 0) {
+          await Future.delayed(Duration(seconds: 2));
+        }
+
+        final response = await http.head(Uri.parse(url));
+        if (response.statusCode == 200) {
+          return true;
+        }
+      } catch (e) {
+        AppLogger.warning('⚠️ Попытка ${attempt + 1} валидации URL $url не удалась: $e', tag: 'PHOTO_SYNC');
+      }
+    }
+    return false;
   }
 }
