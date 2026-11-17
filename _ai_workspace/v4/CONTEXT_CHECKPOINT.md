@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 23:35 · `main` · 8c6c67c 04_ПРАВИЛА: boot в бюджете
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 23:44 · `main` · 77adcc8 Адаптация brain-тестов под cactus + vitest
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
