@@ -30,6 +30,10 @@
     "brain:ideas": "node scripts/brain/gen-ideas.mjs",
     "brain:add": "node scripts/brain/add.mjs",
     "brain:sync": "npm run brain:status && npm run brain:checkpoint && npm run brain:handoff && npm run brain:ideas && npm run brain:refs",
+    "brain:test": "vitest run scripts/brain",
     "prepare": "node scripts/hooks/install.mjs"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
   }
 }

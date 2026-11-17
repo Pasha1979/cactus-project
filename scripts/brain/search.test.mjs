@@ -22,9 +22,9 @@ describe('brain:search',()=>{
     const hits=search('TTS',{root:dir});
     expect(hits[0].ids).toContain('I-85');
   });
-  it('реальный архив: находит «iCal» в ПЛАН_РАБОТ',()=>{
-    const hits=search('iCal',{root:'_ai_workspace/_archive'});
+  it('реальный архив: находит «Strangler» в REFACTORING_ROADMAP',()=>{
+    const hits=search('Strangler',{root:'_ai_workspace/_archive'});
     expect(hits.length).toBeGreaterThan(0);
-    expect(hits.some(h=>h.file.includes('ПЛАН_РАБОТ'))).toBe(true);
+    expect(hits.some(h=>h.file.includes('REFACTORING_ROADMAP'))).toBe(true);
   });
 });
