@@ -23,8 +23,8 @@ class CloudStorageProvider with ChangeNotifier {
   oauth2.AuthorizationCodeGrant?
       _currentGrant; // Для сохранения состояния авторизации
 
-  static const String _yandexClientId = '066c5dd1fda94c15ac2dc248cdb0f1e8';
-  static const String _yandexClientSecret = 'c624749917a34e6a8579e5ff2685f0f7';
+  static const String _yandexClientId = 'ПЕРЕНЕСЕНО_В_ENV_JSON';
+  static const String _yandexClientSecret = 'ПЕРЕНЕСЕНО_В_ENV_JSON';
   static const String _yandexRedirectUri = 'mycactus://callback';
   static const String _yandexAuthEndpoint =
       'https://oauth.yandex.com/authorize';

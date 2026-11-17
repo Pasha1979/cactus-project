@@ -14,7 +14,7 @@ import '../../models/plant.dart';
 /// - Запрос текущей погоды по координатам или городу
 /// - Кэширование на 1 час
 /// - Формирование рекомендаций по поливу
-import '../../../core/config/api_config.dart';
+import '../../core/config/api_config.dart';
 
 class WeatherService {
   static const String _tag = 'WEATHER';
@@ -58,6 +58,11 @@ class WeatherService {
       return jsonDecode(cached);
     }
 
+    if (_apiKey.isEmpty) {
+      AppLogger.warning(ApiConstants.keyNotConfiguredMessage('OPENWEATHER_API_KEY'), tag: _tag);
+      return null;
+    }
+
     try {
       final response = await _dio.get(
         '$_baseUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric',
@@ -86,6 +91,11 @@ class WeatherService {
         DateTime.now().millisecondsSinceEpoch - cacheTime <
             _cacheDuration.inMilliseconds) {
       return jsonDecode(cached);
+    }
+
+    if (_apiKey.isEmpty) {
+      AppLogger.warning(ApiConstants.keyNotConfiguredMessage('OPENWEATHER_API_KEY'), tag: _tag);
+      return null;
     }
 
     try {

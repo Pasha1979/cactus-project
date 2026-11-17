@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/logger/app_logger.dart';
 import '../../models/plant.dart';
-import '../../../core/config/api_config.dart';
+import '../../core/config/api_config.dart';
 
 /// Сервис для получения погодных данных через OpenWeatherMap API.
 ///
@@ -57,6 +57,11 @@ class WeatherService {
       return jsonDecode(cached);
     }
 
+    if (_apiKey.isEmpty) {
+      AppLogger.warning(ApiConstants.keyNotConfiguredMessage('OPENWEATHER_API_KEY'), tag: _tag);
+      return null;
+    }
+
     try {
       final response = await _dio.get(
         '$_baseUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric',
@@ -85,6 +90,11 @@ class WeatherService {
         DateTime.now().millisecondsSinceEpoch - cacheTime <
             _cacheDuration.inMilliseconds) {
       return jsonDecode(cached);
+    }
+
+    if (_apiKey.isEmpty) {
+      AppLogger.warning(ApiConstants.keyNotConfiguredMessage('OPENWEATHER_API_KEY'), tag: _tag);
+      return null;
     }
 
     try {

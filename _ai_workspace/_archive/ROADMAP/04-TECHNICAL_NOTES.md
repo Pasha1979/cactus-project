@@ -119,8 +119,8 @@
 **OAuth2 авторизация:**
 - Android: Deep link (mycactus://callback)
 - Windows: Локальный сервер (localhost:8080)
-- Client ID: 066c5dd1fda94c15ac2dc248cdb0f1e8
-- Client Secret: c624749917a34e6a8579e5ff2685f0f7
+- Client ID: ПЕРЕНЕСЕНО_В_ENV_JSON
+- Client Secret: ПЕРЕНЕСЕНО_В_ENV_JSON
 - Redirect URI: mycactus://callback
 
 **Структура папок:**

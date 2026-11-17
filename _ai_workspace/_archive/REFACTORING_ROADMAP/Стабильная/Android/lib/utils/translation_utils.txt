@@ -25,7 +25,7 @@ Future<String> translateText(String text,
 Future<String> _translateSingle(String text, String from, String to) async {
   const url = 'https://api-b2b.backenster.com/b1/api/v3/translate/';
   const token =
-      'Bearer a_25rccaCYcBC9ARqMODx2BV2M0wNZgDCEl3jryYSgYZtF1a702PVi4sxqi2AmZWyCcw4x209VXnCYwesx';
+      'Bearer ПЕРЕНЕСЕНО_В_ENV_JSON';
 
   // Формируем тело запроса
   final requestBody = {

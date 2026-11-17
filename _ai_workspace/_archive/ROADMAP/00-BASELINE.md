@@ -198,8 +198,8 @@ lib/
 - `_currentGrant` - текущий grant для авторизации
 
 **Константы Яндекс.Диска:**
-- Client ID: 066c5dd1fda94c15ac2dc248cdb0f1e8
-- Client Secret: c624749917a34e6a8579e5ff2685f0f7
+- Client ID: ПЕРЕНЕСЕНО_В_ENV_JSON
+- Client Secret: ПЕРЕНЕСЕНО_В_ENV_JSON
 - Redirect URI: mycactus://callback
 - Auth Endpoint: https://oauth.yandex.com/authorize
 - Token Endpoint: https://oauth.yandex.com/token

@@ -934,13 +934,13 @@ dev_dependencies:
 
 **Погода:**
 - ✅ Геолокация (Geolocator)
-- ✅ OpenWeatherMap API (apikey: 7fd64eefdd81d17943bbcd4e17a87e5d)
+- ✅ OpenWeatherMap API (apikey: ПЕРЕНЕСЕНО_В_ENV_JSON)
 - ✅ Советы по поливу на основе погоды
 - ✅ Кэширование (1 час)
 - ✅ getCurrentLocation, getCurrentWeather, getWeatherByCity
 
 **Синхронизация:**
-- ✅ Яндекс.Диск OAuth2 (client_id: 066c5dd1fda94c15ac2dc248cdb0f1e8)
+- ✅ Яндекс.Диск OAuth2 (client_id: ПЕРЕНЕСЕНО_В_ENV_JSON)
 - ✅ Автосинхронизация при старте (если "Запомнить меня")
 - ✅ Ручная синхронизация
 - ✅ Конфликт-резолюшн по timestamp (допуск 2 секунды)

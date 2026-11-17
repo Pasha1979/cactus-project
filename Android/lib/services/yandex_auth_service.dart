@@ -130,6 +130,12 @@ class YandexAuthService {
   // ==================== АВТОРИЗАЦИЯ ====================
 
   Future<void> connectToYandexDisk(BuildContext context) async {
+    if (_yandexClientId.isEmpty || _yandexClientSecret.isEmpty) {
+      AppLogger.error(ApiConstants.keyNotConfiguredMessage('YANDEX_CLIENT_ID/YANDEX_CLIENT_SECRET'), tag: 'YANDEX_AUTH');
+      _isConnected = false;
+      return;
+    }
+
     if (_isAuthorizing) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -281,6 +287,13 @@ class YandexAuthService {
 
   Future<void> connectToYandexDiskSilently() async {
     if (_isConnected) return;
+
+    if (_yandexClientId.isEmpty || _yandexClientSecret.isEmpty) {
+      AppLogger.error(ApiConstants.keyNotConfiguredMessage('YANDEX_CLIENT_ID/YANDEX_CLIENT_SECRET'), tag: 'YANDEX_AUTH');
+      _isConnected = false;
+      return;
+    }
+
 
     final accessToken = await _storage.read(key: 'yandex_access_token');
     final refreshToken = await _storage.read(key: 'yandex_refresh_token');

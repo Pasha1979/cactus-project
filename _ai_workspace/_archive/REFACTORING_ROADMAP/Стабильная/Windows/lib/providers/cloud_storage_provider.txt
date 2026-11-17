@@ -19,8 +19,8 @@ class CloudStorageProvider with ChangeNotifier {
   bool _isAuthorizing = false;
   DateTime? _lastCloudUpdate;
 
-  static const String _yandexClientId = '066c5dd1fda94c15ac2dc248cdb0f1e8';
-  static const String _yandexClientSecret = 'c624749917a34e6a8579e5ff2685f0f7';
+  static const String _yandexClientId = 'ПЕРЕНЕСЕНО_В_ENV_JSON';
+  static const String _yandexClientSecret = 'ПЕРЕНЕСЕНО_В_ENV_JSON';
   static const String _yandexRedirectUri = 'http://localhost:8080';
   static const String _yandexAuthEndpoint =
       'https://oauth.yandex.com/authorize';

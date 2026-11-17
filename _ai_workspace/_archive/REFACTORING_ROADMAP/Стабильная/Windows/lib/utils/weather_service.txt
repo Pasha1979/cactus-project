@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/plant.dart'; // Импорт твоей модели Plant для типа растения.
 
 class WeatherService {
-  static const String _apiKey = '7fd64eefdd81d17943bbcd4e17a87e5d';
+  static const String _apiKey = 'ПЕРЕНЕСЕНО_В_ENV_JSON';
   static const String _baseUrl =
       'https://api.openweathermap.org/data/2.5/weather';
   static const String _cacheKey = 'weather_cache';

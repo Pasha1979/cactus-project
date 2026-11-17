@@ -69,7 +69,7 @@ msix:
   # Самоподписанный сертификат + отключение строгой проверки
   sign_msix: true
   certificate_subject: "CN=Pavel Cactus App"
-  certificate_password: "mycactus123"
+  certificate_password: "ПЕРЕНЕСЕНО_В_ENV_JSON"
   require_windows10_sdk: true
   windows_build_version: "10.0.19041.0"   # ← это важно
 

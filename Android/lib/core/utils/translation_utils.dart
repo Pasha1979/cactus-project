@@ -29,6 +29,10 @@ Future<String> translateText(String text,
 Future<String> _translateSingle(String text, String from, String to) async {
   const url = ApiConstants.translationApiUrl;
   const token = ApiConstants.translationApiToken;
+  if (token.isEmpty) {
+    AppLogger.warning(ApiConstants.keyNotConfiguredMessage('TRANSLATION_API_TOKEN'), tag: 'TRANSLATION');
+    return text;
+  }
 
   // Формируем тело запроса
   final requestBody = {

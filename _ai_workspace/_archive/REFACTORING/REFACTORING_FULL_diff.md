@@ -734,7 +734,7 @@ class YandexAuthService implements AuthService {
   final PlatformAdapter _platformAdapter;
   final HttpClient _httpClient;
 
-  final String _clientId = '066c5dd1fda94c15ac2dc248cdb0f1e8';
+  final String _clientId = 'ПЕРЕНЕСЕНО_В_ENV_JSON';
   final String _redirectUri;
 
   YandexAuthService(

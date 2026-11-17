@@ -132,7 +132,7 @@ lib/
 ### 3.2 CloudStorageProvider (736 строк)
 
 **OAuth2 конфигурация Яндекс.Диска:**
-- Client ID: `066c5dd1fda94c15ac2dc248cdb0f1e8`
+- Client ID: `ПЕРЕНЕСЕНО_В_ENV_JSON`
 - Scopes: `cloud_api:disk.read`, `cloud_api:disk.write`
 - Папки: `/MyCactus/`, `/MyCactus/photos/`
 
@@ -325,7 +325,7 @@ lib/
 - Бессрочное (до ручного обновления)
 
 ### 5.3 Weather Service (weather_service.dart)
-**API:** OpenWeatherMap (apikey: 7fd64eefdd81d17943bbcd4e17a87e5d)
+**API:** OpenWeatherMap (apikey: ПЕРЕНЕСЕНО_В_ENV_JSON)
 
 **Методы:**
 - `getCurrentLocation()` - Geolocator для GPS координат

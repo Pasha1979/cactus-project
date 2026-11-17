@@ -13,8 +13,8 @@ class ApiConstants {
   static const String yandexAuthEndpoint = 'https://oauth.yandex.com/authorize';
   
   // Yandex OAuth Credentials
-  static const String yandexClientId = '066c5dd1fda94c15ac2dc248cdb0f1e8';
-  static const String yandexClientSecret = 'c624749917a34e6a8579e5ff2685f0f7';
+  static const String yandexClientId = String.fromEnvironment('YANDEX_CLIENT_ID');
+  static const String yandexClientSecret = String.fromEnvironment('YANDEX_CLIENT_SECRET');
   static const String yandexRedirectUri = 'mycactus://callback';
   static const String yandexTokenEndpoint = 'https://oauth.yandex.com/token';
   
@@ -43,13 +43,13 @@ class ApiConstants {
   static const int sendTimeout = 30;
 
   // OpenWeather API Key
-  static const String openWeatherApiKey = '7fd64eefdd81d17943bbcd4e17a87e5d';
+  static const String openWeatherApiKey = String.fromEnvironment('OPENWEATHER_API_KEY');
   static const String openWeatherBaseUrl = 'https://api.openweathermap.org/data/2.5/weather';
 
   // Translation API (Lingvanex/Backenster)
   static const String translationApiUrl = 'https://api-b2b.backenster.com/b1/api/v3/translate/';
-  static const String translationApiToken = 'Bearer a_25rccaCYcBC9ARqMODx2BV2M0wNZgDCEl3jryYSgYZtF1a702PVi4sxqi2AmZWyCcw4x209VXnCYwesx';
-  static const String translationApiReferer = 'https://lingvanex.com/translate/';
+  static const String translationApiToken = String.fromEnvironment('TRANSLATION_API_TOKEN');
+  static const String translationApiReferer = String.fromEnvironment('TRANSLATION_API_REFERER', defaultValue: 'https://lingvanex.com/translate/');
 
   // Llifle API
   static const String llifleBaseUrl = 'https://llifle.com';
@@ -65,4 +65,10 @@ class ApiConstants {
   // OpenStreetMap
   static const String openStreetMapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   static const String openStreetMapUrl = 'https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=15/{lat}/{lon}';
+  /// true, если ключ передан через env.json / --dart-define и непуст
+  static bool isKeyConfigured(String key) => key.isNotEmpty;
+
+  /// Сообщение при отсутствии ключа: запуск без env.json
+  static String keyNotConfiguredMessage(String keyName) =>
+      'Ключ $keyName не настроен (env.json)';
 }
