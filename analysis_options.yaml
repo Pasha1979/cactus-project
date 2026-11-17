@@ -2,6 +2,8 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
+    - _ai_workspace/**
+    - _local_untracked/**
     - ../REFACTORING_ROADMAP/Стабильная/**
   strong-mode:
     implicit-casts: false

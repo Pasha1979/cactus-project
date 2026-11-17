@@ -296,3 +296,23 @@ Android: 49 dep + 7 dev · Windows: 41 dep + 7 dev · общих: 41+7.
 
 - Сам перенос файлов (задача 1.2Б), правка pubspec (1.2В), починка печати (этап 4).
 - Каталоги `android/`, `windows/` платформенных оболочек — мерж отдельным шагом с подтверждением.
+
+## 8. Результаты сборки (задача 1.2В, 2026-11-18)
+
+Среда проверки: Flutter 3.29.1 / Dart 3.7.0 (проект: `sdk >=3.0.0`, `flutter_lints ^6.0.0` → требует Dart ≥3.8.0).
+
+| Проверка | Результат |
+|---|---|
+| `flutter pub get` | ❌ на `flutter_lints ^6.0.0` (Dart 3.7.0 < 3.8.0). С временной подменой на `^5.0.0` — ✅ 214 пакетов. pubspec восстановлен. |
+| `flutter analyze` | **14 errors** — все предсуществующие: `RadioGroup`/`groupValue`/`onChanged` (API Flutter ≥3.35) и `activeThumbColor` (≥3.31) в main.dart, statistics_screen, add_plant_screen. Подтверждено наличием в `e4e336f` (до слияния). **Ошибок слияния: 0.** |
+| `flutter build windows --debug` | ❌ падает на dart-компиляции — те же 14 ошибок Radio-API. CMake/MSBuild-цепочка работает, runner собирается. |
+| `flutter build apk --debug` | ❌ Gradle daemon умер (ресурсы среды), до dart-компиляции не дошёл; ожидается та же стена. |
+| Импорты | 335 импортов проверено, битых: 0. |
+
+**Найдено и исправлено в 1.2В (баги слияния):**
+- голые относительные импорты `import 'models/plant.dart'` в `lib/main.dart` и `lib/injection_container.dart` — переписаны на новые пути;
+- `package:my_cactus/{models,screens,widgets}/...` в `test/` — переписаны;
+- архив `_ai_workspace/` исключён из анализа (analysis_options.yaml);
+- регенерированы `windows/flutter/generated_plugin_registrant*` (без Firebase).
+
+**Вывод:** слияние корректно. Для сборки нужен Flutter ≥3.35 (RadioGroup API) либо откат Radio-кода на классический API — решение владельца (R-040).

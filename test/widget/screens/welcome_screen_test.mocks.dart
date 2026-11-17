@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart' as _i2;
 import 'package:flutter/material.dart' as _i9;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
-import 'package:my_cactus/models/plant.dart' as _i5;
+import 'package:my_cactus/data/models/plant.dart' as _i5;
 import 'package:my_cactus/presentation/providers/cloud_storage_provider.dart'
     as _i8;
 import 'package:my_cactus/presentation/providers/plant_crud_provider.dart'

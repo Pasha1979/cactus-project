@@ -5,7 +5,7 @@ import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 import 'package:my_cactus/presentation/providers/cloud_storage_provider.dart';
 import 'package:my_cactus/presentation/providers/providers.dart';
-import 'package:my_cactus/screens/welcome_screen.dart';
+import 'package:my_cactus/presentation/screens/welcome_screen.dart';
 
 import 'welcome_screen_test.mocks.dart';
 

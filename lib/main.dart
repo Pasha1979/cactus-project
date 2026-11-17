@@ -6,7 +6,7 @@ import 'core/config/feature_flags.dart';
 import 'core/config/app_constants.dart';
 import 'services/backup/auto_backup_service.dart';
 import 'presentation/providers/settings_provider.dart';
-import 'models/plant.dart';
+import 'data/models/plant.dart';
 import 'presentation/providers/cloud_storage_provider.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/routers/app_router.dart';
@@ -14,15 +14,15 @@ import 'dart:io';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'widgets/plant_cards.dart';
+import 'presentation/widgets/plant_cards.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'theme/cactus_theme.dart';
+import 'presentation/theme/cactus_theme.dart';
 import 'data/datasources/local/hive_database.dart';
 import 'data/migrations/data_migration_manager.dart';
 import 'injection_container.dart' as di;
-import 'utils/responsive_helper.dart';
-import 'screens/statistics_screen.dart';
+import 'core/utils/responsive_helper.dart';
+import 'presentation/screens/statistics_screen.dart';
 
 enum GroupAction { changeStatus, delete }
 

@@ -79,3 +79,7 @@
 **R-037** — Критерий для старых папок `lib/{screens,models,widgets,theme,utils}`: импортируемый файл = живой → перенос в новую структуру (models→data/models, screens→presentation/screens, widgets→presentation/widgets, theme→presentation/theme, utils→core/utils); sha1-дубль (`utils/responsive_helper.dart`) → архив, импорты переведены на core-версию. Ни один файл не удалён без архива (зеркало в `_ai_workspace/_archive/merge_1_2/`).
 
 **R-038** — `cleanBrokenCloudUrls`/`_validateCloudUrlWithRetry` удалены из `photo_sync_service.dart` при слиянии: функция молча удаляла ссылки на облачные фото при сетевом сбое (нарушение R-004/R-005 «фото не терять»). Правильная очистка — по спецификации на этапе 3.
+
+**R-039** — Ограничение среды Devin зафиксировано: Flutter 3.29.1 / Dart 3.7.0 против `flutter_lints ^6.0.0` (требует Dart ≥3.8.0). Проверка 1.2В выполнена с временной локальной подменой `flutter_lints ^5.0.0` (pubspec в репозитории не менялся).
+
+**R-040** — Найдено при проверке 1.2В: код использует `RadioGroup`/`groupValue`-API Flutter ≥3.35 и `activeThumbColor` (main.dart, statistics_screen, add_plant_screen). Под Flutter 3.29 — 14 ошибок компиляции. Это предсуществующий код (подтверждено в e4e336f). Требование к локальной среде владельца: **Flutter ≥3.35**, либо откат Radio-кода на классический API.

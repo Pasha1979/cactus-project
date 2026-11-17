@@ -231,7 +231,8 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
       // TODO(R-024): printing/pdfium не работает на Windows — сохраняем PDF
       final directory = await getApplicationDocumentsDirectory();
       final file = File(
-          '${directory.path}/qr_labels_${DateTime.now().millisecondsSinceEpoch}.pdf');
+        '${directory.path}/qr_labels_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      );
       await file.writeAsBytes(await pdf.save());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

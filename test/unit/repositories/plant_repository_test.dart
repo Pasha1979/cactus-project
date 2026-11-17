@@ -4,7 +4,7 @@ import 'package:mockito/mockito.dart';
 import 'package:my_cactus/data/datasources/local/plant_local_datasource.dart';
 import 'package:my_cactus/data/models/plant_dto.dart';
 import 'package:my_cactus/data/repositories/plant_repository_impl.dart';
-import 'package:my_cactus/models/plant.dart';
+import 'package:my_cactus/data/models/plant.dart';
 
 import 'plant_repository_test.mocks.dart';
 

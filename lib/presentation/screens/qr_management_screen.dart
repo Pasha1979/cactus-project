@@ -197,7 +197,8 @@ class _QRManagementScreenState extends State<QRManagementScreen>
           if (Platform.isWindows) {
             // TODO(R-024): printing/pdfium не работает на Windows
             _showSnackBar(
-                'Печать недоступна: файл можно открыть через системное приложение');
+              'Печать недоступна: файл можно открыть через системное приложение',
+            );
           } else {
             await Printing.layoutPdf(
               onLayout: (_) => pdfFile.readAsBytes(),

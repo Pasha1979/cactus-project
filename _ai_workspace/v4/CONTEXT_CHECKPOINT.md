@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 00:22 · `main` · 34aef82 chore(cleanup): remove 100+ MB of IDE cach
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 00:50 · `main` · 7ba3263 chore(migration): merge Android + Windows 
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
