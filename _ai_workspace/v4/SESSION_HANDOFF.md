@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-17 · `main` · ff28999 04_ПРАВИЛА: запас под колебания автоген-ha
+# HANDOFF (автоген) · 2026-11-17 · `main` · e4e336f chore(migration): plan for merging Android
 
 Сделано:
-- ff28999 04_ПРАВИЛА: запас под колебания автоген-handoff
-- 68bca46 Handoff/checkpoint под HEAD миграции тестов
-- 9ce9973 Контекст после авточекпоинта + ужатие 04_ПРАВИЛА под
-- 77adcc8 Адаптация brain-тестов под cactus + vitest
+- e4e336f chore(migration): plan for merging Android + Windows
+- 34aef82 chore(cleanup): remove 100+ MB of IDE caches and bui
+- d9c5125 chore(secrets): move API keys to gitignored env.json
+- c7d0dc2 chore(secrets): gitignore env.json and secrets
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

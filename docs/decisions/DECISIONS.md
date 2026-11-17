@@ -71,3 +71,11 @@
 **R-033** — Скрытый баг сборки исправлен: битый относительный импорт `../../../core/config/api_config.dart` в `weather_service.dart` (обе копии) заменён на `../../core/config/api_config.dart`. Цитата (Devin, отчёт задачи 0.2): «Найден и исправлен баг не по задаче: weather_service.dart в обеих копиях имел битый импорт… файл не компилируется… текущий main до моего фикса вообще не собирался».
 
 **R-034** — Правило чистоты репозитория: кэши IDE, локальные настройки, артефакты сборки НЕ коммитятся; управляются через `.gitignore` (постоянное правило).
+
+**R-035** — Единая структура проекта утверждена по плану 1.2А: общий `lib/` (core/data/domain/presentation/services/platform), `android/` из Android-копии, `windows/` из Windows-копии, общие `assets/` и `pubspec.yaml`. Источник: задание 1.2А/1.2Б.
+
+**R-036** — Правила разрешения DIFFERENT-файлов при слиянии (утверждено в задании 1.2Б): база — Android-версии (полнее); Windows-варианты `feature_flags` и `app_logger` (без Firebase, R-027); Windows-версии `photo_provider`/`photo_sync_service` НЕ переносить (удаляют фото); платформенные различия — через `Platform.isAndroid`/`Platform.isWindows`; версия 1.2.0 (R-019).
+
+**R-037** — Критерий для старых папок `lib/{screens,models,widgets,theme,utils}`: импортируемый файл = живой → перенос в новую структуру (models→data/models, screens→presentation/screens, widgets→presentation/widgets, theme→presentation/theme, utils→core/utils); sha1-дубль (`utils/responsive_helper.dart`) → архив, импорты переведены на core-версию. Ни один файл не удалён без архива (зеркало в `_ai_workspace/_archive/merge_1_2/`).
+
+**R-038** — `cleanBrokenCloudUrls`/`_validateCloudUrlWithRetry` удалены из `photo_sync_service.dart` при слиянии: функция молча удаляла ссылки на облачные фото при сетевом сбое (нарушение R-004/R-005 «фото не терять»). Правильная очистка — по спецификации на этапе 3.

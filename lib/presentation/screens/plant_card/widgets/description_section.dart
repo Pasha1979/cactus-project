@@ -1,0 +1,70 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../data/models/plant.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/providers.dart';
+
+class DescriptionSection extends StatelessWidget {
+
+  const DescriptionSection({super.key, required this.plant});
+  final Plant plant;
+
+  @override
+  Widget build(BuildContext context) {
+    final descriptionText = plant.description ?? 'Добавьте описание...';
+    final descriptionList = descriptionText.split('\n');
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ExpansionTile(
+        leading: const Icon(Icons.description, color: Colors.green),
+        title: const Text(
+          'Описание',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.green,
+          ),
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.edit, color: Colors.grey),
+          onPressed: () async {
+            final result = await context.push<Plant>(
+              '/plant/${plant.permanentId}/edit',
+              extra: plant,
+            );
+            if (result != null && context.mounted) {
+              context.read<PlantCrudProvider>()
+                  .updatePlant(plant.permanentId, result);
+              context.read<PlantCrudProvider>().savePlants();
+            }
+          },
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: descriptionList.length == 1
+                ? Text(
+                    descriptionText,
+                    style: const TextStyle(fontSize: 16),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: descriptionList
+                        .map((desc) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4.0),
+                              child: Text(
+                                desc,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),)
+                        .toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 23:52 · `main` · ff28999 04_ПРАВИЛА: запас под колебания автоген-ha
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 00:22 · `main` · 34aef82 chore(cleanup): remove 100+ MB of IDE cach
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

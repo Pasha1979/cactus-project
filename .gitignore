@@ -12,3 +12,11 @@ local.properties
 CppProperties.json
 **/build/
 !docs/**/build/
+_local_untracked/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+**/ephemeral/
