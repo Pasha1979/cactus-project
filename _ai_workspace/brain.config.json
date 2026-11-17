@@ -1,0 +1,22 @@
+{
+  "project": "cactus-project",
+  "brainVersion": "v4",
+  "autoCheckpoint": {
+    "enabled": true,
+    "commits": 5,
+    "changedFiles": 15
+  },
+  "contextGuard": {
+    "handoffCommits": 3,
+    "checkpointCommits": 5,
+    "checkpointChangedFiles": 20
+  },
+  "coverage": {
+    "staleWipDays": 14
+  },
+  "platforms": ["Android", "Windows"],
+  "verifyCommands": {
+    "analyze": "flutter analyze"
+  },
+  "role": "superadmin"
+}
