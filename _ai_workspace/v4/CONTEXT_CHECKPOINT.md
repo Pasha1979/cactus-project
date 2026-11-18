@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 00:09 · `main` · 55ac42b chore(brain): sync status/handoff after ta
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 00:11 · `main` · 128b99d chore(brain): session handoff - end of ses
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
