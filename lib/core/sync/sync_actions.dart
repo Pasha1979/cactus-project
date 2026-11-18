@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/auth_repository.dart';
+import 'initial_migration.dart';
 import 'sync_engine.dart';
 
 /// Точки входа синхронизации из кода верхнего уровня (задача 2.5).
@@ -9,16 +10,23 @@ import 'sync_engine.dart';
 /// Без аккаунта движок сам делает no-op (R-008); для кнопки
 /// состояние аккаунта проверяется до вызова — честный UI (R-051).
 class SyncActions {
-  SyncActions(this._engine, this._auth);
+  SyncActions(this._engine, this._auth, {InitialMigration? migration})
+      : _migration = migration;
 
   final SyncEngine _engine;
   final AuthRepository _auth;
+  final InitialMigration? _migration;
 
   /// Вошёл ли пользователь в Supabase-аккаунт.
   bool get hasAccount => _auth.currentUser != null;
 
   /// Стартовый sync после загрузки провайдеров (тихий, без SnackBar).
-  Future<void> startup() => _engine.sync();
+  /// Перед sync — однократная миграция local→Supabase (задача 2.6):
+  /// внутри проверяет аккаунт и флаг done, без аккаунта — no-op.
+  Future<void> startup() async {
+    await _migration?.run();
+    await _engine.sync();
+  }
 
   /// Ручной sync по кнопке «Синхр.».
   Future<void> manual() => _engine.sync();

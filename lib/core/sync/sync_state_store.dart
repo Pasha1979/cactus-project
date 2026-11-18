@@ -47,4 +47,12 @@ class SyncStateStore {
 
   Future<void> removeStamp(String permanentId) =>
       _box.delete('$_stampPrefix$permanentId');
+
+  // ============ Произвольные ключи (миграция, отчёты — задача 2.6) ============
+
+  String? getValue(String key) => _box.get(key);
+
+  Future<void> setValue(String key, String value) => _box.put(key, value);
+
+  Future<void> removeValue(String key) => _box.delete(key);
 }

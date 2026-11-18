@@ -222,3 +222,26 @@ whole-JSON через Яндекс (`syncData`/`loadDataFromCloud`/post-auth syn
 `CloudStorageProvider` + WelcomeScreen через фасад). Записи идут через
 Supabase; фото и бэкап — через Яндекс без изменений (R-003 гибрид).
 TODO(архив после 2.6) расставлен в точках gate.
+
+## Initial migration + backup/rollback (задача 2.6)
+
+Однократная миграция живой коллекции: локальные данные → Supabase.
+Источник истины этапа — ЛОКАЛЬНЫЕ данные. Yandex plant_provider.json
+не удаляется и не перезаписывается (остаётся резервной копией).
+
+### Порядок (InitialMigration.run, строгий)
+
+1. Флаг `sync_state['migration_v1_done'] == 'true'` → выход (идемпотентность).
+2. Нет аккаунта → выход без флага (отложено до входа, R-008).
+3. `MigrationBackup.createBackup()` — ВСЕ plants + 6 legacy-ключей →
+   `documents/migration_backup_<ts>.json`; путь в `migration_backup_path`.
+4. Bulk enqueue: plants → 'upsert'; 6 ключей → 'settings:<key>' upsert.
+5. `engine.sync()` (push → pull).
+6. Outbox не пуст → флаг НЕ ставим (частичный сбой, повтор домигрирует).
+7. Серверные `last_modified` → `stamp:<id>`; курсоры = `rpc('sync_now')`
+   (свои записи не тянутся обратно).
+8. `migration_v1_done = true`; сверка counts local/remote → `migration_report`
+   + AppLogger (расхождение → error, но работа не прерывается).
+
+`rollback(path)` — восстановление plants+prefs из файла, сброс флага done.
+Подключение: `SyncActions.startup()` вызывает `migration.run()` перед sync.

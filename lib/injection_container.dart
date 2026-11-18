@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/auth/auth_repository.dart';
 import 'core/auth/supabase_auth_repository.dart';
 import 'core/sync/remote_change_applier.dart';
+import 'core/sync/initial_migration.dart';
+import 'core/sync/migration_backup.dart';
 import 'core/sync/settings_sync_adapter.dart';
 import 'core/sync/sync_actions.dart';
 import 'core/sync/sync_conflicts.dart';
@@ -160,8 +162,35 @@ Future<void> init() async {
     ),
   );
 
+  // Однократная миграция local→Supabase с автобэкапом (задача 2.6)
+  sl.registerLazySingleton(
+    () => MigrationBackup(
+      plants: sl<PlantRepository>(),
+      settings: sl<SettingsSyncAdapter>(),
+      state: sl<SyncStateStore>(),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => InitialMigration(
+      auth: sl<AuthRepository>(),
+      plants: sl<PlantRepository>(),
+      outbox: sl<SyncOutbox>(),
+      state: sl<SyncStateStore>(),
+      engine: sl<SyncEngine>(),
+      remote: sl<PlantRemoteDataSource>(),
+      backup: sl<MigrationBackup>(),
+      settings: sl<SettingsSyncAdapter>(),
+    ),
+  );
+
   // Точки входа синхронизации (старт/кнопка) и авто-синк (задача 2.5)
-  sl.registerLazySingleton(() => SyncActions(sl<SyncEngine>(), sl<AuthRepository>()));
+  sl.registerLazySingleton(
+    () => SyncActions(
+      sl<SyncEngine>(),
+      sl<AuthRepository>(),
+      migration: sl<InitialMigration>(),
+    ),
+  );
   sl.registerLazySingleton(
     () => SyncScheduler(engine: sl<SyncEngine>(), outbox: sl<SyncOutbox>()),
   );
