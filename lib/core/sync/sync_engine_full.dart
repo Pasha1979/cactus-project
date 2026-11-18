@@ -7,6 +7,7 @@ import '../../domain/repositories/plant_repository.dart';
 import '../auth/auth_repository.dart';
 import '../logger/app_logger.dart';
 import 'remote_change_applier.dart';
+import 'settings_sync_adapter.dart';
 import 'sync_conflicts.dart';
 import 'sync_engine.dart';
 import 'sync_outbox.dart';
@@ -27,6 +28,7 @@ class FullSyncEngine implements SyncEngine {
     required AuthRepository auth,
     required SyncStateStore state,
     required SyncConflictStore conflicts,
+    required SettingsSyncAdapter settings,
     RemoteChangeApplier? applier,
     int pageLimit = 1000,
   })  : _outbox = outbox,
@@ -35,6 +37,7 @@ class FullSyncEngine implements SyncEngine {
         _auth = auth,
         _state = state,
         _conflicts = conflicts,
+        _settings = settings,
         _applier = applier,
         _pageLimit = pageLimit;
 
@@ -44,6 +47,7 @@ class FullSyncEngine implements SyncEngine {
   final AuthRepository _auth;
   final SyncStateStore _state;
   final SyncConflictStore _conflicts;
+  final SettingsSyncAdapter _settings;
   final RemoteChangeApplier? _applier;
   final int _pageLimit;
 
@@ -87,7 +91,20 @@ class FullSyncEngine implements SyncEngine {
 
     for (final entry in _outbox.pending()) {
       try {
-        if (entry.op == SyncOutbox.opDelete) {
+        // Записи настроек: 'settings:<PrefsKey>' → user_settings (2.4б)
+        if (SettingsSyncAdapter.isSettingId(entry.recordId)) {
+          if (entry.op == SyncOutbox.opDelete) {
+            await _remote.upsertSetting({
+              'key': SettingsSyncAdapter.settingKey(entry.recordId),
+              'value': null,
+              'is_deleted': true,
+            });
+          } else {
+            await _remote.upsertSetting(
+              _settings.toRow(SettingsSyncAdapter.settingKey(entry.recordId), user.id),
+            );
+          }
+        } else if (entry.op == SyncOutbox.opDelete) {
           await _remote.deletePlant(entry.recordId);
         } else {
           final plant = await _plants.getPlantById(entry.recordId);
@@ -154,6 +171,22 @@ class FullSyncEngine implements SyncEngine {
         }
         if (page.rows.length < _pageLimit) break; // страница неполная — конец
       }
+
+      // Настройки: отдельный курсор settings_cursor (2.4б)
+      var scur = _state.settingsCursor;
+      while (true) {
+        final page =
+            await _remote.fetchSettingsSince(scur, limit: _pageLimit);
+        for (final row in page.rows) {
+          await _applySettingRow(row);
+        }
+        if (page.newCursor != null) {
+          scur = page.newCursor;
+          await _state.setSettingsCursor(page.newCursor!);
+        }
+        if (page.rows.length < _pageLimit) break;
+      }
+
       await onPullComplete?.call();
     } catch (e, st) {
       hadError = true;
@@ -214,6 +247,17 @@ class FullSyncEngine implements SyncEngine {
     await _applyUpsert(plantFromSyncRow(row));
     await _outbox.remove(permanentId); // remote применён — push не нужен
     await _state.setStamp(permanentId, remoteStamp);
+  }
+
+  /// Применить строку user_settings: tombstone → удалить ключ,
+  /// иначе записать значение в prefs (провайдеры перечитают в onPullComplete).
+  Future<void> _applySettingRow(Map<String, dynamic> row) async {
+    final key = row['key'] as String;
+    if (row['is_deleted'] == true) {
+      await _settings.removeLegacy(key);
+    } else {
+      await _settings.writeLegacy(key, row['value']);
+    }
   }
 
   Future<void> _applyUpsert(Plant plant) async {

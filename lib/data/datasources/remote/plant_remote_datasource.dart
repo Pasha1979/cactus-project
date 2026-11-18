@@ -34,4 +34,13 @@ abstract class PlantRemoteDataSource {
     DateTime? cursor, {
     int limit = 1000,
   });
+
+  /// Upsert строки user_settings (ключ = (user_id, key)).
+  Future<void> upsertSetting(Map<String, dynamic> row);
+
+  /// Изменения user_settings с [cursor], включая tombstones.
+  Future<RemoteChangesPage> fetchSettingsSince(
+    DateTime? cursor, {
+    int limit = 1000,
+  });
 }

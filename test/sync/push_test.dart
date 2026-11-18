@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_cactus/core/auth/auth_repository.dart';
 import 'package:my_cactus/core/auth/auth_state.dart';
 import 'package:my_cactus/core/sync/sync_engine.dart';
+import 'package:my_cactus/core/sync/settings_sync_adapter.dart';
 import 'package:my_cactus/core/sync/sync_engine_full.dart';
 import 'package:my_cactus/core/sync/sync_conflicts.dart';
 import 'package:my_cactus/core/sync/sync_outbox.dart';
@@ -71,6 +73,16 @@ class FakeRemote implements PlantRemoteDataSource {
   }
 
   @override
+  Future<void> upsertSetting(Map<String, dynamic> row) async {}
+
+  @override
+  Future<RemoteChangesPage> fetchSettingsSince(
+    DateTime? cursor, {
+    int limit = 1000,
+  }) async =>
+      RemoteChangesPage(rows: [], newCursor: null);
+
+  @override
   Future<RemoteChangesPage> fetchChangesSince(
     DateTime? cursor, {
     int limit = 1000,
@@ -134,6 +146,7 @@ void main() {
   late Box<String> conflictsBox;
   late SyncStateStore state;
   late SyncConflictStore conflicts;
+  late SettingsSyncAdapter settings;
   late SyncOutbox outbox;
   late FakeAuthRepository auth;
   late FakeRemote remote;
@@ -155,6 +168,8 @@ void main() {
     conflictsBox = await Hive.openBox<String>('conflicts_${DateTime.now().microsecondsSinceEpoch}');
     state = SyncStateStore(stateBox);
     conflicts = SyncConflictStore(conflictsBox);
+    SharedPreferences.setMockInitialValues({});
+    settings = SettingsSyncAdapter(await SharedPreferences.getInstance());
     engine = FullSyncEngine(
       outbox: outbox,
       remote: remote,
@@ -162,6 +177,7 @@ void main() {
       auth: auth,
       state: state,
       conflicts: conflicts,
+      settings: settings,
     );
     await sl.reset();
   });

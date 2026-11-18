@@ -45,24 +45,15 @@ class SupabaseDatasource implements PlantRemoteDataSource {
   }
 
   /// Штамп последней синхронизации для инкрементального pull.
-  ///
-  /// Серверное время берём из триггерного `last_modified` свежайшей строки
-  /// plants (PostgREST не умеет `SET x = now()`, а новых миграций/rpc в 2.4
-  /// нет — R-046). Клиентское время не используется.
+  /// Серверное время — rpc('sync_now') (миграция 00003, R-046/R-047).
   @override
   Future<DateTime?> updateLastSync() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) {
       throw StateError('Нет авторизованного пользователя для updateLastSync');
     }
-    final newest = await _client
-        .from('plants')
-        .select('last_modified')
-        .order('last_modified', ascending: false)
-        .limit(1)
-        .maybeSingle();
-    if (newest == null) return null; // таблица пуста — нечем проставить
-    final serverStamp = DateTime.parse(newest['last_modified'] as String);
+    final res = await _client.rpc('sync_now');
+    final serverStamp = DateTime.parse(res as String);
     await _client.from('sync_metadata').upsert(
       {'user_id': userId, 'last_sync_at': serverStamp.toIso8601String()},
       onConflict: 'user_id',
@@ -78,6 +69,39 @@ class SupabaseDatasource implements PlantRemoteDataSource {
     int limit = 1000,
   }) async {
     final base = _client.from('plants').select();
+    final filtered = cursor == null
+        ? base
+        : base.gt('last_modified', cursor.toIso8601String());
+    final response = await filtered
+        .order('last_modified', ascending: true)
+        .limit(limit);
+    final rows = List<Map<String, dynamic>>.from(response);
+    final newCursor = rows.isEmpty
+        ? null
+        : DateTime.parse(rows.last['last_modified'] as String);
+    return RemoteChangesPage(rows: rows, newCursor: newCursor);
+  }
+
+  /// Upsert настройки в user_settings (legacy-настройки, задача 2.4б).
+  @override
+  Future<void> upsertSetting(Map<String, dynamic> row) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('Нет авторизованного пользователя для upsertSetting');
+    }
+    await _client.from('user_settings').upsert(
+      {...row, 'user_id': userId},
+      onConflict: 'user_id,key',
+    );
+  }
+
+  /// Изменения user_settings с курсора — включая tombstones.
+  @override
+  Future<RemoteChangesPage> fetchSettingsSince(
+    DateTime? cursor, {
+    int limit = 1000,
+  }) async {
+    final base = _client.from('user_settings').select();
     final filtered = cursor == null
         ? base
         : base.gt('last_modified', cursor.toIso8601String());

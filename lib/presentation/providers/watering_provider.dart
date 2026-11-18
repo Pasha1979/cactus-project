@@ -3,8 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
 import '../../core/logger/app_logger.dart';
+import '../../core/sync/settings_sync_adapter.dart';
+import '../../core/sync/sync_outbox.dart';
 import '../../core/ui/ui_state.dart';
 import '../../data/models/plant.dart';
+import '../../injection_container.dart';
 
 /// Провайдер для управления поливами
 ///
@@ -53,6 +56,13 @@ class WateringProvider with ChangeNotifier {
         PrefsKeys.globalWateringDates,
         _globalWateringDates.map((d) => d.toIso8601String()).toList(),
       );
+      // Outbox: глобальные поливы синхронизируются через user_settings (2.4б)
+      try {
+        await sl<SyncOutbox>().enqueue(
+          '${SettingsSyncAdapter.prefix}${PrefsKeys.globalWateringDates}',
+          SyncOutbox.opUpsert,
+        );
+      } catch (_) {}
     } catch (e) {
       AppLogger.error('❌ WateringProvider save error: $e', tag: 'WATERING');
     }

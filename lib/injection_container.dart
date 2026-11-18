@@ -1,8 +1,10 @@
 import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/auth/auth_repository.dart';
 import 'core/auth/supabase_auth_repository.dart';
 import 'core/sync/remote_change_applier.dart';
+import 'core/sync/settings_sync_adapter.dart';
 import 'core/sync/sync_conflicts.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/sync/sync_engine_full.dart';
@@ -131,6 +133,10 @@ Future<void> init() async {
   // Архив конфликтов (задача 2.4)
   sl.registerLazySingleton(() => SyncConflictStore(HiveDatabase.syncConflictsBox));
 
+  // Адаптер legacy-настроек SharedPreferences ↔ user_settings (задача 2.4б)
+  final prefs = await SharedPreferences.getInstance();
+  sl.registerLazySingleton(() => SettingsSyncAdapter(prefs));
+
   // Удалённый источник данных Supabase (записи)
   sl.registerLazySingleton(() => SupabaseDatasource());
   sl.registerLazySingleton<PlantRemoteDataSource>(() => sl<SupabaseDatasource>());
@@ -145,6 +151,7 @@ Future<void> init() async {
       auth: sl<AuthRepository>(),
       state: sl<SyncStateStore>(),
       conflicts: sl<SyncConflictStore>(),
+      settings: sl<SettingsSyncAdapter>(),
       applier: sl.isRegistered<RemoteChangeApplier>()
           ? sl<RemoteChangeApplier>()
           : null,

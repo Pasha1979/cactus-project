@@ -163,3 +163,32 @@ remoteJson, at}. `listConflicts()` — для UI восстановления (�
 
 После успешного pull движок вызывает `onPullComplete` — в main.dart
 зарегистрирована перезагрузка провайдеров (watering/wintering/photo/crud).
+
+## Legacy settings sync (задача 2.4б)
+
+Глобальные поливы, зимовка и adultImages жили только в SharedPreferences —
+на втором устройстве не обновлялись. Теперь синхронизируются через таблицу
+`user_settings` (PK = user_id+key, RLS, триггер last_modified — миграция 00003).
+
+### Ключи (SharedPreferences ↔ user_settings.key)
+
+| PrefsKeys | Тип | Sync |
+|---|---|---|
+| global_watering_dates | StringList ISO | ✔ |
+| wintering_start | String ISO/'' | ✔ |
+| wintering_end | String ISO/'' | ✔ |
+| wintering_temp | double | ✔ |
+| wintering_log | StringList JSON | ✔ |
+| adult_images | String JSON map | ✔ |
+| search_history / qr_scan_history | — | ✗ локальны намеренно (R-047) |
+
+### Поток
+
+- Push: `_save()` в Watering/Wintering/Photo провайдерах →
+  `outbox.enqueue('settings:<key>','upsert')` → `SettingsSyncAdapter.readLegacy`
+  → `upsertSetting` (value jsonb, user_id явно, без client last_modified).
+- Pull: `fetchSettingsSince(settings_cursor)` — отдельный курсор в sync_state;
+  tombstone → `prefs.remove(key)`; иначе `writeLegacy` напрямую в prefs
+  (без _save-хуков — петли нет). После pull → `onPullComplete` → провайдеры
+  перечитывают prefs.
+- `updateLastSync` теперь `rpc('sync_now')` — точные серверные часы.

@@ -95,3 +95,5 @@
 **R-045** — Push-пайплайн (задача 2.3): очередь `SyncOutbox` (Hive-бокс 'sync_outbox', JSON {id,op,queuedAt}, delete приоритетнее upsert); `last_modified` ставит только серверный триггер (миграция 00002) — клиентское время в конфликтах не участвует; без аккаунта push — no-op (R-008).
 
 **R-046** — Pull-пайплайн (задача 2.4): курсор и штампы — ТОЛЬКО серверные значения (`last_modified` строк / триггерный штамп; `DateTime.now()` в присвоениях cursor/stamp запрещён). Конфликты — LWW по серверному `last_modified`, локальная версия архивируется в `sync_conflicts` вместо молчаливой потери (R-024). Флаг `_applyingRemote` в PlantCrudProvider — guard от петли enqueue при применении remote. updateLastSync берёт серверное время из триггерного `last_modified` (PostgREST не умеет `SET x = now()`).
+
+**R-047** — Legacy-настройки синхронизируются через таблицу `user_settings` (миграция 00003, задача 2.4б): 6 ключей — global_watering_dates, wintering_start/end/temp/log, adult_images. search_history и qr_scan_history остаются ЛОКАЛЬНЫМИ намеренно. Точные серверные часы — rpc `sync_now()` (updateLastSync). Отдельный курсор `settings_cursor` в sync_state.

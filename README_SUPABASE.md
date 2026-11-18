@@ -61,3 +61,8 @@ WHERE schemaname = 'public';
 тем же способом (SQL Editor → Run). Она добавляет триггер `last_modified`
 (серверное время для конфликтов LWW) и колонки `last_fertilization`,
 `planned_fertilization_date`.
+
+## 7. Миграция 00003 (user_settings + sync_now)
+
+Примените `supabase/migrations/00003_user_settings.sql` (SQL Editor → Run):
+таблица `user_settings` с RLS, триггер `last_modified`, функция `sync_now()`.

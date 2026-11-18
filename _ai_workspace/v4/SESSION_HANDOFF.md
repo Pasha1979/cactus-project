@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · e91eabe feat(sync): push pipeline with outbox and 
+# HANDOFF (автоген) · 2026-11-18 · `main` · bfb27ba feat(sync): pull pipeline with server curs
 
 Сделано:
+- bfb27ba feat(sync): pull pipeline with server cursor and con
 - e91eabe feat(sync): push pipeline with outbox and server-sid
 - bcf1162 chore(brain): sync handoff/checkpoint after task 2.2
 - 7833794 feat(sync): connect Supabase and create database sch
-- dc45b26 feat(sync): create architecture and basic infrastruc
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

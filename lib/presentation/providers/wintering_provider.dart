@@ -5,6 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
 import '../../core/logger/app_logger.dart';
+import '../../core/sync/settings_sync_adapter.dart';
+import '../../core/sync/sync_outbox.dart';
+import '../../injection_container.dart';
 
 /// Запись журнала зимовки
 class WinteringLogEntry {
@@ -96,6 +99,18 @@ class WinteringProvider with ChangeNotifier {
         PrefsKeys.winteringLog,
         _logEntries.map((e) => jsonEncode(e.toJson())).toList(),
       );
+      // Outbox: настройки зимовки синхронизируются через user_settings (2.4б)
+      try {
+        final outbox = sl<SyncOutbox>();
+        for (final k in const [
+          PrefsKeys.winteringStart,
+          PrefsKeys.winteringEnd,
+          PrefsKeys.winteringTemp,
+          PrefsKeys.winteringLog,
+        ]) {
+          await outbox.enqueue('${SettingsSyncAdapter.prefix}$k', SyncOutbox.opUpsert);
+        }
+      } catch (_) {}
     } catch (e) {
       AppLogger.error('❌ WinteringProvider save error: $e', tag: 'WINTERING');
     }

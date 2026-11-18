@@ -11,6 +11,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
 import '../../core/logger/app_logger.dart';
+import '../../core/sync/settings_sync_adapter.dart';
+import '../../core/sync/sync_outbox.dart';
+import '../../injection_container.dart';
 import '../../data/models/plant.dart';
 import '../../services/image/image_processor.dart';
 
@@ -90,6 +93,13 @@ class PhotoProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(PrefsKeys.adultImages, jsonEncode(_adultImages));
+      // Outbox: adultImages синхронизируются через user_settings (2.4б)
+      try {
+        await sl<SyncOutbox>().enqueue(
+          '${SettingsSyncAdapter.prefix}${PrefsKeys.adultImages}',
+          SyncOutbox.opUpsert,
+        );
+      } catch (_) {}
     } catch (e) {
       AppLogger.error('❌ PhotoProvider save error: $e', tag: 'PHOTO');
     }
