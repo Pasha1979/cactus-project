@@ -23,8 +23,10 @@ import 'data/migrations/data_migration_manager.dart';
 import 'injection_container.dart' as di;
 import 'core/supabase_client.dart';
 import 'core/sync/remote_change_applier.dart';
+import 'core/sync/sync_actions.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/sync/sync_engine_full.dart';
+import 'core/sync/sync_scheduler.dart';
 import 'core/utils/responsive_helper.dart';
 import 'presentation/screens/statistics_screen.dart';
 
@@ -92,6 +94,9 @@ void main() async {
       await plantCrudProvider.loadPlants();
     };
   }
+
+  // Авто-синхронизация: debounce/resume/periodic (задача 2.5)
+  di.sl<SyncScheduler>().start();
 
   runApp(
     MultiProvider(
@@ -170,7 +175,7 @@ class MyApp extends StatelessWidget {
           final qrCodeProvider =
               Provider.of<QrCodeProvider>(context, listen: false);
 
-          await _syncData(plantCrudProvider, cloudProvider);
+          await plantCrudProvider.loadPlants();
 
           // Параллельная загрузка специализированных провайдеров
           await Future.wait([
@@ -180,6 +185,14 @@ class MyApp extends StatelessWidget {
             qrCodeProvider.loadScanHistory(),
             qrCodeProvider.loadQRCodeFiles(),
           ]);
+
+          // Стартовый sync через новый движок (задача 2.5).
+          // Без аккаунта — no-op, приложение работает локально (R-008).
+          try {
+            await di.sl<SyncActions>().startup();
+          } catch (e, st) {
+            AppLogger.error('Стартовый sync не удался', tag: 'MAIN', error: e, stackTrace: st);
+          }
 
           if (startupMessage != null && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -234,39 +247,8 @@ class MyApp extends StatelessWidget {
     };
   }
 
-  Future<void> _syncData(
-      PlantCrudProvider plantCrudProvider, CloudStorageProvider cloudProvider,) async {
-    await plantCrudProvider.loadPlants();
-    if (!cloudProvider.isConnected) {
-      AppLogger.api('Нет подключения к облаку, синхронизация пропущена', tag: 'MAIN');
-      return;
-    }
-    await cloudProvider.fetchLastCloudUpdate();
-    final localUpdate = plantCrudProvider.lastLocalUpdate;
-    final cloudUpdate = cloudProvider.lastCloudUpdate;
-    AppLogger.api('Локальное обновление: $localUpdate', tag: 'MAIN');
-    AppLogger.api('Облачное обновление: $cloudUpdate', tag: 'MAIN');
-    if (localUpdate == null && cloudUpdate == null) {
-      AppLogger.api('Оба хранилища пусты, синхронизация не требуется', tag: 'MAIN');
-      return;
-    }
-    if (plantCrudProvider.plants.isEmpty && cloudUpdate != null) {
-      AppLogger.api('Локальные данные пусты, загружаем из облака', tag: 'MAIN');
-      await cloudProvider.loadDataFromCloud(plantCrudProvider);
-      await plantCrudProvider.savePlants();
-    } else if (cloudUpdate == null ||
-        (localUpdate != null && localUpdate.isAfter(cloudUpdate))) {
-      AppLogger.api('Локальные данные новее или облако пусто, синхронизируем в облако', tag: 'MAIN');
-      await cloudProvider.syncData(plantCrudProvider);
-    } else if (localUpdate == null || cloudUpdate.isAfter(localUpdate)) {
-      AppLogger.api('Облачные данные новее или локальные пусты, загружаем из облака', tag: 'MAIN');
-      await cloudProvider.loadDataFromCloud(plantCrudProvider);
-      await plantCrudProvider.savePlants();
-    } else {
-      AppLogger.api('Данные синхронизированы, ничего не требуется', tag: 'MAIN');
-    }
-  }
 }
+
 
 // Остальной код (HomeScreen, PlantCards, AddPlantForm) остаётся без изменений
 
@@ -1715,8 +1697,6 @@ class HomeScreenState extends State<HomeScreen>
 
   // Нижняя навигация для мобильных устройств
   Widget _buildBottomNavigationBar() {
-    final cloudProvider = context.read<CloudStorageProvider>();
-
     return BottomNavigationBar(
       currentIndex: 0,
       type: BottomNavigationBarType.fixed,
@@ -1733,25 +1713,13 @@ class HomeScreenState extends State<HomeScreen>
           // Сканер QR
           context.push('/qr/scan');
         } else if (index == 2) {
-          // Синхронизировать
-          if (!cloudProvider.isConnected) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Сначала подключите Яндекс.Диск'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-            return;
-          }
-
-          final plantProvider = context.read<PlantCrudProvider>();
-
+          // Синхронизировать — новый движок (задача 2.5); без аккаунта — no-op
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('🔄 Синхронизация началась...')),
           );
 
           try {
-            await cloudProvider.syncData(plantProvider);
+            await di.sl<SyncActions>().manual();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

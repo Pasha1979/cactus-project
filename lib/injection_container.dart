@@ -5,10 +5,12 @@ import 'core/auth/auth_repository.dart';
 import 'core/auth/supabase_auth_repository.dart';
 import 'core/sync/remote_change_applier.dart';
 import 'core/sync/settings_sync_adapter.dart';
+import 'core/sync/sync_actions.dart';
 import 'core/sync/sync_conflicts.dart';
 import 'core/sync/sync_engine.dart';
 import 'core/sync/sync_engine_full.dart';
 import 'core/sync/sync_outbox.dart';
+import 'core/sync/sync_scheduler.dart';
 import 'core/sync/sync_state_store.dart';
 import 'data/datasources/local/hive_database.dart';
 import 'data/datasources/remote/plant_remote_datasource.dart';
@@ -156,6 +158,12 @@ Future<void> init() async {
           ? sl<RemoteChangeApplier>()
           : null,
     ),
+  );
+
+  // Точки входа синхронизации (старт/кнопка) и авто-синк (задача 2.5)
+  sl.registerLazySingleton(() => SyncActions(sl<SyncEngine>()));
+  sl.registerLazySingleton(
+    () => SyncScheduler(engine: sl<SyncEngine>(), outbox: sl<SyncOutbox>()),
   );
 
   // ==================== PROVIDERS ====================

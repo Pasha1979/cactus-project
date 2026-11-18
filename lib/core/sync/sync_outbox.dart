@@ -40,6 +40,9 @@ class SyncOutbox {
 
   final Box<String> _box;
 
+  /// Коллбек после enqueue — используется SyncScheduler для debounce (2.5).
+  void Function()? onEnqueue;
+
   /// Поставить изменение в очередь. Если уже стоит 'delete' —
   /// 'upsert' его не отменяет (приоритет удаления).
   Future<void> enqueue(String recordId, String op) async {
@@ -56,6 +59,7 @@ class SyncOutbox {
         'queuedAt': DateTime.now().toIso8601String(),
       }),
     );
+    onEnqueue?.call();
   }
 
   /// Все записи в очереди (в порядке вставки ключей).

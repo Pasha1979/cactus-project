@@ -143,6 +143,15 @@ enum FeatureFlag {
     key: 'enable_wintering_notifications',
     defaultValue: true,
     description: 'Напоминания о начале/окончании зимовки',
+  ),
+
+  /// Старый обмен записями через Яндекс.Диск (whole-JSON plant_provider.json)
+  /// TODO(архив после 2.6): удалить путь после миграции данных
+  legacyYandexRecordSync(
+    key: 'legacy_yandex_record_sync',
+    defaultValue: false,
+    description:
+        'Legacy record-sync через Яндекс (R-048). Выключен — записи идут через Supabase',
   );
 
   const FeatureFlag({

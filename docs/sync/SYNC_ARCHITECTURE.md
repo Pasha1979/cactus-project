@@ -192,3 +192,33 @@ remoteJson, at}. `listConflicts()` — для UI восстановления (�
   (без _save-хуков — петли нет). После pull → `onPullComplete` → провайдеры
   перечитывают prefs.
 - `updateLastSync` теперь `rpc('sync_now')` — точные серверные часы.
+
+## Wiring + auto-sync (задача 2.5)
+
+Движок подключён к точкам входа; старый Yandex-обмен записями выключен флагом.
+
+### Точки входа (все — `SyncEngine.sync()`, без аккаунта → no-op R-008)
+
+- **Старт**: после загрузки провайдеров → `SyncActions.startup()`
+  (`sl<SyncEngine>().sync()` под try/catch).
+- **Кнопка «Синхр.»** (нижняя панель): `SyncActions.manual()` → `sync()`.
+  SnackBar-ы не тронуты.
+- **`SyncActions`** (`lib/core/sync/sync_actions.dart`) — тонкая точка входа,
+  подменяемая в тестах.
+
+### Auto-sync (`lib/core/sync/sync_scheduler.dart`, виджеты не тронуты)
+
+- **debounce**: `SyncOutbox.enqueue` → callback → Timer 5с (сбрасывается
+  повторными enqueue — один sync на пачку правок).
+- **resume**: `WidgetsBindingObserver.didChangeAppLifecycleState(resumed)`.
+- **periodic**: `Timer.periodic` 60с.
+- Вкл/выкл — локальный флаг `enableAutoCloudSync` (FeatureFlags), без UI.
+- Все триггеры уважают «без аккаунта → no-op».
+
+### Legacy record-sync (R-048)
+
+Флаг `legacyYandexRecordSync` (default **false**) gate-ит весь путь
+whole-JSON через Яндекс (`syncData`/`loadDataFromCloud`/post-auth sync в
+`CloudStorageProvider` + WelcomeScreen через фасад). Записи идут через
+Supabase; фото и бэкап — через Яндекс без изменений (R-003 гибрид).
+TODO(архив после 2.6) расставлен в точках gate.

@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/config/feature_flags.dart';
 import '../../core/logger/app_logger.dart';
 import '../routers/app_router.dart' show navigatorKey;
 import 'plant_crud_provider.dart';
@@ -58,8 +59,10 @@ class CloudStorageProvider with ChangeNotifier {
       if (context != null && context.mounted) {
         final plantCrudProvider =
             Provider.of<PlantCrudProvider>(context, listen: false);
-        await _syncManager.syncData(plantCrudProvider);
-        AppLogger.api('🔄 Полная синхронизация после авторизации выполнена', tag: 'CLOUD_STORAGE');
+        if (FeatureFlags.isEnabled(FeatureFlag.legacyYandexRecordSync)) {
+          await _syncManager.syncData(plantCrudProvider);
+          AppLogger.api('🔄 Полная синхронизация после авторизации выполнена', tag: 'CLOUD_STORAGE');
+        }
       }
     }
 
@@ -88,7 +91,13 @@ class CloudStorageProvider with ChangeNotifier {
 
   // ==================== СИНХРОНИЗАЦИЯ ====================
 
+  // TODO(архив после 2.6): legacy record-sync (whole-JSON через Яндекс) —
+  // выключен флагом legacyYandexRecordSync, записи идут через Supabase (R-048)
   Future<void> syncData(PlantCrudProvider plantCrudProvider) async {
+    if (!FeatureFlags.isEnabled(FeatureFlag.legacyYandexRecordSync)) {
+      AppLogger.api('Legacy record-sync выключен (R-048)', tag: 'CLOUD_STORAGE');
+      return;
+    }
     notifyListeners(); // isSyncing = true — обновляем UI немедленно
     await _syncManager.syncData(plantCrudProvider);
     notifyListeners(); // isSyncing = false
@@ -98,6 +107,11 @@ class CloudStorageProvider with ChangeNotifier {
     if (!context.mounted) return;
     final plantCrudProvider =
         Provider.of<PlantCrudProvider>(context, listen: false);
+    // TODO(архив после 2.6): legacy record-path, gated флагом (R-048)
+    if (!FeatureFlags.isEnabled(FeatureFlag.legacyYandexRecordSync)) {
+      AppLogger.api('Legacy record-sync выключен (R-048)', tag: 'CLOUD_STORAGE');
+      return;
+    }
     // Загружаем данные из облака без conflict resolution
     // (пользователь явно запросил загрузку)
     await _syncManager.loadDataFromCloud(plantCrudProvider);
@@ -135,6 +149,10 @@ class CloudStorageProvider with ChangeNotifier {
   }
 
   Future<void> loadDataFromCloud(PlantCrudProvider plantCrudProvider) async {
+    if (!FeatureFlags.isEnabled(FeatureFlag.legacyYandexRecordSync)) {
+      AppLogger.api('Legacy record-sync выключен (R-048)', tag: 'CLOUD_STORAGE');
+      return;
+    }
     await _syncManager.loadDataFromCloud(plantCrudProvider);
     notifyListeners();
   }
