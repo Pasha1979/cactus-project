@@ -1,5 +1,11 @@
 import 'package:get_it/get_it.dart';
 
+import 'core/auth/auth_repository.dart';
+import 'core/auth/supabase_auth_repository.dart';
+import 'core/sync/stub_sync_engine.dart';
+import 'core/sync/sync_engine.dart';
+import 'data/datasources/remote/supabase_datasource.dart';
+
 import 'core/network/network_info.dart';
 import 'data/datasources/local/gbif_cache_local_datasource.dart';
 import 'data/datasources/local/hive_database.dart';
@@ -106,6 +112,16 @@ Future<void> init() async {
   sl.registerLazySingleton<WinteringRepository>(
     () => WinteringRepositoryImpl(sl<WinteringLocalDataSource>()),
   );
+
+  // ==================== SYNC / AUTH (R-003, заглушки — задача 2.1) ====================
+  // AuthRepository — Supabase (почта+пароль, R-029)
+  sl.registerLazySingleton<AuthRepository>(() => SupabaseAuthRepository());
+
+  // Удалённый источник данных Supabase (записи)
+  sl.registerLazySingleton(() => SupabaseDatasource());
+
+  // SyncEngine — пока заглушка (реализация в задачах 2.3-2.5)
+  sl.registerLazySingleton<SyncEngine>(() => StubSyncEngine());
 
   // ==================== PROVIDERS ====================
   // ChangeNotifier-провайдеры, используемые через sl<>()

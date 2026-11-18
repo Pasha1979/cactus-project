@@ -61,6 +61,8 @@ dependencies:
   # Firebase удалён по R-027 (фаза 3.4/4.1) — локальные флаги и логирование
   # Шаг 5.2: Реализация TODO из настроек
   share_plus: ^10.0.0  # Для отправки логов и файлов
+  supabase_flutter: ^2.18.3
+  crypto: ^3.0.8
 
 dev_dependencies:
   flutter_test:

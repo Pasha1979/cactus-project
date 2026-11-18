@@ -5,6 +5,9 @@ analyzer:
     - _ai_workspace/**
     - _local_untracked/**
     - ../REFACTORING_ROADMAP/Стабильная/**
+    - build/**
+    - android/**
+    - windows/**
   strong-mode:
     implicit-casts: false
     implicit-dynamic: false
