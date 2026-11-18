@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 21:38 · `main` · bfb27ba feat(sync): pull pipeline with server curs
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 22:05 · `main` · bfb27ba feat(sync): pull pipeline with server curs
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
