@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · dc45b26 feat(sync): create architecture and basic 
+# HANDOFF (автоген) · 2026-11-18 · `main` · 7833794 feat(sync): connect Supabase and create da
 
 Сделано:
+- 7833794 feat(sync): connect Supabase and create database sch
 - dc45b26 feat(sync): create architecture and basic infrastruc
 - e02b339 chore(migration): verify build after merge
 - 7ba3263 chore(migration): merge Android + Windows into singl
-- e4e336f chore(migration): plan for merging Android + Windows
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

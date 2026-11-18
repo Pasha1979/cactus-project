@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 20:04 · `main` · dc45b26 feat(sync): create architecture and basic 
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 20:08 · `main` · 7833794 feat(sync): connect Supabase and create da
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
