@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · 6c29a00 feat(sync): one-time initial migration wit
+# HANDOFF (автоген) · 2026-11-18 · `main` · 8746162 test(sync): cross-device sync integration 
 
 Сделано:
+- 8746162 test(sync): cross-device sync integration tests and 
+- b87a7a1 chore(brain): sync status/handoff after task 2.6
 - 6c29a00 feat(sync): one-time initial migration with backup, 
 - 6723337 chore(brain): sync status/handoff after task 2.5b
-- cd908a4 feat(ui): honest sync status feedback (auth check, e
-- e3a0443 chore(brain): sync status/handoff after task 2.5
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

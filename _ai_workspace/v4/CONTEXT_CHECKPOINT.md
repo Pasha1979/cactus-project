@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 23:22 · `main` · 6c29a00 feat(sync): one-time initial migration wit
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 23:40 · `main` · 8746162 test(sync): cross-device sync integration 
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
