@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 23:40 · `main` · 8746162 test(sync): cross-device sync integration 
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 23:49 · `main` · 4a76406 feat(photo): photo passport models and loc
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
