@@ -245,3 +245,9 @@ TODO(архив после 2.6) расставлен в точках gate.
 
 `rollback(path)` — восстановление plants+prefs из файла, сброс флага done.
 Подключение: `SyncActions.startup()` вызывает `migration.run()` перед sync.
+
+## Кросс-девайс приёмка (задача 2.7)
+
+Автотесты: `test/integration/cross_device_sync_test.dart` (c1–c4, два
+движка на общем in-memory сервере). Ручной чек-лист на реальных
+устройствах: [docs/ACCEPTANCE_CHECKLIST_2.7.md](../ACCEPTANCE_CHECKLIST_2.7.md).
