@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 22:16 · `main` · 939b7ad feat(sync): wire engine to startup/button/
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 22:47 · `main` · cd908a4 feat(ui): honest sync status feedback (aut
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
