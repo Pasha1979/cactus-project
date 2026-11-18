@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · 4a76406 feat(photo): photo passport models and loc
+# HANDOFF (автоген) · 2026-11-18 · `main` · 55ac42b chore(brain): sync status/handoff after ta
 
 Сделано:
+- 55ac42b chore(brain): sync status/handoff after task 3.1
 - 4a76406 feat(photo): photo passport models and local CRUD (n
 - 80f10dc chore(brain): sync status/handoff after task 2.7
 - 8746162 test(sync): cross-device sync integration tests and 
-- b87a7a1 chore(brain): sync status/handoff after task 2.6
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

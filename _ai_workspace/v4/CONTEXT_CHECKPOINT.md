@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 23:49 · `main` · 4a76406 feat(photo): photo passport models and loc
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 00:09 · `main` · 55ac42b chore(brain): sync status/handoff after ta
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
