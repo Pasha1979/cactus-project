@@ -1,3 +1,14 @@
+/// Страница изменений из Supabase (pull-курсор).
+class RemoteChangesPage {
+  const RemoteChangesPage({required this.rows, required this.newCursor});
+
+  /// Строки plants (включая tombstones is_deleted = true).
+  final List<Map<String, dynamic>> rows;
+
+  /// Серверное last_modified последней строки; null если страница пуста.
+  final DateTime? newCursor;
+}
+
 /// Контракт удалённого источника данных растений.
 ///
 /// Реализация — [SupabaseDatasource]. Интерфейс нужен для подмены
@@ -12,6 +23,15 @@ abstract class PlantRemoteDataSource {
   /// Мягкое удаление (tombstone is_deleted = true).
   Future<void> deletePlant(String plantId);
 
-  /// Обновить sync_metadata.last_sync_at = now() после успешного push.
-  Future<void> updateLastSync();
+  /// Обновить sync_metadata.last_sync_at серверным временем.
+  /// Возвращает серверный штамп (или null, если нечем проставить).
+  Future<DateTime?> updateLastSync();
+
+  /// Изменения с [cursor] (строго позже), по возрастанию last_modified.
+  /// ВКЛЮЧАЕТ tombstones (is_deleted = true) — без них удаления не дойдут.
+  /// cursor == null → тянуть всё с начала.
+  Future<RemoteChangesPage> fetchChangesSince(
+    DateTime? cursor, {
+    int limit = 1000,
+  });
 }

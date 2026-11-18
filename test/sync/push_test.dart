@@ -5,8 +5,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_cactus/core/auth/auth_repository.dart';
 import 'package:my_cactus/core/auth/auth_state.dart';
 import 'package:my_cactus/core/sync/sync_engine.dart';
-import 'package:my_cactus/core/sync/sync_engine_push.dart';
+import 'package:my_cactus/core/sync/sync_engine_full.dart';
+import 'package:my_cactus/core/sync/sync_conflicts.dart';
 import 'package:my_cactus/core/sync/sync_outbox.dart';
+import 'package:my_cactus/core/sync/sync_state_store.dart';
 import 'package:my_cactus/data/datasources/remote/plant_remote_datasource.dart';
 import 'package:my_cactus/data/models/plant.dart';
 import 'package:my_cactus/domain/repositories/plant_repository.dart';
@@ -39,6 +41,7 @@ class FakeRemote implements PlantRemoteDataSource {
   final deleted = <String>[];
   var lastSyncUpdated = false;
   var failNext = false;
+  final changes = <Map<String, dynamic>>[];
 
   @override
   Future<List<Map<String, dynamic>>> fetchPlants() async => [];
@@ -62,7 +65,22 @@ class FakeRemote implements PlantRemoteDataSource {
   }
 
   @override
-  Future<void> updateLastSync() async => lastSyncUpdated = true;
+  Future<DateTime?> updateLastSync() async {
+    lastSyncUpdated = true;
+    return DateTime.parse('2026-01-01T00:00:00Z');
+  }
+
+  @override
+  Future<RemoteChangesPage> fetchChangesSince(
+    DateTime? cursor, {
+    int limit = 1000,
+  }) async =>
+      RemoteChangesPage(
+        rows: changes,
+        newCursor: changes.isEmpty
+            ? null
+            : DateTime.parse(changes.last['last_modified'] as String),
+      );
 }
 
 class FakePlantRepository implements PlantRepository {
@@ -112,11 +130,15 @@ AuthUser _user() => AuthUser(
 
 void main() {
   late Box<String> box;
+  late Box<String> stateBox;
+  late Box<String> conflictsBox;
+  late SyncStateStore state;
+  late SyncConflictStore conflicts;
   late SyncOutbox outbox;
   late FakeAuthRepository auth;
   late FakeRemote remote;
   late FakePlantRepository repo;
-  late PushSyncEngine engine;
+  late FullSyncEngine engine;
 
   setUpAll(() async {
     final dir = await Directory.systemTemp.createTemp('push_test_');
@@ -129,16 +151,26 @@ void main() {
     auth = FakeAuthRepository()..user = _user();
     remote = FakeRemote();
     repo = FakePlantRepository();
-    engine = PushSyncEngine(
+    stateBox = await Hive.openBox<String>('state_${DateTime.now().microsecondsSinceEpoch}');
+    conflictsBox = await Hive.openBox<String>('conflicts_${DateTime.now().microsecondsSinceEpoch}');
+    state = SyncStateStore(stateBox);
+    conflicts = SyncConflictStore(conflictsBox);
+    engine = FullSyncEngine(
       outbox: outbox,
       remote: remote,
       plants: repo,
       auth: auth,
+      state: state,
+      conflicts: conflicts,
     );
     await sl.reset();
   });
 
-  tearDown(() async => box.deleteFromDisk());
+  tearDown(() async {
+    await box.deleteFromDisk();
+    await stateBox.deleteFromDisk();
+    await conflictsBox.deleteFromDisk();
+  });
 
   // t1: enqueue при add/update/delete через провайдер
   test('t1: enqueue при add/update/delete', () async {

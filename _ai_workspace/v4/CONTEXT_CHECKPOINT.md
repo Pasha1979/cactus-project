@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 20:49 · `main` · bcf1162 chore(brain): sync handoff/checkpoint afte
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 21:38 · `main` · e91eabe feat(sync): push pipeline with outbox and 
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

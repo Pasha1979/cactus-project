@@ -22,6 +22,9 @@ import 'data/datasources/local/hive_database.dart';
 import 'data/migrations/data_migration_manager.dart';
 import 'injection_container.dart' as di;
 import 'core/supabase_client.dart';
+import 'core/sync/remote_change_applier.dart';
+import 'core/sync/sync_engine.dart';
+import 'core/sync/sync_engine_full.dart';
 import 'core/utils/responsive_helper.dart';
 import 'presentation/screens/statistics_screen.dart';
 
@@ -68,15 +71,37 @@ void main() async {
 
   tz.initializeTimeZones();
 
+  // Провайдеры, нужные пост-синхронному коллбеку (задача 2.4, п.4)
+  final plantCrudProvider = PlantCrudProvider();
+  final wateringProvider = WateringProvider();
+  final winteringProvider = WinteringProvider();
+  final photoProvider = PhotoProvider();
+
+  // RemoteChangeApplier: pull применяет изменения через провайдер
+  // под флагом _applyingRemote — без петли enqueue в outbox (R-046)
+  di.sl.registerSingleton<RemoteChangeApplier>(plantCrudProvider);
+
+  // Post-sync callback: после успешного pull перезагружаем провайдеры.
+  // UI не трогаем — только логика.
+  final syncEngine = di.sl<SyncEngine>();
+  if (syncEngine is FullSyncEngine) {
+    syncEngine.onPullComplete = () async {
+      await wateringProvider.load();
+      await winteringProvider.load();
+      await photoProvider.load();
+      await plantCrudProvider.loadPlants();
+    };
+  }
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => PlantCrudProvider()),
+        ChangeNotifierProvider.value(value: plantCrudProvider),
         ChangeNotifierProvider(create: (_) => CloudStorageProvider()),
         // Новые специализированные провайдеры (шаг 1.10)
-        ChangeNotifierProvider(create: (_) => WateringProvider()),
-        ChangeNotifierProvider(create: (_) => WinteringProvider()),
-        ChangeNotifierProvider(create: (_) => PhotoProvider()),
+        ChangeNotifierProvider.value(value: wateringProvider),
+        ChangeNotifierProvider.value(value: winteringProvider),
+        ChangeNotifierProvider.value(value: photoProvider),
         ChangeNotifierProvider(create: (_) => BatchProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
         ChangeNotifierProvider(create: (_) => QrCodeProvider()),

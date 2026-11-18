@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/sync/remote_change_applier.dart';
 import '../../core/sync/sync_outbox.dart';
 import '../../core/logger/app_logger.dart';
 import '../../core/ui/ui_state.dart';
@@ -28,10 +29,14 @@ import '../../services/image/image_processor.dart';
 /// - Выбор растений (multi-select)
 /// - Уникальные номера и валидацию
 /// - Базовую статистику
-class PlantCrudProvider with ChangeNotifier {
+class PlantCrudProvider with ChangeNotifier implements RemoteChangeApplier {
   final PlantRepository _repository = sl<PlantRepository>();
   // TODO(этап 2.5): перевести outbox-хуки на события репозитория
   final SyncOutbox _outbox = sl<SyncOutbox>();
+
+  /// Флаг «применяем удалённое изменение»: outbox-хуки пропускают enqueue,
+  /// иначе pull сам заполнил бы очередь и устроил петлю (задача 2.4, R-046).
+  bool _applyingRemote = false;
 
   List<Plant> _plants = [];
   final Set<String> _selectedIds = {};
@@ -495,7 +500,9 @@ class PlantCrudProvider with ChangeNotifier {
     final plantWithTime = plant.copyWith(lastModified: DateTime.now());
     try {
       await _repository.addPlant(plantWithTime);
-      await _outbox.enqueue(plantWithTime.permanentId, SyncOutbox.opUpsert);
+      if (!_applyingRemote) {
+        await _outbox.enqueue(plantWithTime.permanentId, SyncOutbox.opUpsert);
+      }
       _plants.add(plantWithTime);
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
@@ -512,7 +519,9 @@ class PlantCrudProvider with ChangeNotifier {
       // Автоматически обновляем lastModified при каждом обновлении
       final plantWithTime = updatedPlant.copyWith(lastModified: DateTime.now());
       await _repository.updatePlant(plantWithTime);
-      await _outbox.enqueue(plantWithTime.permanentId, SyncOutbox.opUpsert);
+      if (!_applyingRemote) {
+        await _outbox.enqueue(plantWithTime.permanentId, SyncOutbox.opUpsert);
+      }
       _plants[index] = plantWithTime;
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
@@ -534,7 +543,9 @@ class PlantCrudProvider with ChangeNotifier {
       _deletedPlantIds.add(id);
       // Физическое удаление из списка и из базы
       await _repository.deletePlant(id);
-      await _outbox.enqueue(id, SyncOutbox.opDelete);
+      if (!_applyingRemote) {
+        await _outbox.enqueue(id, SyncOutbox.opDelete);
+      }
       _plants.removeAt(plantIndex);
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
@@ -542,6 +553,43 @@ class PlantCrudProvider with ChangeNotifier {
       AppLogger.api('🗑️ Растение удалено: ${plant.latinName}', tag: 'PLANT_CRUD');
     } catch (e) {
       AppLogger.error('Ошибка удаления растения: $e', tag: 'PLANT_CRUD');
+    }
+  }
+
+  // ==================== PULL: применение удалённых изменений (задача 2.4) ====================
+
+  /// Upsert удалённой записи под флагом `_applyingRemote` (без enqueue — R-046).
+  @override
+  Future<void> applyUpsert(Plant plant) async {
+    _applyingRemote = true;
+    try {
+      final index = _plants.indexWhere((p) => p.permanentId == plant.permanentId);
+      if (index == -1) {
+        await _repository.addPlant(plant);
+        _plants.add(plant);
+      } else {
+        await _repository.updatePlant(plant);
+        _plants[index] = plant;
+      }
+      _plantsState = UiSuccess(List.unmodifiable(_plants));
+      notifyListeners();
+    } finally {
+      _applyingRemote = false;
+    }
+  }
+
+  /// Удаление записи по permanentId под флагом `_applyingRemote` (без enqueue).
+  @override
+  Future<void> applyDelete(String permanentId) async {
+    _applyingRemote = true;
+    try {
+      final index = _plants.indexWhere((p) => p.permanentId == permanentId);
+      await _repository.deletePlant(permanentId);
+      if (index != -1) _plants.removeAt(index);
+      _plantsState = UiSuccess(List.unmodifiable(_plants));
+      notifyListeners();
+    } finally {
+      _applyingRemote = false;
     }
   }
 

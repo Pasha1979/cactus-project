@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · bcf1162 chore(brain): sync handoff/checkpoint afte
+# HANDOFF (автоген) · 2026-11-18 · `main` · e91eabe feat(sync): push pipeline with outbox and 
 
 Сделано:
+- e91eabe feat(sync): push pipeline with outbox and server-sid
 - bcf1162 chore(brain): sync handoff/checkpoint after task 2.2
 - 7833794 feat(sync): connect Supabase and create database sch
 - dc45b26 feat(sync): create architecture and basic infrastruc
-- e02b339 chore(migration): verify build after merge
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

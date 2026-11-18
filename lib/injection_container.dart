@@ -2,9 +2,12 @@ import 'package:get_it/get_it.dart';
 
 import 'core/auth/auth_repository.dart';
 import 'core/auth/supabase_auth_repository.dart';
+import 'core/sync/remote_change_applier.dart';
+import 'core/sync/sync_conflicts.dart';
 import 'core/sync/sync_engine.dart';
-import 'core/sync/sync_engine_push.dart';
+import 'core/sync/sync_engine_full.dart';
 import 'core/sync/sync_outbox.dart';
+import 'core/sync/sync_state_store.dart';
 import 'data/datasources/local/hive_database.dart';
 import 'data/datasources/remote/plant_remote_datasource.dart';
 import 'data/datasources/remote/supabase_datasource.dart';
@@ -122,17 +125,29 @@ Future<void> init() async {
   // Outbox — очередь несинхронизированных изменений (задача 2.3)
   sl.registerLazySingleton(() => SyncOutbox(HiveDatabase.syncOutboxBox));
 
+  // Состояние синхронизации — курсор + серверные штампы (задача 2.4)
+  sl.registerLazySingleton(() => SyncStateStore(HiveDatabase.syncStateBox));
+
+  // Архив конфликтов (задача 2.4)
+  sl.registerLazySingleton(() => SyncConflictStore(HiveDatabase.syncConflictsBox));
+
   // Удалённый источник данных Supabase (записи)
   sl.registerLazySingleton(() => SupabaseDatasource());
   sl.registerLazySingleton<PlantRemoteDataSource>(() => sl<SupabaseDatasource>());
 
-  // SyncEngine — push-реализация (задача 2.3); pull — задача 2.4
+  // SyncEngine — push + pull (задачи 2.3-2.4); RemoteChangeApplier
+  // регистрируется в main.dart (провайдер создаётся после DI)
   sl.registerLazySingleton<SyncEngine>(
-    () => PushSyncEngine(
+    () => FullSyncEngine(
       outbox: sl<SyncOutbox>(),
       remote: sl<PlantRemoteDataSource>(),
       plants: sl<PlantRepository>(),
       auth: sl<AuthRepository>(),
+      state: sl<SyncStateStore>(),
+      conflicts: sl<SyncConflictStore>(),
+      applier: sl.isRegistered<RemoteChangeApplier>()
+          ? sl<RemoteChangeApplier>()
+          : null,
     ),
   );
 

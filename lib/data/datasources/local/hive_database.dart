@@ -14,6 +14,8 @@ class HiveDatabase {
   static const String _plantIndexBoxName = 'plant_index_box';
   static const String _settingsBoxName = 'settings_box';
   static const String _syncOutboxBoxName = 'sync_outbox';
+  static const String _syncStateBoxName = 'sync_state';
+  static const String _syncConflictsBoxName = 'sync_conflicts';
 
   static Box<PlantDto>? _plantsBox;
   static Box<QRCodeDto>? _qrCodesBox;
@@ -23,6 +25,8 @@ class HiveDatabase {
   static Box<List<dynamic>>? _plantIndexBox;
   static Box<String>? _settingsBox;
   static Box<String>? _syncOutboxBox;
+  static Box<String>? _syncStateBox;
+  static Box<String>? _syncConflictsBox;
 
   static bool _isInitialized = false;
   static bool _isInitializing = false;
@@ -64,6 +68,8 @@ class HiveDatabase {
       _plantIndexBox = await Hive.openBox<List<dynamic>>(_plantIndexBoxName);
       _settingsBox = await Hive.openBox<String>(_settingsBoxName);
       _syncOutboxBox = await Hive.openBox<String>(_syncOutboxBoxName);
+      _syncStateBox = await Hive.openBox<String>(_syncStateBoxName);
+      _syncConflictsBox = await Hive.openBox<String>(_syncConflictsBoxName);
 
       _isInitialized = true;
     } finally {
@@ -146,6 +152,22 @@ class HiveDatabase {
       throw Exception('Hive not initialized. Call initialize() first.');
     }
     return _syncOutboxBox!;
+  }
+
+  /// Коробка состояния синхронизации — курсор и серверные штампы (задача 2.4)
+  static Box<String> get syncStateBox {
+    if (_syncStateBox == null) {
+      throw Exception('Hive not initialized. Call initialize() first.');
+    }
+    return _syncStateBox!;
+  }
+
+  /// Коробка архива конфликтов (задача 2.4)
+  static Box<String> get syncConflictsBox {
+    if (_syncConflictsBox == null) {
+      throw Exception('Hive not initialized. Call initialize() first.');
+    }
+    return _syncConflictsBox!;
   }
 
   /// Закрыть все коробки и сбросить состояние

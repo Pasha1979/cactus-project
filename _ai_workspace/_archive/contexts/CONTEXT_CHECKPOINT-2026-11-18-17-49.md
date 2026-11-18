@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 20:08 · `main` · 7833794 feat(sync): connect Supabase and create da
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 20:49 · `main` · bcf1162 chore(brain): sync handoff/checkpoint afte
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

@@ -119,3 +119,47 @@ SyncOutbox (Hive 'sync_outbox', JSON {id, op, queuedAt})
 ### Локальный режим
 
 Без `AuthRepository.currentUser` push — no-op: очередь копится локально и уйдёт при входе (R-008).
+
+## Pull + конфликты + курсор (задача 2.4)
+
+### Инкрементальный pull
+
+```
+sync_state['pull_cursor'] (серверное время, null → всё)
+        ↓ fetchChangesSince(cursor, limit=1000)
+   plants: last_modified > cursor, ORDER BY last_modified ASC,
+   ВКЛЮЧАЯ is_deleted = true (tombstones обязательны)
+        ↓ для каждой строки — правила ниже
+   cursor = last_modified последней строки → sync_state
+   повторять, пока страница полная (пагинация)
+```
+
+### Правила применения строки
+
+| Условие | Действие |
+|---|---|
+| `is_deleted=true`, local чистый | удалить локально (без enqueue!) |
+| `is_deleted=true`, local dirty | архив `delete_vs_edit` → удалить, снять outbox |
+| не удалён, local чистый | применить remote (upsert), stamp=remoteStamp |
+| local dirty, remoteStamp ≤ storedStamp | оставить local — уйдёт в push |
+| local dirty, remoteStamp > storedStamp | КОНФЛИКТ: архив `edit_vs_edit` (localJson+remoteJson), remote применён (LWW), outbox снят, stamp=remoteStamp |
+
+`stamp:<permanentId>` в `sync_state` — серверный last_modified на момент
+последнего push/pull; база сравнения при конфликте.
+
+### Guard от петли
+
+Pull применяет изменения через `RemoteChangeApplier` (PlantCrudProvider)
+под флагом `_applyingRemote` — outbox-хуки пропускают enqueue. Без него
+pull сам заполнил бы очередь и устроил бесконечный ping-pong.
+
+### Архив конфликтов
+
+`sync_conflicts` (Box<String>, JSON): {type, permanentId, localJson,
+remoteJson, at}. `listConflicts()` — для UI восстановления (задача 2.5).
+Молчаливых потерь нет (R-024).
+
+### Post-sync
+
+После успешного pull движок вызывает `onPullComplete` — в main.dart
+зарегистрирована перезагрузка провайдеров (watering/wintering/photo/crud).

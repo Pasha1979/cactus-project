@@ -50,3 +50,55 @@ Map<String, dynamic> plantToSyncRow(Plant p, String userId) => {
       'parent_id': p.parentId,
       'qr_code': p.qrCode?.toJson(),
     };
+
+/// Обратный маппер: строка таблицы plants (snake_case) → Plant.
+///
+/// Собирает camelCase-JSON и переиспользует [Plant.fromJson].
+/// `last_modified` серверной строки попадает в [Plant.lastModified].
+Plant plantFromSyncRow(Map<String, dynamic> row) {
+  final json = <String, dynamic>{
+    'permanentId': row['permanent_id'],
+    'displayId': row['display_id'],
+    'latinName': row['latin_name'],
+    'status': row['status'],
+    'year': row['year'],
+    'customNumber': row['custom_number'],
+    'category': row['category'],
+    'fieldNumber': row['field_number'],
+    'seller': row['seller'],
+    'harvestYear': row['harvest_year'],
+    'country': row['country'],
+    'habitat': row['habitat'],
+    'description': row['description'],
+    'synonyms': row['synonyms'],
+    'careTips': row['care_tips'],
+    'floweringPeriod': row['flowering_period'],
+    'countryFlag': row['country_flag'],
+    'seedsCount': row['seeds_count'],
+    'germinatedCount': row['germinated_count'],
+    'wateringDates': row['watering_dates'],
+    'customWateringDates': row['custom_watering_dates'],
+    'hasUnreadNotification': row['has_unread_notification'],
+    'lastRepotting': row['last_repotting'],
+    'plannedTransplantDate': row['planned_transplant_date'],
+    'lastFertilization': row['last_fertilization'],
+    'plannedFertilizationDate': row['planned_fertilization_date'],
+    'germinationHistory': row['germination_history'],
+    'floweringHistory': row['flowering_history'],
+    'notes': row['notes'],
+    'userPhotos': row['user_photos'],
+    'lliflePhotoUrls': row['llifle_photo_urls'],
+    'gbifPhotoUrls': row['gbif_photo_urls'],
+    'gbifOccurrences': row['gbif_occurrences'],
+    'lastGbifUpdate': row['last_gbif_update'],
+    'aliveCount': row['alive_count'],
+    'isBatch': row['is_batch'],
+    'childrenIds': row['children_ids'],
+    'parentId': row['parent_id'],
+    'qrCode': row['qr_code'],
+    'lastModified': row['last_modified'],
+  };
+  final plant = Plant.fromJson(json);
+  if (row['display_id'] != null) plant.displayId = row['display_id'] as String;
+  return plant;
+}

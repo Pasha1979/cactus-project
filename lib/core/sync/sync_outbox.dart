@@ -65,6 +65,9 @@ class SyncOutbox {
       .map((s) => OutboxEntry.fromJson(jsonDecode(s) as Map<String, dynamic>))
       .toList();
 
+  /// Есть ли запись в очереди (локально «грязная» для pull).
+  bool contains(String recordId) => _box.containsKey(recordId);
+
   /// Снять запись с очереди после успешной отправки.
   Future<void> remove(String recordId) => _box.delete(recordId);
 
