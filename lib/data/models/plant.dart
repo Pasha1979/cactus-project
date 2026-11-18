@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 import 'gbif_occurrence.dart';
 import 'qr_code.dart';
+import '../../core/models/photo_passport.dart';
 import '../../core/utils/plant_status_mapper.dart';
 
 /// Безопасный парсинг единичной даты из JSON.
@@ -75,6 +76,7 @@ class Plant {
     List<FloweringRecord>? floweringHistory,
     this.notes = const [],
     this.userPhotos = const [],
+    this.photoPassports = const [],
     this.lliflePhotoUrls = const [],
     this.fieldNumber,
     this.seller,
@@ -145,6 +147,10 @@ class Plant {
               ?.map((e) => e as String)
               .toList() ??
           [],
+      photoPassports: (json['photoPassports'] as List<dynamic>?)
+              ?.map((e) => PhotoPassport.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       lastFertilization: _parseDateTimeSafe(json['lastFertilization']),
       plannedFertilizationDate: _parseDateTimeSafe(json['plannedFertilizationDate']),
       lliflePhotoUrls: List<String>.from(json['lliflePhotoUrls'] ?? []),
@@ -180,6 +186,7 @@ class Plant {
   final int seedsCount;
   final int germinatedCount;
   final List<String> userPhotos;
+  final List<PhotoPassport> photoPassports;
   final DateTime? lastFertilization;
   final DateTime? plannedFertilizationDate;
   final List<String> lliflePhotoUrls;
@@ -275,6 +282,7 @@ class Plant {
     List<FloweringRecord>? floweringHistory,
     List<Note>? notes,
     List<String>? userPhotos,
+    List<PhotoPassport>? photoPassports,
     DateTime? lastFertilization,
     DateTime? plannedFertilizationDate,
     List<String>? lliflePhotoUrls,
@@ -320,6 +328,7 @@ class Plant {
       floweringHistory: floweringHistory ?? this.floweringHistory,
       notes: notes ?? this.notes,
       userPhotos: userPhotos ?? this.userPhotos,
+      photoPassports: photoPassports ?? this.photoPassports,
       lastFertilization: lastFertilization ?? this.lastFertilization,
       plannedFertilizationDate:
           plannedFertilizationDate ?? this.plannedFertilizationDate,
@@ -374,6 +383,7 @@ class Plant {
             floweringHistory.map((record) => record.toJson()).toList(),
         'notes': notes.map((n) => n.toJson()).toList(),
         'userPhotos': userPhotos,
+        'photoPassports': photoPassports.map((p) => p.toJson()).toList(),
         'lastFertilization': lastFertilization?.toIso8601String(),
         'plannedFertilizationDate': plannedFertilizationDate?.toIso8601String(),
         'lliflePhotoUrls': lliflePhotoUrls,

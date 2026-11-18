@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../core/logger/app_logger.dart';
+import '../../core/models/photo_passport.dart';
 import '../../domain/repositories/plant_repository.dart';
 import '../models/gbif_occurrence.dart';
 import '../models/plant.dart';
@@ -101,6 +102,10 @@ class PlantRepositoryImpl implements PlantRepository {
         (map) => Note.fromJson(map),
       ),
       userPhotos: dto.userPhotos,
+      photoPassports: _safeJsonList(
+        dto.photoPassportsJson,
+        (map) => PhotoPassport.fromJson(map),
+      ),
       lliflePhotoUrls: dto.lliflePhotoUrls,
       fieldNumber: dto.fieldNumber,
       seller: dto.seller,
@@ -135,6 +140,9 @@ class PlantRepositoryImpl implements PlantRepository {
       seedsCount: entity.seedsCount,
       germinatedCount: entity.germinatedCount,
       userPhotos: entity.userPhotos,
+      photoPassportsJson: entity.photoPassports
+          .map((e) => jsonEncode(e.toJson()))
+          .toList(),
       lastFertilization: entity.lastFertilization,
       plannedFertilizationDate: entity.plannedFertilizationDate,
       lliflePhotoUrls: entity.lliflePhotoUrls,

@@ -61,6 +61,7 @@ class PlantDto extends HiveObject {
     required this.childrenIds,
     this.parentId,
     this.qrCodeJson,
+    this.photoPassportsJson = const [],
   });
   /// Уникальный постоянный идентификатор растения (UUID).
   @HiveField(0)
@@ -192,4 +193,8 @@ class PlantDto extends HiveObject {
 
   @HiveField(39)
   String? qrCodeJson;
+
+  /// Фото-паспорта (этап 3, R-054): список JSON-строк PhotoPassport.
+  @HiveField(40)
+  List<String> photoPassportsJson;
 }

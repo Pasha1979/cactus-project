@@ -251,3 +251,23 @@ TODO(архив после 2.6) расставлен в точках gate.
 Автотесты: `test/integration/cross_device_sync_test.dart` (c1–c4, два
 движка на общем in-memory сервере). Ручной чек-лист на реальных
 устройствах: [docs/ACCEPTANCE_CHECKLIST_2.7.md](../ACCEPTANCE_CHECKLIST_2.7.md).
+
+## Photo Passports: структура и локальный CRUD (этап 3.1)
+
+Фундамент фото-паспортов (R-004/R-005/R-054) — только данные и локальная
+логика, без UI и без Яндекс.Диска.
+
+- **`PhotoPassport`** (`lib/core/models/photo_passport.dart`): passportId,
+  plantId, versions[], isArchived, isDeleted.
+- **`PhotoVersion`**: versionId, yandexFilePath (путь на Диске, НЕ ссылка),
+  createdAt, sizeBytes, localCachePath?.
+- **`Plant.photoPassports`** — новое поле (userPhotos сохранён для
+  обратной совместимости, миграция — шаг 3.2). Персистится через
+  `PlantDto.photoPassportsJson` (HiveField 40).
+- **`PhotoPassportManager`** (`lib/core/sync/photo_passport_manager.dart`):
+  addPhotoVersion (новый паспорт / +версия по passportId — замена = версия),
+  archivePassport, deletePassportEverywhere (только флаг + outbox — файл
+  на Диске НЕ трогается), freeLocalSpace (сброс кэш-путей),
+  getActivePassports (!isDeleted && !isArchived).
+- Запрет сетевой валидации: cleanBroken/validateCloudUrl — 0 живых
+  вхождений (только комментарии об их удалении).
