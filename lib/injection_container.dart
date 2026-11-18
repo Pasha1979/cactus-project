@@ -161,7 +161,7 @@ Future<void> init() async {
   );
 
   // Точки входа синхронизации (старт/кнопка) и авто-синк (задача 2.5)
-  sl.registerLazySingleton(() => SyncActions(sl<SyncEngine>()));
+  sl.registerLazySingleton(() => SyncActions(sl<SyncEngine>(), sl<AuthRepository>()));
   sl.registerLazySingleton(
     () => SyncScheduler(engine: sl<SyncEngine>(), outbox: sl<SyncOutbox>()),
   );

@@ -1713,31 +1713,9 @@ class HomeScreenState extends State<HomeScreen>
           // Сканер QR
           context.push('/qr/scan');
         } else if (index == 2) {
-          // Синхронизировать — новый движок (задача 2.5); без аккаунта — no-op
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🔄 Синхронизация началась...')),
-          );
-
-          try {
-            await di.sl<SyncActions>().manual();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('✅ Синхронизация успешно завершена'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('❌ Ошибка: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
+          // Синхронизировать — честный статус (R-051): без аккаунта → оранжевый,
+          // ошибка → красный, успех → зелёный
+          await handleManualSync(context, di.sl<SyncActions>());
         } else if (index == 3) {
           // Выход
           await _handleExit(context);

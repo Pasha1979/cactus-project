@@ -131,7 +131,9 @@ void main() {
         'wo_${DateTime.now().microsecondsSinceEpoch}');
     outbox = SyncOutbox(outboxBox);
     engine = CountingEngine();
-    actions = SyncActions(engine);
+    final auth = FakeAuthRepository()
+      ..user = AuthUser(id: 'u1', email: 't@t.t', createdAt: DateTime(2026));
+    actions = SyncActions(engine, auth);
     scheduler = SyncScheduler(
       engine: engine,
       outbox: outbox,
