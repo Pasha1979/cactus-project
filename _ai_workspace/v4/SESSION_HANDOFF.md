@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · cd908a4 feat(ui): honest sync status feedback (aut
+# HANDOFF (автоген) · 2026-11-18 · `main` · 6c29a00 feat(sync): one-time initial migration wit
 
 Сделано:
+- 6c29a00 feat(sync): one-time initial migration with backup, 
+- 6723337 chore(brain): sync status/handoff after task 2.5b
 - cd908a4 feat(ui): honest sync status feedback (auth check, e
 - e3a0443 chore(brain): sync status/handoff after task 2.5
-- 939b7ad feat(sync): wire engine to startup/button/auto-sync,
-- 5911319 feat(sync): sync legacy watering/wintering/adult-ima
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)
