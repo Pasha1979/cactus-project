@@ -85,3 +85,5 @@
 **R-040** — Найдено при проверке 1.2В: код использует `RadioGroup`/`groupValue`-API Flutter ≥3.35 и `activeThumbColor` (main.dart, statistics_screen, add_plant_screen). Под Flutter 3.29 — 14 ошибок компиляции. Это предсуществующий код (подтверждено в e4e336f). Требование к локальной среде владельца: **Flutter ≥3.35**, либо откат Radio-кода на классический API.
 
 **R-041** — Локальная среда владельца обновлена до Flutter 3.50.0 / Dart 3.14.0 (2026-11-18): `flutter pub get` и `flutter run -d windows` работают, единый проект собирается и запускается (smoke владельца). Источник: выполнение владельцем после отчёта 1.2В.
+
+**R-042** — Supabase подключён (задача 2.2): `SupabaseClientManager` инициализируется в `main()` с try-catch; без SUPABASE_URL/SUPABASE_ANON_KEY в env.json — локальный режим (R-029). Схема `supabase/migrations/00001_initial_schema.sql`: таблицы `plants` + `sync_metadata` с RLS (изоляция по `user_id`), UNIQUE(user_id, permanent_id) для upsert.

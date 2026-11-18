@@ -1,4 +1,4 @@
-# HANDOFF (автоген) · 2026-11-17 · `main` · e02b339 chore(migration): verify build after merge
+# HANDOFF (автоген) · 2026-11-18 · `main` · e02b339 chore(migration): verify build after merge
 
 Сделано:
 - e02b339 chore(migration): verify build after merge

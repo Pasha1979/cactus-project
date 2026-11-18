@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-17 01:11 · `main` · e02b339 chore(migration): verify build after merge
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 06:39 · `main` · e02b339 chore(migration): verify build after merge
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

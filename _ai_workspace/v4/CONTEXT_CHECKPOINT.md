@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 06:39 · `main` · e02b339 chore(migration): verify build after merge
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 20:04 · `main` · dc45b26 feat(sync): create architecture and basic 
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

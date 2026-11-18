@@ -21,6 +21,7 @@ import 'presentation/theme/cactus_theme.dart';
 import 'data/datasources/local/hive_database.dart';
 import 'data/migrations/data_migration_manager.dart';
 import 'injection_container.dart' as di;
+import 'core/supabase_client.dart';
 import 'core/utils/responsive_helper.dart';
 import 'presentation/screens/statistics_screen.dart';
 
@@ -44,6 +45,18 @@ void main() async {
 
   // Инициализация DI-контейнера (зависит от Hive)
   await di.init();
+
+  // Инициализация Supabase (задача 2.2): без ключей в env.json — локальный режим (R-029)
+  try {
+    await SupabaseClientManager.initialize();
+    if (SupabaseClientManager.isInitialized) {
+      AppLogger.db('Supabase подключён', tag: 'MAIN');
+    } else {
+      AppLogger.db('Supabase не настроен — локальный режим', tag: 'MAIN');
+    }
+  } catch (e, st) {
+    AppLogger.error('Ошибка инициализации Supabase — локальный режим', tag: 'MAIN', error: e, stackTrace: st);
+  }
 
   // Миграция данных из SharedPreferences в Hive (при первом запуске после обновления)
   final migrationSuccess = await DataMigrationManager.runMigrationIfNeeded();
