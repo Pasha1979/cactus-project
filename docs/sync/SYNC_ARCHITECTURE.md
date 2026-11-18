@@ -88,3 +88,34 @@ flowchart LR
 - **2.4** — pull + `ConflictResolver` (last-writer-wins).
 - **2.5** — фото: Яндекс.Диск + привязка URL к записям.
 - **2.6** — миграция существующих данных пользователя.
+
+## Push + outbox + серверное время (задача 2.3)
+
+### Поток
+
+```
+CRUD (PlantCrudProvider) → outbox.enqueue(permanentId, op)
+        ↓
+SyncOutbox (Hive 'sync_outbox', JSON {id, op, queuedAt})
+        ↓ PushSyncEngine.pushLocalChanges()
+   op=delete → remote.deletePlant (tombstone is_deleted=true)
+   op=upsert → PlantRepository → plantToSyncRow → remote.uploadPlant (upsert)
+        ↓ успех
+   outbox.remove(id) + sync_metadata.last_sync_at = now()
+```
+
+### Правила outbox
+
+- Ключ = `permanent_id`: повторный `enqueue` перезаписывает запись (нет дублей).
+- `delete` приоритетнее `upsert`: если в очереди уже delete, повторный upsert его не отменяет.
+- Ошибка сети → запись остаётся, статус `error`, ретрай при следующем `sync()`.
+
+### Серверное время (R-045)
+
+- Триггер `plants_set_last_modified` (миграция 00002) ставит `last_modified = now()` на каждый INSERT/UPDATE.
+- Клиент **никогда** не отправляет `last_modified` в upsert — часы устройств не участвуют в конфликтах.
+- `is_deleted` — tombstone: удаление синхронизируется как обновление, не физическое удаление.
+
+### Локальный режим
+
+Без `AuthRepository.currentUser` push — no-op: очередь копится локально и уйдёт при входе (R-008).

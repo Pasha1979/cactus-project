@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · 7833794 feat(sync): connect Supabase and create da
+# HANDOFF (автоген) · 2026-11-18 · `main` · bcf1162 chore(brain): sync handoff/checkpoint afte
 
 Сделано:
+- bcf1162 chore(brain): sync handoff/checkpoint after task 2.2
 - 7833794 feat(sync): connect Supabase and create database sch
 - dc45b26 feat(sync): create architecture and basic infrastruc
 - e02b339 chore(migration): verify build after merge
-- 7ba3263 chore(migration): merge Android + Windows into singl
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

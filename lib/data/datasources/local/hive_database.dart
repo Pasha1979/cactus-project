@@ -13,6 +13,7 @@ class HiveDatabase {
   static const String _gbifCacheBoxName = 'gbif_cache_box';
   static const String _plantIndexBoxName = 'plant_index_box';
   static const String _settingsBoxName = 'settings_box';
+  static const String _syncOutboxBoxName = 'sync_outbox';
 
   static Box<PlantDto>? _plantsBox;
   static Box<QRCodeDto>? _qrCodesBox;
@@ -21,6 +22,7 @@ class HiveDatabase {
   static Box<GbifOccurrenceDto>? _gbifCacheBox;
   static Box<List<dynamic>>? _plantIndexBox;
   static Box<String>? _settingsBox;
+  static Box<String>? _syncOutboxBox;
 
   static bool _isInitialized = false;
   static bool _isInitializing = false;
@@ -61,6 +63,7 @@ class HiveDatabase {
       _gbifCacheBox = await Hive.openBox<GbifOccurrenceDto>(_gbifCacheBoxName);
       _plantIndexBox = await Hive.openBox<List<dynamic>>(_plantIndexBoxName);
       _settingsBox = await Hive.openBox<String>(_settingsBoxName);
+      _syncOutboxBox = await Hive.openBox<String>(_syncOutboxBoxName);
 
       _isInitialized = true;
     } finally {
@@ -135,6 +138,14 @@ class HiveDatabase {
       throw Exception('Hive not initialized. Call initialize() first.');
     }
     return _settingsBox!;
+  }
+
+  /// Коробка outbox — очередь несинхронизированных изменений (задача 2.3)
+  static Box<String> get syncOutboxBox {
+    if (_syncOutboxBox == null) {
+      throw Exception('Hive not initialized. Call initialize() first.');
+    }
+    return _syncOutboxBox!;
   }
 
   /// Закрыть все коробки и сбросить состояние

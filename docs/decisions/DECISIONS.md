@@ -87,3 +87,9 @@
 **R-041** — Локальная среда владельца обновлена до Flutter 3.50.0 / Dart 3.14.0 (2026-11-18): `flutter pub get` и `flutter run -d windows` работают, единый проект собирается и запускается (smoke владельца). Источник: выполнение владельцем после отчёта 1.2В.
 
 **R-042** — Supabase подключён (задача 2.2): `SupabaseClientManager` инициализируется в `main()` с try-catch; без SUPABASE_URL/SUPABASE_ANON_KEY в env.json — локальный режим (R-029). Схема `supabase/migrations/00001_initial_schema.sql`: таблицы `plants` + `sync_metadata` с RLS (изоляция по `user_id`), UNIQUE(user_id, permanent_id) для upsert.
+
+**R-043** — убрана строка ALTER DATABASE … app.jwt_secret (Supabase сам управляет JWT-секретом; плейсхолдер сломал бы аутентификацию).
+
+**R-044** — добавлено UNIQUE(user_id, permanent_id); upsert использует onConflict:'user_id,permanent_id' с явной подстановкой user_id (RLS).
+
+**R-045** — Push-пайплайн (задача 2.3): очередь `SyncOutbox` (Hive-бокс 'sync_outbox', JSON {id,op,queuedAt}, delete приоритетнее upsert); `last_modified` ставит только серверный триггер (миграция 00002) — клиентское время в конфликтах не участвует; без аккаунта push — no-op (R-008).

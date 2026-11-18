@@ -54,3 +54,10 @@ WHERE schemaname = 'public';
 
 - Задачи 2.3–2.5: логика SyncEngine (push/pull, конфликты, фото на Яндекс.Диск).
 - Задача 2.6: миграция существующих локальных данных в Supabase.
+
+## 6. Миграция 00002 (серверное время)
+
+После применения 00001 примените `supabase/migrations/00002_server_time.sql`
+тем же способом (SQL Editor → Run). Она добавляет триггер `last_modified`
+(серверное время для конфликтов LWW) и колонки `last_fertilization`,
+`planned_fertilization_date`.

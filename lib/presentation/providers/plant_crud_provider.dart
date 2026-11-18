@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/sync/sync_outbox.dart';
 import '../../core/logger/app_logger.dart';
 import '../../core/ui/ui_state.dart';
 import '../../domain/repositories/plant_repository.dart';
@@ -29,6 +30,8 @@ import '../../services/image/image_processor.dart';
 /// - Базовую статистику
 class PlantCrudProvider with ChangeNotifier {
   final PlantRepository _repository = sl<PlantRepository>();
+  // TODO(этап 2.5): перевести outbox-хуки на события репозитория
+  final SyncOutbox _outbox = sl<SyncOutbox>();
 
   List<Plant> _plants = [];
   final Set<String> _selectedIds = {};
@@ -492,6 +495,7 @@ class PlantCrudProvider with ChangeNotifier {
     final plantWithTime = plant.copyWith(lastModified: DateTime.now());
     try {
       await _repository.addPlant(plantWithTime);
+      await _outbox.enqueue(plantWithTime.permanentId, SyncOutbox.opUpsert);
       _plants.add(plantWithTime);
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
@@ -508,6 +512,7 @@ class PlantCrudProvider with ChangeNotifier {
       // Автоматически обновляем lastModified при каждом обновлении
       final plantWithTime = updatedPlant.copyWith(lastModified: DateTime.now());
       await _repository.updatePlant(plantWithTime);
+      await _outbox.enqueue(plantWithTime.permanentId, SyncOutbox.opUpsert);
       _plants[index] = plantWithTime;
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();
@@ -529,6 +534,7 @@ class PlantCrudProvider with ChangeNotifier {
       _deletedPlantIds.add(id);
       // Физическое удаление из списка и из базы
       await _repository.deletePlant(id);
+      await _outbox.enqueue(id, SyncOutbox.opDelete);
       _plants.removeAt(plantIndex);
       _plantsState = UiSuccess(List.unmodifiable(_plants));
       notifyListeners();

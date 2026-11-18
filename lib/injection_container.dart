@@ -2,13 +2,15 @@ import 'package:get_it/get_it.dart';
 
 import 'core/auth/auth_repository.dart';
 import 'core/auth/supabase_auth_repository.dart';
-import 'core/sync/stub_sync_engine.dart';
 import 'core/sync/sync_engine.dart';
+import 'core/sync/sync_engine_push.dart';
+import 'core/sync/sync_outbox.dart';
+import 'data/datasources/local/hive_database.dart';
+import 'data/datasources/remote/plant_remote_datasource.dart';
 import 'data/datasources/remote/supabase_datasource.dart';
 
 import 'core/network/network_info.dart';
 import 'data/datasources/local/gbif_cache_local_datasource.dart';
-import 'data/datasources/local/hive_database.dart';
 import 'data/datasources/local/note_local_datasource.dart';
 import 'data/datasources/local/plant_index_manager.dart';
 import 'data/datasources/local/plant_local_datasource.dart';
@@ -117,11 +119,22 @@ Future<void> init() async {
   // AuthRepository — Supabase (почта+пароль, R-029)
   sl.registerLazySingleton<AuthRepository>(() => SupabaseAuthRepository());
 
+  // Outbox — очередь несинхронизированных изменений (задача 2.3)
+  sl.registerLazySingleton(() => SyncOutbox(HiveDatabase.syncOutboxBox));
+
   // Удалённый источник данных Supabase (записи)
   sl.registerLazySingleton(() => SupabaseDatasource());
+  sl.registerLazySingleton<PlantRemoteDataSource>(() => sl<SupabaseDatasource>());
 
-  // SyncEngine — пока заглушка (реализация в задачах 2.3-2.5)
-  sl.registerLazySingleton<SyncEngine>(() => StubSyncEngine());
+  // SyncEngine — push-реализация (задача 2.3); pull — задача 2.4
+  sl.registerLazySingleton<SyncEngine>(
+    () => PushSyncEngine(
+      outbox: sl<SyncOutbox>(),
+      remote: sl<PlantRemoteDataSource>(),
+      plants: sl<PlantRepository>(),
+      auth: sl<AuthRepository>(),
+    ),
+  );
 
   // ==================== PROVIDERS ====================
   // ChangeNotifier-провайдеры, используемые через sl<>()
