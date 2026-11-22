@@ -22,6 +22,7 @@ import '../screens/year_germination_chart_screen.dart';
 import '../screens/plant_card/plant_card_screen.dart';
 import '../screens/settings/about_screen.dart';
 import '../screens/settings/appearance_settings_screen.dart';
+import '../screens/settings/conflict_archive_screen.dart';
 import '../screens/settings/backup_settings_screen.dart';
 import '../screens/settings/behavior_settings_screen.dart';
 import '../screens/settings/cloud_settings_screen.dart';
@@ -246,6 +247,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/settings/about',
       builder: (context, state) => const AboutScreen(),
+    ),
+    GoRoute(
+      path: '/conflicts',
+      builder: (context, state) => const ConflictArchiveScreen(),
     ),
   ],
 );

@@ -3,7 +3,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/api_config.dart';
 import '../../../core/config/app_constants.dart';
+import '../../../core/sync/sync_conflicts.dart';
 import '../../../core/update_checker.dart';
+import '../../../injection_container.dart';
+import 'conflict_archive_screen.dart';
 
 /// Экран "О приложении".
 ///
@@ -91,6 +94,9 @@ class AboutScreen extends StatelessWidget {
           ),
 
           const Divider(),
+
+          // Архив конфликтов синхронизации (H2) — виден только при N>0.
+          const ConflictArchiveTile(),
 
           // Ссылки
           ListTile(
@@ -227,5 +233,66 @@ class AboutScreen extends StatelessWidget {
         SnackBar(content: Text('Email-клиент недоступен. Напишите на: $email')),
       );
     }
+  }
+}
+
+/// Пункт «Архив конфликтов синхронизации (N)» (аудит 4.3, H2).
+/// Скрыт при N==0; счётчик обновляется после возврата со списка.
+/// Store подменяется в тестах через [store].
+class ConflictArchiveTile extends StatefulWidget {
+  const ConflictArchiveTile({super.key, this.store});
+
+  final SyncConflictStore? store;
+
+  @override
+  State<ConflictArchiveTile> createState() => _ConflictArchiveTileState();
+}
+
+class _ConflictArchiveTileState extends State<ConflictArchiveTile> {
+  int _count = 0;
+
+  SyncConflictStore? get _store {
+    try {
+      return widget.store ?? sl<SyncConflictStore>();
+    } catch (_) {
+      return widget.store;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  @override
+  void didUpdateWidget(ConflictArchiveTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.store != widget.store) _reload();
+  }
+
+  void _reload() {
+    final n = _store?.length ?? 0;
+    if (n != _count && mounted) setState(() => _count = n);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_count <= 0) return const SizedBox.shrink();
+    return ListTile(
+      leading: const Icon(Icons.sync_problem),
+      title: Text('Архив конфликтов синхронизации ($_count)'),
+      subtitle: const Text('Восстановить локальные версии'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ConflictArchiveScreen(store: widget.store),
+          ),
+        );
+        _reload();
+      },
+    );
   }
 }

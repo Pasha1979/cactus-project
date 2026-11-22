@@ -322,3 +322,19 @@ Legacy-очередь `deletedUserPhotos` обслуживается тем же
 **Освобождение места**: `freeLocalSpace` удаляет локальный файл кэша
 (`File.deleteSync` в try/catch) и сбрасывает `localCachePath` — место
 освобождается реально, а не только в метаданных.
+
+### Conflict archive UI (этап 4.3, R-059)
+
+- **`SyncConflict.id`** — стабильный идентификатор записи = ключ
+  Hive-бокса `sync_conflicts` (`permanentId:micros`); `listConflicts()`
+  возвращает записи с id, `removeConflict(id)` удаляет конкретную.
+- **Вход**: `ConflictArchiveTile` в «О приложении» — виден только при
+  `store.length > 0`, показывает счётчик, обновляется после возврата.
+- **Экран `/conflicts`** (`conflict_archive_screen.dart`): карточки
+  с именем растения (localJson→remoteJson), типом и датой.
+  - «Вернуть мою локальную версию» → AlertDialog → `restoreLocalConflict`
+    — `Plant.fromJson(localJson)` → `updatePlant` (штатный путь → outbox
+    → push на другие устройства) → `removeConflict`.
+  - «Оставить облачную» → `keepRemoteConflict` — `removeConflict`,
+    облачная версия уже применена движком (LWW).
+- Пустой архив — заглушка «Конфликтов нет».

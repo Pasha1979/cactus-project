@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 16:21 · `main` · 736d6d4 chore(brain): checkpoint refresh
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 17:46 · `main` · 980a1d7 fix(audit): unify photo subsystem, trash q
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

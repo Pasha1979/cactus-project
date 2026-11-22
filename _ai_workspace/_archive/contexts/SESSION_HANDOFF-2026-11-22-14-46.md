@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-17 · `main` · 049e08f chore(secrets): add empty env.example.json
+# HANDOFF (автоген) · 2026-11-22 · `main` · 980a1d7 fix(audit): unify photo subsystem, trash q
 
 Сделано:
-- 049e08f chore(secrets): add empty env.example.json
-- ad77ab1 chore: baseline tag, decisions, project rules, featu
-- e0e64aa Сверка «ноль потерь»: все 26 документов архива тепер
-- ff28999 04_ПРАВИЛА: запас под колебания автоген-handoff
+- 980a1d7 fix(audit): unify photo subsystem, trash queue, free
+- 736d6d4 chore(brain): checkpoint refresh
+- 5fb7d1b chore(brain): R-37 always commit AND push to GitHub 
+- 6eb15f4 test(ui): explicit Roboto in home screen golden (fon
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 15:42 · `main` · 5fb7d1b chore(brain): R-37 always commit AND push 
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 16:21 · `main` · 736d6d4 chore(brain): checkpoint refresh
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 /// Запись архива конфликтов синхронизации.
 class SyncConflict {
   const SyncConflict({
+    required this.id,
     required this.type,
     required this.permanentId,
     required this.localJson,
@@ -12,7 +13,9 @@ class SyncConflict {
     required this.at,
   });
 
-  factory SyncConflict.fromJson(Map<String, dynamic> json) => SyncConflict(
+  factory SyncConflict.fromJson(Map<String, dynamic> json, {String? id}) =>
+      SyncConflict(
+        id: id ?? (json['id'] as String? ?? ''),
         type: json['type'] as String,
         permanentId: json['permanentId'] as String,
         localJson: json['localJson'] as Map<String, dynamic>?,
@@ -20,6 +23,10 @@ class SyncConflict {
         at: DateTime.tryParse(json['at']?.toString() ?? '') ??
             DateTime.fromMillisecondsSinceEpoch(0),
       );
+
+  /// Стабильный id записи = ключ в Hive-боксе (`permanentId:micros`).
+  /// Нужен UI для удаления конкретной записи (аудит 4.3, H2).
+  final String id;
 
   /// 'edit_vs_edit' | 'delete_vs_edit'
   final String type;
@@ -64,14 +71,23 @@ class SyncConflictStore {
         }),
       );
 
-  /// Все зафиксированные конфликты (для UI в задаче 2.5).
+  /// Все зафиксированные конфликты — с id для удаления (UI, H2).
   List<SyncConflict> listConflicts() => _box.keys
-      .map((k) => _box.get(k))
-      .whereType<String>()
-      .map((s) => SyncConflict.fromJson(jsonDecode(s) as Map<String, dynamic>))
+      .map((k) {
+        final raw = _box.get(k);
+        if (raw == null) return null;
+        return SyncConflict.fromJson(
+          jsonDecode(raw) as Map<String, dynamic>,
+          id: k.toString(),
+        );
+      })
+      .whereType<SyncConflict>()
       .toList();
 
   Future<void> remove(String key) => _box.delete(key);
+
+  /// Удалить запись по id из [SyncConflict.id] (UI архива, H2).
+  Future<void> removeConflict(String id) => _box.delete(id);
 
   int get length => _box.length;
 }
