@@ -28,7 +28,8 @@
 - Заглушки → `throw UnimplementedError`, не no-op (R-11) · `DateTime.tryParse` везде (R-10) · `.withOpacity()` запрещён (R-26) · `print()` → AppLogger (D-15)
 
 ## ✅ ПОСЛЕ ИЗМЕНЕНИЯ КОДА:
-`flutter analyze` на Android И Windows → аудит 9 пунктов → git commit → статус пользователю простым языком.
+`flutter analyze` на Android И Windows → аудит 9 пунктов → git commit → **git push** → статус пользователю простым языком.
+**R-37: после КАЖДОГО git commit немедленно `git push origin <ветка>`** — GitHub всегда содержит последнюю версию. Не ждать отдельной команды, исключений нет.
 Обнови v4/01_ПЛАН и 02_СТАТУС (`npm run brain:status`). Напомни протестировать обе платформы и синхронизацию.
 
 ## 🧷 CONTEXT CHECKPOINT (внутри сессии):
