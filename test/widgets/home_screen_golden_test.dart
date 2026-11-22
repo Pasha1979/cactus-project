@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -119,16 +120,29 @@ void main() {
     WidgetTester tester, {
     Size size = const Size(420, 800),
   }) async {
+    // Хост — Windows → некоторые стили темы резолвят 'Segoe UI', которого
+    // нет в тестовом окружении → подписи NavigationRail рисуются квадратами.
+    // Android-таргет → дефолт 'Roboto' (загружен из SDK).
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.runAsync(() async {
       await provider.loadPlants();
+      // apply(fontFamily): у части стилей (labelMedium и др.) family=null —
+      // в тестовом окружении резолвится системный дефолт, которого нет →
+      // подписи NavigationRail рисовались квадратами.
+      final theme = CactusTheme.light();
+      final themed = theme.copyWith(
+        textTheme: theme.textTheme.apply(fontFamily: 'Roboto'),
+        primaryTextTheme: theme.primaryTextTheme.apply(fontFamily: 'Roboto'),
+      );
       await tester.pumpWidget(
         ChangeNotifierProvider<PlantCrudProvider>.value(
           value: provider,
           child: MaterialApp(
-            theme: CactusTheme.light(),
+            theme: themed,
             home: const HomeScreen(),
           ),
         ),
