@@ -1103,17 +1103,9 @@ class PlantCrudProvider with ChangeNotifier implements RemoteChangeApplier {
     if (index == -1) return;
     try {
       final newPhotoPath = await _copyPhotoToAppStorage(photoPath);
-      final updatedPhotos = List<String>.from(_plants[index].userPhotos)
-        ..add(newPhotoPath);
-      final updated = _plants[index].copyWith(
-        userPhotos: updatedPhotos,
-        lastModified: DateTime.now(),
-      );
-      _plants[index] = updated;
-      await _repository.updatePlant(updated);
-      notifyListeners();
 
-      // Этап 3 (R-056): создаём фото-паспорт для нового фото.
+      // Аудит 4.2 (C2): единый источник истины — фото-паспорта.
+      // В userPhotos НЕ пишем (поле @Deprecated, оставлено для истории).
       // Путь пока локальный — облачный проставит photo_sync при загрузке
       // через uploadPassportPhoto (внутренний путь, не публичная ссылка).
       try {
@@ -1124,7 +1116,8 @@ class PlantCrudProvider with ChangeNotifier implements RemoteChangeApplier {
           // Менеджер обновил репозиторий — синхронизируем in-memory копию
           final refreshed = await _repository.getPlantById(plantId);
           if (refreshed != null) {
-            _plants[index] = refreshed;
+            _plants[index] = refreshed.copyWith(lastModified: DateTime.now());
+            await _repository.updatePlant(_plants[index]);
             notifyListeners();
           }
         }

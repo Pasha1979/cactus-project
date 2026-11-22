@@ -296,3 +296,29 @@ TODO(архив после 2.6) расставлен в точках gate.
 «Вернуть в галерею». Новые фото → паспорт в `addUserPhoto`;
 `photo_sync` грузит версии через `uploadPassportPhoto` (путь, не ссылка);
 локальный файл сохраняется в localCachePath.
+
+### Аудит 4.2: единая фото-подсистема + корзина (R-058)
+
+**Единый источник истины — `Plant.photoPassports`.** Legacy-поле
+`userPhotos` помечено `@Deprecated`: не используется ни для отображения
+(`gallery_tab` строит сетку из активных паспортов —
+`localCachePath ?? yandexFilePath` последней версии), ни для загрузки
+(`PhotoSyncService.syncUserPhotos` грузит только версии паспортов,
+`addUserPhoto` создаёт паспорт и в `userPhotos` не пишет). Поле
+оставлено в модели/DTO для истории и обратной совместимости.
+
+**Корзина `photo_trash` (`PhotoTrashService`)** — Hive-бокс `photo_trash`
+(Box\<String\>, JSON-записи `{id, paths, now, deleteAfter}`).
+`deletePassportEverywhere` кроме флага `isDeleted` + outbox ставит пути
+версий в корзину с меткой «удалить при ближайшей синхронизации».
+`processTrash` при sync вызывает удаление с `permanently=false`
+(Яндекс сам кладёт файл в свою Корзину — откат 30 дней). Из очереди
+вычёркиваются ТОЛЬКО успешно удалённые пути; упавшие остаются и
+повторяются при следующей синхронизации — ноль потерь очереди.
+Legacy-очередь `deletedUserPhotos` обслуживается тем же правилом:
+`clearDeletedPhotos()` вызывается лишь при полном успехе, упавшие
+дублируются в `photo_trash`. `permanently=true` в коде отсутствует.
+
+**Освобождение места**: `freeLocalSpace` удаляет локальный файл кэша
+(`File.deleteSync` в try/catch) и сбрасывает `localCachePath` — место
+освобождается реально, а не только в метаданных.

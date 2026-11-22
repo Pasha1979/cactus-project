@@ -16,6 +16,7 @@ class HiveDatabase {
   static const String _syncOutboxBoxName = 'sync_outbox';
   static const String _syncStateBoxName = 'sync_state';
   static const String _syncConflictsBoxName = 'sync_conflicts';
+  static const String _photoTrashBoxName = 'photo_trash';
 
   static Box<PlantDto>? _plantsBox;
   static Box<QRCodeDto>? _qrCodesBox;
@@ -27,6 +28,7 @@ class HiveDatabase {
   static Box<String>? _syncOutboxBox;
   static Box<String>? _syncStateBox;
   static Box<String>? _syncConflictsBox;
+  static Box<String>? _photoTrashBox;
 
   static bool _isInitialized = false;
   static bool _isInitializing = false;
@@ -70,6 +72,7 @@ class HiveDatabase {
       _syncOutboxBox = await Hive.openBox<String>(_syncOutboxBoxName);
       _syncStateBox = await Hive.openBox<String>(_syncStateBoxName);
       _syncConflictsBox = await Hive.openBox<String>(_syncConflictsBoxName);
+      _photoTrashBox = await Hive.openBox<String>(_photoTrashBoxName);
 
       _isInitialized = true;
     } finally {
@@ -170,6 +173,14 @@ class HiveDatabase {
     return _syncConflictsBox!;
   }
 
+  /// Коробка корзины фото — очередь удалений с Яндекс.Диска (аудит 4.2)
+  static Box<String> get photoTrashBox {
+    if (_photoTrashBox == null) {
+      throw Exception('Hive not initialized. Call initialize() first.');
+    }
+    return _photoTrashBox!;
+  }
+
   /// Закрыть все коробки и сбросить состояние
   static Future<void> close() async {
     await _plantsBox?.close();
@@ -179,6 +190,7 @@ class HiveDatabase {
     await _gbifCacheBox?.close();
     await _plantIndexBox?.close();
     await _settingsBox?.close();
+    await _photoTrashBox?.close();
 
     _plantsBox = null;
     _qrCodesBox = null;
@@ -187,6 +199,7 @@ class HiveDatabase {
     _gbifCacheBox = null;
     _plantIndexBox = null;
     _settingsBox = null;
+    _photoTrashBox = null;
     _isInitialized = false;
   }
 

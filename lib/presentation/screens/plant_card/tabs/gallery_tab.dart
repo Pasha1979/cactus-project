@@ -52,16 +52,30 @@ class _GalleryTabState extends State<GalleryTab> {
     }
   }
 
+  /// «Мои» фото = активные паспорта (аудит 4.2, C2: единый источник истины).
+  /// Архивные/удалённые в сетку не попадают — архив смотрится через
+  /// «Показать архивные фото». Отображаемый путь = последняя версия:
+  /// localCachePath ?? yandexFilePath. userPhotos не читаем (@Deprecated).
+  List<String> _activePassportPhotos(Plant plant) => [
+        for (final p in plant.photoPassports)
+          if (!p.isDeleted && !p.isArchived && p.versions.isNotEmpty)
+            p.versions.last.localCachePath ?? p.versions.last.yandexFilePath,
+      ];
+
   List<String> _getDisplayedPhotos() {
     final plant = widget.plant;
     if (_currentFilter == 'my') {
-      return List.from(plant.userPhotos);
+      return _activePassportPhotos(plant);
     } else if (_currentFilter == 'llifle') {
       return List.from(plant.lliflePhotoUrls);
     } else if (_currentFilter == 'gbif') {
       return List.from(plant.gbifPhotoUrls);
     } else {
-      return [...plant.userPhotos, ...plant.lliflePhotoUrls, ...plant.gbifPhotoUrls];
+      return [
+        ..._activePassportPhotos(plant),
+        ...plant.lliflePhotoUrls,
+        ...plant.gbifPhotoUrls,
+      ];
     }
   }
 
@@ -146,8 +160,10 @@ class _GalleryTabState extends State<GalleryTab> {
                           itemBuilder: (context, index) {
                             final photo = displayedPhotos[index];
                             final isNetwork = photo.startsWith('http');
-                            final isMainPhoto = plant.userPhotos.isNotEmpty &&
-                                plant.userPhotos.first == photo;
+                            // Главное фото = первый активный паспорт (C2).
+                            final myPhotos = _activePassportPhotos(plant);
+                            final isMainPhoto = myPhotos.isNotEmpty &&
+                                myPhotos.first == photo;
 
                             return RepaintBoundary(
                               child: GestureDetector(

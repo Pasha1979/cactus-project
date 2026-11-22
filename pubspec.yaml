@@ -1,9 +1,12 @@
 name: my_cactus
 description: Каталогизатор коллекции кактусов
-version: 1.2.0+1
+# build-номер (+N) ОБЯЗАТЕЛЬНО увеличивать при каждом релизе —
+# иначе Android не поставит обновление поверх установленной версии.
+version: 1.2.0+120
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.8.0 <4.0.0"        # flutter_lints 6 требует Dart >=3.8
+  flutter: ">=3.35.0"         # RadioGroup/activeThumbColor требуют >=3.35
 
 dependencies:
   cached_network_image: ^3.2.0

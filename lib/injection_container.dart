@@ -8,6 +8,7 @@ import 'core/sync/initial_migration.dart';
 import 'core/sync/migration_backup.dart';
 import 'core/sync/photo_migration.dart';
 import 'core/sync/photo_passport_manager.dart';
+import 'core/sync/photo_trash_service.dart';
 import 'core/sync/settings_sync_adapter.dart';
 import 'core/sync/sync_actions.dart';
 import 'core/sync/sync_conflicts.dart';
@@ -172,10 +173,16 @@ Future<void> init() async {
       state: sl<SyncStateStore>(),
     ),
   );
+  // Корзина удалений фото с Диска (аудит 4.2, C3) — permanently=false,
+  // упавшие удаления остаются в очереди на повтор.
+  sl.registerLazySingleton(
+    () => PhotoTrashService(HiveDatabase.photoTrashBox),
+  );
   sl.registerLazySingleton(
     () => PhotoPassportManager(
       plants: sl<PlantRepository>(),
       outbox: sl<SyncOutbox>(),
+      trash: sl<PhotoTrashService>(),
     ),
   );
   sl.registerLazySingleton(

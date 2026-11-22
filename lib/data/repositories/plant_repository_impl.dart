@@ -103,7 +103,7 @@ class PlantRepositoryImpl implements PlantRepository {
       ),
       userPhotos: dto.userPhotos,
       photoPassports: _safeJsonList(
-        dto.photoPassportsJson,
+        dto.photoPassportsJson ?? const <String>[],
         (map) => PhotoPassport.fromJson(map),
       ),
       lliflePhotoUrls: dto.lliflePhotoUrls,

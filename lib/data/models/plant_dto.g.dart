@@ -57,15 +57,14 @@ class PlantDtoAdapter extends TypeAdapter<PlantDto> {
       childrenIds: (fields[37] as List).cast<String>(),
       parentId: fields[38] as String?,
       qrCodeJson: fields[39] as String?,
-      photoPassportsJson:
-          (fields[40] as List?)?.cast<String>() ?? const <String>[],
+      photoPassportsJson: (fields[40] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, PlantDto obj) {
     writer
-      ..writeByte(40)
+      ..writeByte(41)
       ..writeByte(0)
       ..write(obj.permanentId)
       ..writeByte(1)

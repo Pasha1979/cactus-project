@@ -185,6 +185,10 @@ class Plant {
   final String category;
   final int seedsCount;
   final int germinatedCount;
+  /// LEGACY-поле: старые строковые пути/ссылки фото.
+  /// Сохранено для истории и миграции — НЕ использовать для
+  /// отображения и загрузки (аудит 4.2, C2: источник = photoPassports).
+  @Deprecated('Использовать photoPassports — единый источник фото')
   final List<String> userPhotos;
   final List<PhotoPassport> photoPassports;
   final DateTime? lastFertilization;

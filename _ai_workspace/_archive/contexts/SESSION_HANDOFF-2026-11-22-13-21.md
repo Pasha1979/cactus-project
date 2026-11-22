@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-17 · `main` · ff28999 04_ПРАВИЛА: запас под колебания автоген-ha
+# HANDOFF (автоген) · 2026-11-22 · `main` · 736d6d4 chore(brain): checkpoint refresh
 
 Сделано:
-- ff28999 04_ПРАВИЛА: запас под колебания автоген-handoff
-- 68bca46 Handoff/checkpoint под HEAD миграции тестов
-- 9ce9973 Контекст после авточекпоинта + ужатие 04_ПРАВИЛА под
-- 77adcc8 Адаптация brain-тестов под cactus + vitest
+- 736d6d4 chore(brain): checkpoint refresh
+- 5fb7d1b chore(brain): R-37 always commit AND push to GitHub 
+- 6eb15f4 test(ui): explicit Roboto in home screen golden (fon
+- bd389d6 test(ui): golden screenshots of home screen (mobile 
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

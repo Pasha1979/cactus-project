@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-22 · `main` · 5fb7d1b chore(brain): R-37 always commit AND push 
+# HANDOFF (автоген) · 2026-11-22 · `main` · 736d6d4 chore(brain): checkpoint refresh
 
 Сделано:
+- 736d6d4 chore(brain): checkpoint refresh
 - 5fb7d1b chore(brain): R-37 always commit AND push to GitHub 
 - 6eb15f4 test(ui): explicit Roboto in home screen golden (fon
 - bd389d6 test(ui): golden screenshots of home screen (mobile 
-- 26f4cd7 chore(brain): sync status/handoff after task 4.1
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

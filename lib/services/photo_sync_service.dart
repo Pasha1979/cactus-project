@@ -5,7 +5,9 @@ import 'dart:io';
 
 import '../core/logger/app_logger.dart';
 import '../core/models/photo_passport.dart';
+import '../core/sync/photo_trash_service.dart';
 import '../data/models/plant.dart';
+import '../injection_container.dart';
 import '../presentation/providers/plant_crud_provider.dart';
 import 'yandex_auth_service.dart';
 import 'yandex_disk_service.dart';
@@ -19,9 +21,21 @@ import 'yandex_disk_service.dart';
 /// - Валидацию cloud URL
 class PhotoSyncService {
 
-  PhotoSyncService(this._authService, this._diskService);
+  PhotoSyncService(this._authService, this._diskService, [PhotoTrashService? trash])
+      : _trashOverride = trash;
   final YandexAuthService _authService;
   final YandexDiskService _diskService;
+  final PhotoTrashService? _trashOverride;
+
+  /// Корзина: из конструктора (тесты) или из DI (приложение).
+  PhotoTrashService? get _trash {
+    if (_trashOverride != null) return _trashOverride;
+    try {
+      return sl<PhotoTrashService>();
+    } catch (_) {
+      return null;
+    }
+  }
 
   // ==================== СИНХРОНИЗАЦИЯ ФОТО ====================
 
@@ -33,66 +47,40 @@ class PhotoSyncService {
 
     try {
       await _diskService.createAppFolders();
-      int uploadedCount = 0;
 
       for (var plant in plantCrudProvider.plants) {
-        final localPhotos = plant.userPhotos
-            .where((photo) =>
-                !photo.startsWith('https://') && !photo.startsWith('http://'),)
-            .toList();
-
-        if (localPhotos.isEmpty) continue;
-
-        final updatedPhotos = List<String>.from(plant.userPhotos);
-
-        for (var localPhoto in localPhotos) {
-          if ((localPhoto.startsWith('/data/user/0/') && !Platform.isAndroid) ||
-              ((localPhoto.startsWith('C:\\') ||
-                      localPhoto.contains(':\\')) &&
-                  Platform.isAndroid)) {
-            continue;
-          }
-
-          final file = File(localPhoto);
-          if (!await file.exists()) continue;
-
-          AppLogger.api('📤 Загружаем фото: $localPhoto', tag: 'PHOTO_SYNC');
-
-          try {
-            final cloudPath = await _diskService.uploadPhoto(localPhoto);
-
-            // Заменяем локальный путь на внутренний путь Диска (R-004/R-055)
-            final index = updatedPhotos.indexOf(localPhoto);
-            if (index != -1) {
-              updatedPhotos[index] = cloudPath;
-              uploadedCount++;
-              AppLogger.api('✅ Фото заменено на путь Диска: $cloudPath', tag: 'PHOTO_SYNC');
-            }
-          } catch (e) {
-            AppLogger.error('❌ Ошибка загрузки $localPhoto: $e', tag: 'PHOTO_SYNC');
-            // Сохраняем локальный фото как fallback - не удаляем его
-          }
-        }
-
-        if (updatedPhotos != plant.userPhotos) {
-          final updatedPlant = plant.copyWith(userPhotos: updatedPhotos);
-          plantCrudProvider.updatePlant(plant.permanentId, updatedPlant);
-        }
-
-        // Этап 3 (R-055): версии фото-паспортов с локальными путями
-        // загружаем через uploadPassportPhoto → внутренний путь Диска.
+        // Аудит 4.2 (C2): единый источник истины — паспорта.
+        // Legacy-загрузка userPhotos отключена: поле @Deprecated,
+        // для отображения и загрузки не используется.
         if (plant.photoPassports.isNotEmpty) {
           await _uploadPassportVersions(plant, plantCrudProvider);
         }
+      }
+
+      // Корзина: удаляем пути из очереди photo_trash (C3).
+      // Удачные вычёркиваются, упавшие остаются на повтор.
+      final trash = _trash;
+      if (trash != null) {
+        await trash.processTrash(_deleteCloudPath);
       }
 
       await cleanDuplicatePhotos(plantCrudProvider);
       // R-004/R-005: cleanBrokenCloudUrls отключена — молча удаляла ссылки на фото при сетевом сбое.
       await _syncDeletedPhotos(plantCrudProvider);
 
-      AppLogger.api('✅ Синхронизация фото завершена. Загружено: $uploadedCount фото', tag: 'PHOTO_SYNC');
+      AppLogger.api('✅ Синхронизация фото завершена', tag: 'PHOTO_SYNC');
     } catch (e) {
       AppLogger.error('Ошибка синхронизации пользовательских фото: $e', tag: 'PHOTO_SYNC');
+    }
+  }
+
+  /// Удалить путь на Диске — внутренний путь или старая публичная ссылка.
+  /// Всегда permanently=false (Корзина Диска, откат 30 дней).
+  Future<void> _deleteCloudPath(String pathOrUrl) async {
+    if (pathOrUrl.startsWith('/')) {
+      await _diskService.deleteCloudFile(pathOrUrl);
+    } else {
+      await _diskService.deletePhoto(pathOrUrl);
     }
   }
 
@@ -166,49 +154,67 @@ class PhotoSyncService {
   Future<void> _syncDeletedPhotos(PlantCrudProvider plantCrudProvider) async {
     AppLogger.api('🔄 Начинаем синхронизацию удаленных фото...', tag: 'PHOTO_SYNC');
 
-    if (plantCrudProvider.deletedUserPhotos.isNotEmpty) {
-      AppLogger.api('🗑️ Удаляем свои фото с облака: ${plantCrudProvider.deletedUserPhotos.length}', tag: 'PHOTO_SYNC');
-      for (var deletedUrl in plantCrudProvider.deletedUserPhotos) {
+    // Аудит 4.2 (C3/M4): clearDeletedPhotos() вызывается ТОЛЬКО при полном
+    // успехе. Упавшие пути остаются в очереди провайдера И дополнительно
+    // ставятся в photo_trash — повтор при следующей синхронизации.
+    final pending = plantCrudProvider.deletedUserPhotos;
+    if (pending.isNotEmpty) {
+      AppLogger.api('🗑️ Удаляем свои фото с облака: ${pending.length}', tag: 'PHOTO_SYNC');
+      final succeeded = <String>{};
+      for (var deletedUrl in List.of(pending)) {
         try {
-          await _diskService.deletePhoto(deletedUrl);
+          await _deleteCloudPath(deletedUrl);
+          succeeded.add(deletedUrl);
           AppLogger.api('✅ Своё фото удалено с облака: $deletedUrl', tag: 'PHOTO_SYNC');
         } catch (e) {
-          AppLogger.error('❌ Ошибка удаления своего фото: $e', tag: 'PHOTO_SYNC');
+          AppLogger.error('❌ Ошибка удаления своего фото (повтор позже): $e', tag: 'PHOTO_SYNC');
+          await _trash?.enqueueDelete(
+            'legacy_${deletedUrl.hashCode}',
+            [deletedUrl],
+          );
         }
       }
+      // deletedUserPhotos — сырой Set: снимаем только успешные.
+      pending.removeAll(succeeded);
     }
 
-    // Llifle фото — только из локальных данных (внешние URL)
-    if (plantCrudProvider.deletedLliflePhotos.isNotEmpty) {
-      AppLogger.api('🗑️ Убираем Llifle фото из данных: ${plantCrudProvider.deletedLliflePhotos.length}', tag: 'PHOTO_SYNC');
+    if (pending.isEmpty) {
+      // Всё удалено (или и не было) — полная очистка обеих очередей.
+      plantCrudProvider.clearDeletedPhotos();
     }
-
-    plantCrudProvider.clearDeletedPhotos();
     AppLogger.api('✅ Синхронизация удаленных фото завершена', tag: 'PHOTO_SYNC');
   }
 
   // ==================== ДЕДУПЛИКАЦИЯ ====================
 
+  /// Дедупликация по паспортным путям (аудит 4.2, C2): повторяющиеся
+  /// версии с одинаковым путём внутри паспорта вычищаются. userPhotos
+  /// не трогается (@Deprecated). Паспорта целиком не удаляем —
+  /// разные паспорта могут легально делить один путь.
   Future<void> cleanDuplicatePhotos(PlantCrudProvider plantCrudProvider) async {
     bool changed = false;
 
     for (var plant in List.from(plantCrudProvider.plants)) {
-      final unique = <String>{};
-      final cleaned = <String>[];
+      var plantChanged = false;
+      final passports = plant.photoPassports.map((pp) {
+        final unique = <String>{};
+        final cleanedVersions = pp.versions.where((v) {
+          final keep = unique.add(_photoDedupKey(v.yandexFilePath));
+          if (!keep) {
+            AppLogger.api('🗑️ Дубликат версии в паспорте: ${v.yandexFilePath}',
+                tag: 'PHOTO_SYNC');
+            plantChanged = true;
+          }
+          return keep;
+        }).toList();
+        return plantChanged ? pp.copyWith(versions: cleanedVersions) : pp;
+      }).toList();
 
-      for (var photo in plant.userPhotos) {
-        final dedupeKey = _photoDedupKey(photo);
-        if (unique.add(dedupeKey)) {
-          cleaned.add(photo);
-        } else {
-          AppLogger.api('🗑️ Удалён дубликат: $photo', tag: 'PHOTO_SYNC');
-          changed = true;
-        }
-      }
-
-      if (cleaned.length != plant.userPhotos.length) {
-        final updatedPlant = plant.copyWith(userPhotos: cleaned);
-        plantCrudProvider.updatePlant(plant.permanentId, updatedPlant);
+      if (plantChanged) {
+        plantCrudProvider.updatePlant(
+          plant.permanentId,
+          plant.copyWith(photoPassports: passports),
+        );
         changed = true;
       }
     }

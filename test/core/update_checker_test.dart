@@ -6,20 +6,21 @@ import 'package:http/testing.dart';
 import 'package:my_cactus/core/update_checker.dart';
 
 UpdateChecker _checker(http.Client client) =>
-    UpdateChecker(client: client, versionUrl: 'https://example.com/v.txt');
+    UpdateChecker(client: client, versionUrl: 'https://example.com/v');
 
-http.Response _utf8(String body) => http.Response.bytes(
-      utf8.encode(body),
+http.Response _json(Map<String, dynamic> body) => http.Response.bytes(
+      utf8.encode(jsonEncode(body)),
       200,
-      headers: {'content-type': 'text/plain; charset=utf-8'},
+      headers: {'content-type': 'application/json; charset=utf-8'},
     );
 
 void main() {
-  // u1: версия совпадает с удалённой → isNewer = false
-  test('u1: текущая версия == удалённой → isNewer = false', () async {
-    final client = MockClient((_) async => _utf8(
-          '1.2.0\n- строки изменений\n',
-        ));
+  // u1: версия релиза совпадает с текущей → isNewer = false
+  test('u1: текущая версия == tag_name → isNewer = false', () async {
+    final client = MockClient((_) async => _json({
+          'tag_name': 'v1.2.0',
+          'body': '- строки изменений',
+        }));
     final result = await _checker(client).checkForUpdates(
       currentVersion: '1.2.0',
     );
@@ -29,11 +30,12 @@ void main() {
     expect(result.error, isNull);
   });
 
-  // u2: удалённая новее → isNewer = true + releaseNotes
-  test('u2: удалённая новее → isNewer + releaseNotes', () async {
-    final client = MockClient((_) async => _utf8(
-          '1.3.0\n- Единая база\n- Фото-паспорта\n',
-        ));
+  // u2: релиз новее → isNewer = true + releaseNotes из body
+  test('u2: tag_name новее → isNewer + releaseNotes', () async {
+    final client = MockClient((_) async => _json({
+          'tag_name': '1.3.0',
+          'body': '- Единая база\n- Фото-паспорта',
+        }));
     final result = await _checker(client).checkForUpdates(
       currentVersion: '1.2.0',
     );
@@ -55,12 +57,12 @@ void main() {
     expect(result.error, isNotNull);
   });
 
-  // u4: HTTP 404 → безопасный fallback
-  test('u4: HTTP 404 → isNewer = false', () async {
+  // u4/f7: 404 (релизов нет) → isNewer = false, БЕЗ ошибки (M1)
+  test('u4: 404 → isNewer = false без error', () async {
     final client = MockClient((_) async => http.Response('not found', 404));
     final result = await _checker(client).checkForUpdates();
 
     expect(result.isNewer, isFalse);
-    expect(result.error, contains('404'));
+    expect(result.error, isNull);
   });
 }

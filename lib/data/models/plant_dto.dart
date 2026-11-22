@@ -61,7 +61,7 @@ class PlantDto extends HiveObject {
     required this.childrenIds,
     this.parentId,
     this.qrCodeJson,
-    this.photoPassportsJson = const [],
+    this.photoPassportsJson,
   });
   /// Уникальный постоянный идентификатор растения (UUID).
   @HiveField(0)
@@ -195,6 +195,9 @@ class PlantDto extends HiveObject {
   String? qrCodeJson;
 
   /// Фото-паспорта (этап 3, R-054): список JSON-строк PhotoPassport.
+  /// Nullable: у записей, созданных до этапа 3, поля 40 нет → null →
+  /// в маппере заменяется на []. Non-nullable генерировал бы
+  /// `(fields[40] as List)` и падал на старых записях (аудит 4.2, H3).
   @HiveField(40)
-  List<String> photoPassportsJson;
+  List<String>? photoPassportsJson;
 }

@@ -294,8 +294,10 @@ class YandexDiskService {
     try {
       final cloudPath = _extractPathFromUrl(fileUrl);
       if (cloudPath != null) {
+        // permanently=false: файл уходит в Корзину Диска на 30 дней — откат
+        // возможен на стороне Яндекса (аудит 4.2, C3). permanently=true запрещён.
         await dio.delete(
-            '$_yandexApiBaseUrl/resources?path=$cloudPath&permanently=true',);
+            '$_yandexApiBaseUrl/resources?path=$cloudPath&permanently=false',);
         AppLogger.api('✅ Файл удален с Яндекс.Диска: $cloudPath', tag: 'YANDEX_DISK');
       } else {
         AppLogger.warning('⚠️ Не удалось извлечь путь из URL: $fileUrl', tag: 'YANDEX_DISK');
@@ -443,8 +445,9 @@ class YandexDiskService {
 
     final dio = _createDio();
     try {
+      // permanently=false: в Корзину Диска на 30 дней (аудит 4.2, C3).
       await dio.delete(
-        '$_yandexApiBaseUrl/resources?path=$cloudPath&permanently=true',
+        '$_yandexApiBaseUrl/resources?path=$cloudPath&permanently=false',
       );
       AppLogger.api('🗑️ Удалён файл: $cloudPath', tag: 'YANDEX_DISK');
     } on DioException catch (e) {

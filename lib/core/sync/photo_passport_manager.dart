@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:uuid/uuid.dart';
 
 import '../../data/models/plant.dart';
 import '../../domain/repositories/plant_repository.dart';
 import '../models/photo_passport.dart';
+import 'photo_trash_service.dart';
 import 'sync_outbox.dart';
 
 /// Локальный менеджер фото-паспортов (этап 3.1, R-004/R-005/R-054).
@@ -16,11 +19,14 @@ class PhotoPassportManager {
   PhotoPassportManager({
     required PlantRepository plants,
     SyncOutbox? outbox,
+    PhotoTrashService? trash,
   })  : _plants = plants,
-        _outbox = outbox;
+        _outbox = outbox,
+        _trash = trash;
 
   final PlantRepository _plants;
   final SyncOutbox? _outbox;
+  final PhotoTrashService? _trash;
 
   /// Добавить версию фото. Если [passportId] передан — версия добавляется
   /// в этот паспорт (замена = новая версия, R-004); иначе создаётся новый
@@ -75,19 +81,47 @@ class PhotoPassportManager {
   Future<void> unarchivePassport(String passportId) =>
       _mutate(passportId, (p) => p.copyWith(isArchived: false));
 
-  /// «Удалить везде»: ставит isDeleted и готовит запись к синхронизации
-  /// через outbox. Файл с Яндекс.Диска НЕ удаляется (позже, R-005).
-  Future<void> deletePassportEverywhere(String passportId) =>
-      _mutate(passportId, (p) => p.copyWith(isDeleted: true));
+  /// «Удалить везде»: ставит isDeleted, готовит запись к синхронизации
+  /// через outbox и ставит пути версий в корзину photo_trash —
+  /// физическое удаление с Диска делает синк (permanently=false, R-005).
+  /// Файл на этом шаге НЕ удаляется.
+  Future<void> deletePassportEverywhere(String passportId) async {
+    await _mutate(passportId, (p) => p.copyWith(isDeleted: true));
+    final trash = _trash;
+    if (trash == null) return;
+    try {
+      final plant = await _findPlantOfPassport(passportId);
+      final passport = plant?.photoPassports
+          .where((p) => p.passportId == passportId)
+          .firstOrNull;
+      if (passport == null) return;
+      final paths = passport.versions
+          .map((v) => v.yandexFilePath)
+          .where((p) => p.startsWith('/MyCactus/'))
+          .toList();
+      await trash.enqueueDelete(passportId, paths);
+    } catch (_) {
+      // Корзина недоступна — не ломаем операцию; удаление повторится позже.
+    }
+  }
 
-  /// Освободить место: сбросить localCachePath у всех версий паспорта
-  /// (имитация — реальный кэш-менеджмент позже).
+  /// Освободить место: удалить локальный файл кэша с диска (если есть)
+  /// и сбросить localCachePath у всех версий паспорта (аудит 4.2, H1).
   Future<void> freeLocalSpace(String passportId) => _mutate(
         passportId,
         (p) => p.copyWith(
-          versions: p.versions
-              .map((v) => v.copyWith(clearCache: true))
-              .toList(),
+          versions: p.versions.map((v) {
+            final cache = v.localCachePath;
+            if (cache != null) {
+              try {
+                final f = File(cache);
+                if (f.existsSync()) f.deleteSync();
+              } catch (_) {
+                // Файл недоступен/занят — просто сбрасываем ссылку.
+              }
+            }
+            return v.copyWith(clearCache: true);
+          }).toList(),
         ),
       );
 

@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-17 · `main` · e0e64aa Сверка «ноль потерь»: все 26 документов ар
+# HANDOFF (автоген) · 2026-11-22 · `main` · 5fb7d1b chore(brain): R-37 always commit AND push 
 
 Сделано:
-- e0e64aa Сверка «ноль потерь»: все 26 документов архива тепер
-- ff28999 04_ПРАВИЛА: запас под колебания автоген-handoff
-- 68bca46 Handoff/checkpoint под HEAD миграции тестов
-- 9ce9973 Контекст после авточекпоинта + ужатие 04_ПРАВИЛА под
+- 5fb7d1b chore(brain): R-37 always commit AND push to GitHub 
+- 6eb15f4 test(ui): explicit Roboto in home screen golden (fon
+- bd389d6 test(ui): golden screenshots of home screen (mobile 
+- 26f4cd7 chore(brain): sync status/handoff after task 4.1
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

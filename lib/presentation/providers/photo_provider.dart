@@ -144,6 +144,18 @@ class PhotoProvider with ChangeNotifier {
             usedPaths.add(photo);
           }
         }
+        // Аудит 4.2 (C2): источник фото — паспорта; их локальные файлы
+        // тоже «используемые», иначе чистка сотрёт их с диска.
+        for (final pp in plant.photoPassports) {
+          for (final v in pp.versions) {
+            if (!v.yandexFilePath.startsWith('/MyCactus/') &&
+                !v.yandexFilePath.startsWith('http')) {
+              usedPaths.add(v.yandexFilePath);
+            }
+            final cache = v.localCachePath;
+            if (cache != null) usedPaths.add(cache);
+          }
+        }
       }
     }
 
@@ -171,6 +183,17 @@ class PhotoProvider with ChangeNotifier {
       if (selectedIds.contains(plant.permanentId)) {
         for (var photo in plant.userPhotos) {
           await _deletePhotoFromStorage(photo);
+        }
+        // Локальные файлы паспортов (кэш + ещё не загруженные версии).
+        for (final pp in plant.photoPassports) {
+          for (final v in pp.versions) {
+            if (!v.yandexFilePath.startsWith('/MyCactus/') &&
+                !v.yandexFilePath.startsWith('http')) {
+              await _deletePhotoFromStorage(v.yandexFilePath);
+            }
+            final cache = v.localCachePath;
+            if (cache != null) await _deletePhotoFromStorage(cache);
+          }
         }
         _adultImages.remove(plant.permanentId);
         updatedIds.add(plant.permanentId);
