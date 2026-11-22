@@ -66,3 +66,8 @@ WHERE schemaname = 'public';
 
 Примените `supabase/migrations/00003_user_settings.sql` (SQL Editor → Run):
 таблица `user_settings` с RLS, триггер `last_modified`, функция `sync_now()`.
+
+## 8. Миграция 00004 (photo_passports)
+
+Примените `supabase/migrations/00004_add_photo_passports.sql` (SQL Editor → Run):
+JSONB-колонка `photo_passports` в `plants` — фото-паспорта (этап 3.2).

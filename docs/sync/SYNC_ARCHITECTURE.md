@@ -271,3 +271,19 @@ TODO(архив после 2.6) расставлен в точках gate.
   getActivePassports (!isDeleted && !isArchived).
 - Запрет сетевой валидации: cleanBroken/validateCloudUrl — 0 живых
   вхождений (только комментарии об их удалении).
+
+### Этап 3.2: Supabase-схема, legacy-миграция и path-based upload (R-055)
+
+- **Миграция `00004_add_photo_passports.sql`**: колонка `photo_passports JSONB`
+  в `plants` — паспорта едут в Supabase вместе с записью растения
+  (мапперы `plantToSyncRow`/`plantFromSyncRow` обновлены).
+- **`PhotoMigration`** (`lib/core/sync/photo_migration.dart`): флаг
+  `migration_photo_v1_done`; каждый элемент `userPhotos` → `PhotoVersion`
+  (yandexFilePath = строка как есть), все версии растения → один
+  `PhotoPassport` с `isArchived = true`. `userPhotos` не очищается.
+  Вызывается из `InitialMigration.run()` — и в ветке done (для установок,
+  мигрированных в 2.6), и после основной миграции.
+- **Path-based upload** (`YandexDiskService`): `uploadPhoto` и новый
+  `uploadPassportPhoto(filePath, passportId, versionId)` возвращают
+  внутренний путь `/MyCactus/photos/{passportId}_{versionId}.{ext}`;
+  publish/публичные ссылки НЕ генерируются и НЕ хранятся (R-004/R-005).

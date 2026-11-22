@@ -6,6 +6,7 @@ import 'core/auth/supabase_auth_repository.dart';
 import 'core/sync/remote_change_applier.dart';
 import 'core/sync/initial_migration.dart';
 import 'core/sync/migration_backup.dart';
+import 'core/sync/photo_migration.dart';
 import 'core/sync/settings_sync_adapter.dart';
 import 'core/sync/sync_actions.dart';
 import 'core/sync/sync_conflicts.dart';
@@ -171,6 +172,13 @@ Future<void> init() async {
     ),
   );
   sl.registerLazySingleton(
+    () => PhotoMigration(
+      plants: sl<PlantRepository>(),
+      state: sl<SyncStateStore>(),
+      outbox: sl<SyncOutbox>(),
+    ),
+  );
+  sl.registerLazySingleton(
     () => InitialMigration(
       auth: sl<AuthRepository>(),
       plants: sl<PlantRepository>(),
@@ -180,6 +188,7 @@ Future<void> init() async {
       remote: sl<PlantRemoteDataSource>(),
       backup: sl<MigrationBackup>(),
       settings: sl<SettingsSyncAdapter>(),
+      photoMigration: sl<PhotoMigration>(),
     ),
   );
 

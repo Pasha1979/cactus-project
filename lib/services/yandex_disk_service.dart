@@ -145,6 +145,19 @@ class YandexDiskService {
 
   // ==================== ФОТО ====================
 
+  /// Внутренний путь версии фото-паспорта на Диске (R-004/R-055).
+  /// НЕ публичная ссылка — адрес файла в формате
+  /// `/MyCactus/photos/{passportId}_{versionId}.{ext}`.
+  static String passportPhotoPath(
+    String passportId,
+    String versionId, [
+    String ext = 'jpg',
+  ]) =>
+      '/MyCactus/photos/${passportId}_$versionId.$ext';
+
+  /// Загружает фото и возвращает ВНУТРЕННИЙ путь на Диске
+  /// (R-004/R-005/R-055): publish и публичная ссылка НЕ генерируются
+  /// и НЕ хранятся — адрес файла, а не URL.
   Future<String> uploadPhoto(String filePath) async {
     if (!_authService.isConnected) {
       throw Exception('Нет подключения к Яндекс.Диску');
@@ -160,40 +173,76 @@ class YandexDiskService {
     final cloudPath = '/MyCactus/photos/$fileName';
 
     try {
-      // Создаём папку, если её нет
-      try {
-        await dio.get('$_yandexApiBaseUrl/resources?path=/MyCactus/photos');
-      } catch (e) {
-        if (e is DioException && e.response?.statusCode == 404) {
-          await dio.put('$_yandexApiBaseUrl/resources?path=/MyCactus/photos');
-        }
-      }
-
-      final uploadResponse = await dio.get(
-        '$_yandexApiBaseUrl/resources/upload?path=$cloudPath&overwrite=true',
-      );
-      final uploadUrl = uploadResponse.data['href'];
-
-      final fileBytes = await file.readAsBytes();
-      await http.put(
-        Uri.parse(uploadUrl),
-        body: fileBytes,
-        headers: {'Content-Type': 'application/octet-stream'},
-      );
-
-      await dio.put('$_yandexApiBaseUrl/resources/publish?path=$cloudPath');
-
-      final resourceResponse = await dio.get(
-        '$_yandexApiBaseUrl/resources?path=$cloudPath',
-      );
-      final fileUrl = resourceResponse.data['file'] as String?;
-
-      AppLogger.api('✅ Фото загружено в облако: $fileUrl', tag: 'YANDEX_DISK');
-      return fileUrl ?? '';
+      await _uploadToCloudPath(dio, file, cloudPath);
+      AppLogger.api('✅ Фото загружено в облако: $cloudPath', tag: 'YANDEX_DISK');
+      return cloudPath;
     } catch (e) {
       AppLogger.error('❌ Ошибка загрузки фото $filePath: $e', tag: 'YANDEX_DISK');
       rethrow;
     }
+  }
+
+  /// Загружает версию фото-паспорта по внутреннему пути (R-004/R-055).
+  /// Возвращает путь на Диске — для записи в PhotoVersion.yandexFilePath.
+  Future<String> uploadPassportPhoto(
+    String filePath, {
+    required String passportId,
+    required String versionId,
+  }) async {
+    if (!_authService.isConnected) {
+      throw Exception('Нет подключения к Яндекс.Диску');
+    }
+
+    final dio = _createDio();
+    final file = File(filePath);
+    if (!await file.exists()) throw Exception('Файл не существует: $filePath');
+
+    final ext = path.extension(filePath).replaceFirst('.', '');
+    final cloudPath = passportPhotoPath(
+      passportId,
+      versionId,
+      ext.isEmpty ? 'jpg' : ext,
+    );
+
+    try {
+      await _uploadToCloudPath(dio, file, cloudPath);
+      AppLogger.api(
+        '✅ Версия паспорта загружена: $cloudPath',
+        tag: 'YANDEX_DISK',
+      );
+      return cloudPath;
+    } catch (e) {
+      AppLogger.error(
+        '❌ Ошибка загрузки версии паспорта $filePath: $e',
+        tag: 'YANDEX_DISK',
+      );
+      rethrow;
+    }
+  }
+
+  /// Общая загрузка файла по внутреннему пути (папка + upload href + PUT).
+  /// НИКАКОГО publish — возвращаемый адрес не публикуется (R-055).
+  Future<void> _uploadToCloudPath(Dio dio, File file, String cloudPath) async {
+    // Создаём папку, если её нет
+    try {
+      await dio.get('$_yandexApiBaseUrl/resources?path=/MyCactus/photos');
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 404) {
+        await dio.put('$_yandexApiBaseUrl/resources?path=/MyCactus/photos');
+      }
+    }
+
+    final uploadResponse = await dio.get(
+      '$_yandexApiBaseUrl/resources/upload?path=$cloudPath&overwrite=true',
+    );
+    final uploadUrl = uploadResponse.data['href'];
+
+    final fileBytes = await file.readAsBytes();
+    await http.put(
+      Uri.parse(uploadUrl),
+      body: fileBytes,
+      headers: {'Content-Type': 'application/octet-stream'},
+    );
   }
 
   Future<List<String>> getCloudPhotos() async {

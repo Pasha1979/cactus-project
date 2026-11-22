@@ -57,15 +57,14 @@ class PhotoSyncService {
           AppLogger.api('📤 Загружаем фото: $localPhoto', tag: 'PHOTO_SYNC');
 
           try {
-            final fileUrl = await _diskService.uploadPhoto(localPhoto);
+            final cloudPath = await _diskService.uploadPhoto(localPhoto);
 
-            // Заменяем локальный путь на cloud URL сразу после успешной загрузки
-            // Не валидируем сразу - Яндекс.Диск URL нужно время на propagation
+            // Заменяем локальный путь на внутренний путь Диска (R-004/R-055)
             final index = updatedPhotos.indexOf(localPhoto);
             if (index != -1) {
-              updatedPhotos[index] = fileUrl;
+              updatedPhotos[index] = cloudPath;
               uploadedCount++;
-              AppLogger.api('✅ Фото заменено на cloud URL: $fileUrl', tag: 'PHOTO_SYNC');
+              AppLogger.api('✅ Фото заменено на путь Диска: $cloudPath', tag: 'PHOTO_SYNC');
             }
           } catch (e) {
             AppLogger.error('❌ Ошибка загрузки $localPhoto: $e', tag: 'PHOTO_SYNC');

@@ -5,6 +5,7 @@ import '../../domain/repositories/plant_repository.dart';
 import '../auth/auth_repository.dart';
 import '../logger/app_logger.dart';
 import 'migration_backup.dart';
+import 'photo_migration.dart';
 import 'settings_sync_adapter.dart';
 import 'sync_engine.dart';
 import 'sync_outbox.dart';
@@ -29,7 +30,9 @@ class InitialMigration {
     required PlantRemoteDataSource remote,
     required MigrationBackup backup,
     required SettingsSyncAdapter settings,
-  })  : _auth = auth,
+    PhotoMigration? photoMigration,
+  })  : _photoMigration = photoMigration,
+        _auth = auth,
         _plants = plants,
         _outbox = outbox,
         _state = state,
@@ -49,6 +52,7 @@ class InitialMigration {
   final PlantRemoteDataSource _remote;
   final MigrationBackup _backup;
   final SettingsSyncAdapter _settings;
+  final PhotoMigration? _photoMigration;
 
   bool get isDone => _state.getValue(doneKey) == 'true';
 
@@ -57,6 +61,14 @@ class InitialMigration {
   Future<bool> run() async {
     if (isDone) {
       AppLogger.api('Миграция v1 уже выполнена — пропуск', tag: 'MIGRATION');
+      // Фото-миграция добавлена позже (3.2): у существующих установок
+      // v1 уже done — прогоняем отдельно, она сама идемпотентна.
+      try {
+        await _photoMigration?.run();
+      } catch (e, st) {
+        AppLogger.error('Фото-миграция не удалась: $e',
+            tag: 'MIGRATION', error: e, stackTrace: st);
+      }
       return true;
     }
     if (_auth.currentUser == null) {
@@ -117,6 +129,16 @@ class InitialMigration {
 
     // Сверка: counts local vs remote (is_deleted=false) — в отчёт и лог
     await _verify(plants.length, remoteRows.length);
+
+    // Фото-миграция ПОСЛЕ основной миграции растений (этап 3.2, R-055):
+    // userPhotos → архивные паспорта. Без аккаунта/локально — идемпотентна.
+    try {
+      await _photoMigration?.run();
+    } catch (e, st) {
+      // Фото-миграция не должна ломать основную — лог и продолжаем
+      AppLogger.error('Фото-миграция не удалась: $e',
+          tag: 'MIGRATION', error: e, stackTrace: st);
+    }
 
     AppLogger.api('Миграция v1 завершена', tag: 'MIGRATION');
     return true;
