@@ -195,9 +195,11 @@ class _QRManagementScreenState extends State<QRManagementScreen>
         final pdfFile = File(file.filePath);
         if (await pdfFile.exists()) {
           if (Platform.isWindows) {
-            // TODO(R-024): printing/pdfium не работает на Windows
-            _showSnackBar(
-              'Печать недоступна: файл можно открыть через системное приложение',
+            // R-024/D-26: pdfium на Windows не работает —
+            // sharePdf открывает системное «Сохранить как PDF».
+            await Printing.sharePdf(
+              bytes: await pdfFile.readAsBytes(),
+              filename: pdfFile.uri.pathSegments.last,
             );
           } else {
             await Printing.layoutPdf(

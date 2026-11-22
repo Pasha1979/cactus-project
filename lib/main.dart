@@ -132,11 +132,14 @@ Future<void> _initNotifications() async {
   await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,); // Базовая инициализация — ждет 1 сек max, не блокирует main().
 
-  // Разрешения для Android 13+ (Windows — не применимо).
-  // await flutterLocalNotificationsPlugin
-  //     .resolvePlatformSpecificImplementation<
-  //         AndroidFlutterLocalNotificationsPlugin>()?
-  //     .requestNotificationsPermission();
+  // Разрешения для Android 13+ (R-026). На Windows
+  // resolvePlatformSpecificImplementation вернёт null — вызов безопасен.
+  if (Platform.isAndroid) {
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+  }
 }
 
 class MyApp extends StatelessWidget {

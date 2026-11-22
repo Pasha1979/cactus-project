@@ -228,17 +228,12 @@ class PrintSettingsScreenState extends State<PrintSettingsScreen> {
   Future<void> _printPdf() async {
     final pdf = await _generatePdf();
     if (Platform.isWindows) {
-      // TODO(R-024): printing/pdfium не работает на Windows — сохраняем PDF
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File(
-        '${directory.path}/qr_labels_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      // R-024/D-26: прямая печать (pdfium) на Windows не работает —
+      // sharePdf открывает системное «Сохранить как PDF».
+      await Printing.sharePdf(
+        bytes: await pdf.save(),
+        filename: 'qr_labels_${DateTime.now().millisecondsSinceEpoch}.pdf',
       );
-      await file.writeAsBytes(await pdf.save());
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF сохранён: ${file.path}')),
-        );
-      }
       return;
     }
     await Printing.layoutPdf(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/api_config.dart';
+import '../../../core/config/app_constants.dart';
+import '../../../core/update_checker.dart';
 
 /// Экран "О приложении".
 ///
@@ -51,7 +53,7 @@ class AboutScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Версия 1.0.0',
+                'Версия ${AppConstants.appVersion}',
                 style: TextStyle(
                   color: Colors.grey[600],
                 ),
@@ -80,6 +82,16 @@ class AboutScreen extends StatelessWidget {
 
           const SizedBox(height: 24),
 
+          // Проверка обновлений (R-022)
+          ListTile(
+            leading: const Icon(Icons.system_update),
+            title: const Text('Проверить обновления'),
+            subtitle: const Text('Поиск новой версии на GitHub'),
+            onTap: () => _checkUpdates(context),
+          ),
+
+          const Divider(),
+
           // Ссылки
           ListTile(
             leading: const Icon(Icons.code),
@@ -88,7 +100,7 @@ class AboutScreen extends StatelessWidget {
             onTap: () => showLicensePage(
               context: context,
               applicationName: 'MyCactus',
-              applicationVersion: '1.0.0',
+              applicationVersion: AppConstants.appVersion,
               applicationIcon: const Icon(
                 Icons.local_florist,
                 size: 48,
@@ -126,6 +138,65 @@ class AboutScreen extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _checkUpdates(BuildContext context) async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    final result = await UpdateChecker().checkForUpdates();
+    if (!context.mounted) return;
+    Navigator.pop(context);
+
+    if (result.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось проверить обновления')),
+      );
+      return;
+    }
+    if (!result.isNewer) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Обновлений нет'),
+          content: Text(
+            'У вас последняя версия (${AppConstants.appVersion})',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ОК'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Доступна версия ${result.latestVersion}'),
+        content: Text(
+          'Что нового:\n${result.releaseNotes}\n\nСкачать?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _openUrl(context, UpdateChecker.releasesUrl);
+            },
+            child: const Text('Скачать'),
           ),
         ],
       ),
