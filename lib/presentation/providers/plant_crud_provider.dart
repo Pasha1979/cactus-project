@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/config/app_constants.dart';
+import '../../core/sync/photo_passport_manager.dart';
 import '../../core/sync/remote_change_applier.dart';
 import '../../core/sync/sync_outbox.dart';
 import '../../core/logger/app_logger.dart';
@@ -1111,9 +1112,38 @@ class PlantCrudProvider with ChangeNotifier implements RemoteChangeApplier {
       _plants[index] = updated;
       await _repository.updatePlant(updated);
       notifyListeners();
+
+      // Этап 3 (R-056): создаём фото-паспорт для нового фото.
+      // Путь пока локальный — облачный проставит photo_sync при загрузке
+      // через uploadPassportPhoto (внутренний путь, не публичная ссылка).
+      try {
+        final pm = _passportManager;
+        if (pm != null) {
+          final size = await File(newPhotoPath).length();
+          await pm.addPhotoVersion(plantId, newPhotoPath, size);
+          // Менеджер обновил репозиторий — синхронизируем in-memory копию
+          final refreshed = await _repository.getPlantById(plantId);
+          if (refreshed != null) {
+            _plants[index] = refreshed;
+            notifyListeners();
+          }
+        }
+      } catch (e) {
+        AppLogger.warning('Не удалось создать фото-паспорт: $e',
+            tag: 'PLANT_CRUD');
+      }
     } catch (e) {
       AppLogger.error('Ошибка добавления фото: $e', tag: 'PLANT_CRUD');
       rethrow;
+    }
+  }
+
+  /// Менеджер фото-паспортов из DI (null — если не зарегистрирован, тесты).
+  PhotoPassportManager? get _passportManager {
+    try {
+      return sl<PhotoPassportManager>();
+    } catch (_) {
+      return null;
     }
   }
 

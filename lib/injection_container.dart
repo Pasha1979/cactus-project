@@ -7,6 +7,7 @@ import 'core/sync/remote_change_applier.dart';
 import 'core/sync/initial_migration.dart';
 import 'core/sync/migration_backup.dart';
 import 'core/sync/photo_migration.dart';
+import 'core/sync/photo_passport_manager.dart';
 import 'core/sync/settings_sync_adapter.dart';
 import 'core/sync/sync_actions.dart';
 import 'core/sync/sync_conflicts.dart';
@@ -169,6 +170,12 @@ Future<void> init() async {
       plants: sl<PlantRepository>(),
       settings: sl<SettingsSyncAdapter>(),
       state: sl<SyncStateStore>(),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => PhotoPassportManager(
+      plants: sl<PlantRepository>(),
+      outbox: sl<SyncOutbox>(),
     ),
   );
   sl.registerLazySingleton(

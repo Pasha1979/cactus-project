@@ -71,6 +71,10 @@ class PhotoPassportManager {
   Future<void> archivePassport(String passportId) =>
       _mutate(passportId, (p) => p.copyWith(isArchived: true));
 
+  /// Вернуть паспорт из архива в галерею (снять isArchived).
+  Future<void> unarchivePassport(String passportId) =>
+      _mutate(passportId, (p) => p.copyWith(isArchived: false));
+
   /// «Удалить везде»: ставит isDeleted и готовит запись к синхронизации
   /// через outbox. Файл с Яндекс.Диска НЕ удаляется (позже, R-005).
   Future<void> deletePassportEverywhere(String passportId) =>
@@ -94,6 +98,22 @@ class PhotoPassportManager {
     return plant.photoPassports
         .where((p) => !p.isDeleted && !p.isArchived)
         .toList();
+  }
+
+  /// Архивные паспорта растения (не удалённые) — для «Показать архивные».
+  Future<List<PhotoPassport>> getArchivedPassports(String plantId) async {
+    final plant = await _plants.getPlantById(plantId);
+    if (plant == null) return [];
+    return plant.photoPassports
+        .where((p) => p.isArchived && !p.isDeleted)
+        .toList();
+  }
+
+  /// Все живые паспорта растения (активные + архивные, без удалённых).
+  Future<List<PhotoPassport>> getAllPassports(String plantId) async {
+    final plant = await _plants.getPlantById(plantId);
+    if (plant == null) return [];
+    return plant.photoPassports.where((p) => !p.isDeleted).toList();
   }
 
   // ==================== internals ====================

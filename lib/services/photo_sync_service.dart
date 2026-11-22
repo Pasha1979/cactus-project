@@ -4,6 +4,8 @@ import 'dart:io';
 
 
 import '../core/logger/app_logger.dart';
+import '../core/models/photo_passport.dart';
+import '../data/models/plant.dart';
 import '../presentation/providers/plant_crud_provider.dart';
 import 'yandex_auth_service.dart';
 import 'yandex_disk_service.dart';
@@ -76,6 +78,12 @@ class PhotoSyncService {
           final updatedPlant = plant.copyWith(userPhotos: updatedPhotos);
           plantCrudProvider.updatePlant(plant.permanentId, updatedPlant);
         }
+
+        // Этап 3 (R-055): версии фото-паспортов с локальными путями
+        // загружаем через uploadPassportPhoto → внутренний путь Диска.
+        if (plant.photoPassports.isNotEmpty) {
+          await _uploadPassportVersions(plant, plantCrudProvider);
+        }
       }
 
       await cleanDuplicatePhotos(plantCrudProvider);
@@ -85,6 +93,71 @@ class PhotoSyncService {
       AppLogger.api('✅ Синхронизация фото завершена. Загружено: $uploadedCount фото', tag: 'PHOTO_SYNC');
     } catch (e) {
       AppLogger.error('Ошибка синхронизации пользовательских фото: $e', tag: 'PHOTO_SYNC');
+    }
+  }
+
+  // ==================== ФОТО-ПАСПОРТА (этап 3) ====================
+
+  /// Загрузить локальные версии паспортов на Диск по внутреннему пути
+  /// `/MyCactus/photos/{passportId}_{versionId}.{ext}` (R-004/R-055).
+  /// Локальный путь файла переезжает в localCachePath.
+  Future<void> _uploadPassportVersions(
+    Plant plant,
+    PlantCrudProvider plantCrudProvider,
+  ) async {
+    var changed = false;
+    final passports = List.of(plant.photoPassports);
+
+    for (var pi = 0; pi < passports.length; pi++) {
+      final pp = passports[pi];
+      if (pp.isDeleted) continue;
+      final versions = List.of(pp.versions);
+      var vChanged = false;
+
+      for (var vi = 0; vi < versions.length; vi++) {
+        final v = versions[vi];
+        final p = v.yandexFilePath;
+        final isCloudOrUrl = p.startsWith('/MyCactus/') ||
+            p.startsWith('http://') ||
+            p.startsWith('https://');
+        if (isCloudOrUrl) continue; // уже облачный путь или legacy-ссылка
+
+        final file = File(p);
+        if (!await file.exists()) continue;
+
+        try {
+          final cloudPath = await _diskService.uploadPassportPhoto(
+            p,
+            passportId: pp.passportId,
+            versionId: v.versionId,
+          );
+          versions[vi] = PhotoVersion(
+            versionId: v.versionId,
+            yandexFilePath: cloudPath,
+            createdAt: v.createdAt,
+            sizeBytes: v.sizeBytes,
+            localCachePath: p, // локальный файл = кэш
+          );
+          vChanged = true;
+        } catch (e) {
+          AppLogger.error(
+            '❌ Ошибка загрузки версии паспорта $p: $e',
+            tag: 'PHOTO_SYNC',
+          );
+        }
+      }
+
+      if (vChanged) {
+        passports[pi] = pp.copyWith(versions: versions);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      plantCrudProvider.updatePlant(
+        plant.permanentId,
+        plant.copyWith(photoPassports: passports),
+      );
     }
   }
 

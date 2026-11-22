@@ -287,3 +287,12 @@ TODO(архив после 2.6) расставлен в точках gate.
   `uploadPassportPhoto(filePath, passportId, versionId)` возвращают
   внутренний путь `/MyCactus/photos/{passportId}_{versionId}.{ext}`;
   publish/публичные ссылки НЕ генерируются и НЕ хранятся (R-004/R-005).
+
+### Этап 3.3: UI фото-паспортов (R-056)
+
+`PhotoPassportSection` (presentation/widgets) в `gallery_tab`:
+активные паспорта — карточки с «⋮»-меню (В архив / Удалить везде с
+диалогом / Освободить место); «Показать архивные фото» → архив +
+«Вернуть в галерею». Новые фото → паспорт в `addUserPhoto`;
+`photo_sync` грузит версии через `uploadPassportPhoto` (путь, не ссылка);
+локальный файл сохраняется в localCachePath.

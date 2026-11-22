@@ -6,6 +6,7 @@ import '../../../../data/models/plant.dart';
 import '../../../providers/providers.dart';
 import '../../../../services/image/photo_cache_manager.dart';
 import '../../../theme/cactus_theme.dart';
+import '../../../widgets/photo_passport_section.dart';
 
 typedef ShowFullPhotoCallback = void Function(BuildContext, Plant, String, bool);
 typedef PhotoOptionsCallback = void Function(BuildContext, Plant, String);
@@ -109,6 +110,9 @@ class _GalleryTabState extends State<GalleryTab> {
                   ],
                 ),
               ),
+
+              // Фото-паспорта: меню действий + архив (этап 3.3, R-056)
+              PhotoPassportSection(plant: plant),
 
               const SizedBox(height: 12),
 
