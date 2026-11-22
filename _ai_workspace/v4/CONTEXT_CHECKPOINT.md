@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 15:11 · `main` · 6721683 test(ui): golden screenshots for passport 
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 15:22 · `main` · b11548f chore(release): bump to 1.2.0, Android 13+
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
