@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 14:39 · `main` · b3006f4 feat(photo): supabase schema update, legac
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 15:01 · `main` · f5c172a feat(ui): photo passport actions menu and 
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
