@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · 996b265 chore(brain): record resume point task 3.2
+# HANDOFF (автоген) · 2026-11-22 · `main` · b3006f4 feat(photo): supabase schema update, legac
 
 Сделано:
+- b3006f4 feat(photo): supabase schema update, legacy photo mi
+- 0025aba chore(brain): final handoff - session closed
 - 996b265 chore(brain): record resume point task 3.2 (T-32) in
 - 128b99d chore(brain): session handoff - end of session after
-- 55ac42b chore(brain): sync status/handoff after task 3.1
-- 4a76406 feat(photo): photo passport models and local CRUD (n
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

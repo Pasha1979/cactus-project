@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-18 · `main` · 128b99d chore(brain): session handoff - end of ses
+# HANDOFF (автоген) · 2026-11-18 · `main` · 996b265 chore(brain): record resume point task 3.2
 
 Сделано:
+- 996b265 chore(brain): record resume point task 3.2 (T-32) in
 - 128b99d chore(brain): session handoff - end of session after
 - 55ac42b chore(brain): sync status/handoff after task 3.1
 - 4a76406 feat(photo): photo passport models and local CRUD (n
-- 80f10dc chore(brain): sync status/handoff after task 2.7
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

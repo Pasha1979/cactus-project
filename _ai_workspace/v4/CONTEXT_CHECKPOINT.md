@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-18 00:11 · `main` · 128b99d chore(brain): session handoff - end of ses
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 14:39 · `main` · b3006f4 feat(photo): supabase schema update, legac
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача
