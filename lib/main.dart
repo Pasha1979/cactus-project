@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mcp_toolkit/mcp_toolkit.dart';
 import 'package:provider/provider.dart';
 import 'core/logger/app_logger.dart';
 import 'core/config/feature_flags.dart';
@@ -37,6 +39,12 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (kDebugMode) {
+    MCPToolkitBinding.instance
+      ..initialize()
+      ..initializeFlutterToolkit();
+  }
 
   // Инициализация Feature Flags (фаза 4.1) — локальные значения, Firebase удалён (R-027)
   await FeatureFlags.initialize();

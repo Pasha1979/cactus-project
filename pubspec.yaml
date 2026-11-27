@@ -66,6 +66,7 @@ dependencies:
   share_plus: ^10.0.0  # Для отправки логов и файлов
   supabase_flutter: ^2.18.3
   crypto: ^3.0.8
+  mcp_toolkit: 8.1.1
 
 dev_dependencies:
   flutter_test:

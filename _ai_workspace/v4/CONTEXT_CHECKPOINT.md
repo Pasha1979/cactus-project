@@ -1,4 +1,4 @@
-# CONTEXT_CHECKPOINT (автоген) · 2026-11-22 17:46 · `main` · 980a1d7 fix(audit): unify photo subsystem, trash q
+# CONTEXT_CHECKPOINT (автоген) · 2026-11-27 23:15 · `main` · 0548b8f feat(ui): conflict archive screen with res
 > Страховка внутри сессии. Перед ответвлением/сменой модуля/потерей нити: npm run brain:checkpoint
 
 ## Текущая задача

@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "dart": {
+      "command": "dart",
+      "args": ["mcp-server"]
+    },
+    "flutter-mcp-toolkit": {
+      "command": "dart",
+      "args": [
+        "_local_untracked/mcp_flutter/mcp_server_dart/bin/flutter_mcp_toolkit_server.dart",
+        "--dart-vm-host=localhost",
+        "--dart-vm-port=8181",
+        "--resources",
+        "--images",
+        "--dynamics"
+      ]
+    }
+  }
+}

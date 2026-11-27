@@ -297,6 +297,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.4.1"
+  dart_mcp:
+    dependency: transitive
+    description:
+      name: dart_mcp
+      sha256: "852b51da915d679be8d051e2e3b6c68ed19fe685f1c676bb35272a2d73ceac7a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.2"
   dart_style:
     dependency: transitive
     description:
@@ -313,6 +321,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.15"
+  decimal:
+    dependency: transitive
+    description:
+      name: decimal
+      sha256: "4137d4de00a42ff638a7ad60b1bcfa739d96695ede7fd8720a08576f668427a5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.7"
   dio:
     dependency: "direct main"
     description:
@@ -329,6 +345,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.2"
+  email_validator:
+    dependency: transitive
+    description:
+      name: email_validator
+      sha256: b19aa5d92fdd76fbc65112060c94d45ba855105a28bb6e462de7ff03b12fa1fb
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   equatable:
     dependency: transitive
     description:
@@ -531,6 +555,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.2.1"
+  flutter_mcp_toolkit_core:
+    dependency: transitive
+    description:
+      name: flutter_mcp_toolkit_core
+      sha256: "903b540ef069dc5508687bb438d3d957782f1294b72b4ed4f330212f3d32b4e8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "8.1.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -597,6 +629,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  from_json_to_json:
+    dependency: transitive
+    description:
+      name: from_json_to_json
+      sha256: d168f2b701a67bf87c3bb96c1d1addf282019fdec9ef8dc0ccd360241e3be139
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.1"
   frontend_server_client:
     dependency: transitive
     description:
@@ -887,6 +927,22 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  intentcall_core:
+    dependency: transitive
+    description:
+      name: intentcall_core
+      sha256: "5943bf2101129d2c1c7e011d5987bc873e83506c4de0245b400159011054d51a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
+  intentcall_schema:
+    dependency: transitive
+    description:
+      name: intentcall_schema
+      sha256: "06ee493cea4bc4fa1f57fab483d7a6fd680f950f8f13f638be6d8a92d310d2a4"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.2"
   intl:
     dependency: "direct main"
     description:
@@ -903,6 +959,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  is_dart_empty_or_not:
+    dependency: transitive
+    description:
+      name: is_dart_empty_or_not
+      sha256: a387c8c7d92c6ba811c165eed76abcefc7290c90ccf53f75e24ee0f435551d29
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0"
   jni:
     dependency: transitive
     description:
@@ -943,6 +1007,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.12.0"
+  json_rpc_2:
+    dependency: transitive
+    description:
+      name: json_rpc_2
+      sha256: "82dfd37d3b2e5030ae4729e1d7f5538cbc45eb1c73d618b9272931facac3bec1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
+  json_schema_builder:
+    dependency: transitive
+    description:
+      name: json_schema_builder
+      sha256: "657db3229ba10305c48e8686e8b3aca16e12e639c3a7b96687a6eeb7836b6e1b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.7"
   latlong2:
     dependency: "direct main"
     description:
@@ -1031,6 +1111,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  mcp_toolkit:
+    dependency: "direct main"
+    description:
+      name: mcp_toolkit
+      sha256: "75d9a9cea994d4de00c7b7a8df59bdbbce5edcfa8359aa0dfc42a027b4979c15"
+      url: "https://pub.dev"
+    source: hosted
+    version: "8.1.1"
   meta:
     dependency: transitive
     description:
@@ -1335,6 +1423,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.0"
+  rational:
+    dependency: transitive
+    description:
+      name: rational
+      sha256: cb808fb6f1a839e6fc5f7d8cb3b0a10e1db48b3be102de73938c627f0b636336
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.3"
   realtime_client:
     dependency: transitive
     description:
@@ -1367,6 +1463,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.28.0"
+  schemantic:
+    dependency: transitive
+    description:
+      name: schemantic
+      sha256: "1252e78063c2d124831337bf8e9d146cbd6d9cf575f5346a9c85c5911c430239"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
   share_plus:
     dependency: "direct main"
     description:
@@ -1692,6 +1796,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1"
+  universal_automation_interface:
+    dependency: transitive
+    description:
+      name: universal_automation_interface
+      sha256: "72b21a227fc0a64c2122d5cae3b56b31128382121e64043f3d8d40ebd300527c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
+  universal_automation_semantics:
+    dependency: transitive
+    description:
+      name: universal_automation_semantics
+      sha256: "315e2e86f5cb00a4290ccc167e6bd81d4b2d6f0b9ffc6a296cd320b2aa6882f9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.0"
+  universal_io:
+    dependency: transitive
+    description:
+      name: universal_io
+      sha256: f63cbc48103236abf48e345e07a03ce5757ea86285ed313a6a032596ed9301e2
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
   url_launcher:
     dependency: "direct main"
     description:

@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-17 · `main` · c7d0dc2 chore(secrets): gitignore env.json and sec
+# HANDOFF (автоген) · 2026-11-22 · `main` · 0548b8f feat(ui): conflict archive screen with res
 
 Сделано:
-- c7d0dc2 chore(secrets): gitignore env.json and secrets
-- 049e08f chore(secrets): add empty env.example.json
-- ad77ab1 chore: baseline tag, decisions, project rules, featu
-- e0e64aa Сверка «ноль потерь»: все 26 документов архива тепер
+- 0548b8f feat(ui): conflict archive screen with restore/keep 
+- 980a1d7 fix(audit): unify photo subsystem, trash queue, free
+- 736d6d4 chore(brain): checkpoint refresh
+- 5fb7d1b chore(brain): R-37 always commit AND push to GitHub 
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)

@@ -47,3 +47,4 @@
 ## Предсказательные паттерны (из REF/LESSONS_LEARNED.md)
 
 | L-35 | Топ повторяющихся ошибок: DateTime.parse без защиты; потеря функциональности при рефакторинге; platform-specific при копировании; route mismatch; пропущенные вызовы при микро-шагах | Критические зоны: providers, migrations, routers, theme, models → медленный режим R-18 | REF/LESSONS_LEARNED.md (паттерны) | 05.2026 | паттерны | — |
+| L-36 | mcp_flutter на Windows: build_skill_assets падает на CRLF | При сборке flutter-mcp-toolkit из исходников на Windows SKILL.md может быть в CRLF; нормализовать line endings перед разбором frontmatter или использовать патч. Релизных Windows-бинарей нет — сервер собирается из источника. | пользователь 27.11.2026 | 27.11.2026 | tooling | — |

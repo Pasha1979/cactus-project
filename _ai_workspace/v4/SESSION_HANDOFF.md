@@ -1,10 +1,10 @@
-# HANDOFF (автоген) · 2026-11-22 · `main` · 980a1d7 fix(audit): unify photo subsystem, trash q
+# HANDOFF (автоген) · 2026-11-27 · `main` · 0548b8f feat(ui): conflict archive screen with res
 
 Сделано:
+- 0548b8f feat(ui): conflict archive screen with restore/keep 
 - 980a1d7 fix(audit): unify photo subsystem, trash queue, free
 - 736d6d4 chore(brain): checkpoint refresh
 - 5fb7d1b chore(brain): R-37 always commit AND push to GitHub 
-- 6eb15f4 test(ui): explicit Roboto in home screen golden (fon
 
 Дальше:
 1. Завершить миграцию мозга v4 (реестры+v4+архив+скрипты→проверка→коммит)
